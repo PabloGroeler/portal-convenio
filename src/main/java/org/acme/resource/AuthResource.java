@@ -13,9 +13,9 @@ import org.acme.dto.LoginRequest;
 import org.acme.dto.LoginResponse;
 import org.acme.dto.SuccessResponse;
 
-@Path("/api")
-@Consumes(MediaType.APPLICATION_JSON)
+@Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
+@Consumes(MediaType.APPLICATION_JSON)
 public class AuthResource {
 
     @Inject
@@ -23,21 +23,18 @@ public class AuthResource {
 
     @POST
     @Path("/login")
-    public Response login(LoginRequest request) {
-        if (request == null) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity(new LoginResponse(false, null))
-                    .build();
-        }
-
-        String token = authService.login(request.username(), request.password());
-        if (token == null) {
+    public Response login(LoginRequest loginRequest) {
+        try {
+            String token = authService.login(loginRequest.username(), loginRequest.password());
+            if (token == null) {
+                throw new Exception("Invalid credentials");
+            }
+            return Response.ok(new LoginResponse(true, token)).build();
+        } catch (Exception e) {
             return Response.status(Response.Status.UNAUTHORIZED)
-                    .entity(new LoginResponse(false, null))
+                    .entity("{\"error\":\"Invalid credentials\"}")
                     .build();
         }
-
-        return Response.ok(new LoginResponse(true, token)).build();
     }
 
     @POST

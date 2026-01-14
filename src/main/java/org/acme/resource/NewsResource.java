@@ -1,5 +1,6 @@
 package org.acme.resource;
 
+import io.quarkus.logging.Log;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.Consumes;
@@ -35,6 +36,7 @@ public class NewsResource {
     @POST
     @Transactional
     public Response create(NewsRequest request) {
+        Log.info("Starting create NewsResource");
         if (request == null) {
             return Response.status(Response.Status.BAD_REQUEST).build();
         }

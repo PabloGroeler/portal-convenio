@@ -14,8 +14,16 @@ interface LoginResponse {
 }
 
 export const login = async (credentials: { email: string; password: string }): Promise<LoginResponse> => {
-  const { data } = await api.post<LoginResponse>('/auth/login', credentials);
-  return data;
+  try {
+    // Backend expects { username, password }
+    const payload = { username: credentials.email, password: credentials.password };
+    const { data } = await api.post<LoginResponse>('/auth/login', payload);
+    return data;
+  } catch (err) {
+    // Re-throw axios errors so callers can handle them, but provide a clearer message
+    console.error('authService.login error:', err);
+    throw err;
+  }
 };
 
 export const logout = async (): Promise<{ success: boolean }> => {

@@ -1,15 +1,15 @@
 version: '3.8'
 
 services:
-  # Existing PostgreSQL service
+  # PostgreSQL service
   postgres:
     image: postgres:16
     ports:
       - "5433:5432"
     environment:
-      - POSTGRES_DB=app
-      - POSTGRES_USER=app
-      - POSTGRES_PASSWORD=app
+      POSTGRES_DB: app
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
@@ -23,15 +23,15 @@ services:
     ports:
       - "8080:8080"
     environment:
-      - quarkus.datasource.db-kind=postgresql
-      - quarkus.datasource.username=app
-      - quarkus.datasource.password=app
-      - quarkus.datasource.jdbc.url=jdbc:postgresql://postgres:5432/app
-      - quarkus.hibernate-orm.database.generation=update
-      - QUARKUS_HTTP_PORT=8080
-      - QUARKUS_HTTP_HOST=0.0.0.0
-    networks:
-      - app-network
+      QUARKUS_DATASOURCE_DB_KIND: postgresql
+      QUARKUS_DATASOURCE_USERNAME: app
+      QUARKUS_DATASOURCE_PASSWORD: app
+      QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/app
+      QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
+      QUARKUS_HTTP_PORT: 8080
+      QUARKUS_HTTP_HOST: 0.0.0.0
+      QUARKUS_HTTP_CORS_ORIGINS: "http://localhost:3000"
+      QUARKUS_SWAGGER_UI_PATH: /swagger-ui
 
   # Frontend service
   frontend:
@@ -40,21 +40,14 @@ services:
       dockerfile: Dockerfile.dev
     ports:
       - "3000:3000"
+    depends_on:
+      - app
+    environment:
+      - VITE_API_URL=http://localhost:8080/api
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    environment:
-      - NODE_ENV=development
-      - CHOKIDAR_USEPOLLING=true
-      - VITE_API_URL=http://localhost:8080/api  # Or use the service name: http://app:8080/api
-    depends_on:
-      - app
-    networks:
-      - app-network
+    command: sh -c "npm run dev"
 
 volumes:
   postgres_data:
-
-networks:
-  app-network:
-    driver: bridge

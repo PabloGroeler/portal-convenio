@@ -4,7 +4,7 @@ FROM node:18 as build
 WORKDIR /app
 COPY package*.json ./
 RUN npm ci
-COPY . .
+COPY nginx .
 RUN npm run build
 
 # Production stage
