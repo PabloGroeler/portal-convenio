@@ -1,6 +1,6 @@
-# API Endpoints
+d# API Endpoints
 
-This document outlines the API endpoints for the Mato Grosso Government Portal Clone project.
+This document outlines the API endpoints for the Convenio Management App.
 
 ## Authentication
 

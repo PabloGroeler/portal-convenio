@@ -1,4 +1,5 @@
 import { useAuth } from '../context/AuthContext';
+import { Link } from 'react-router-dom';
 
 const DashboardPage = () => {
   const { user } = useAuth();
@@ -28,6 +29,33 @@ const DashboardPage = () => {
             </div>
           </dl>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <h2 className="text-xl font-semibold mb-2">Ações</h2>
+        <ul className="space-y-2">
+          <li>
+            <Link
+              to="/painel/convenios"
+              role="button"
+              aria-label="Gerenciar Convênios"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-br from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white font-semibold rounded-lg shadow-lg focus:outline-none focus:ring-2 focus:ring-blue-300 transition-transform transform hover:-translate-y-0.5"
+            >
+              {/* Icon: briefcase/document-like */}
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-5 w-5"
+                viewBox="0 0 20 20"
+                fill="currentColor"
+                aria-hidden
+              >
+                <path d="M6 2a2 2 0 00-2 2v2H3a1 1 0 000 2h14a1 1 0 100-2h-1V4a2 2 0 00-2-2H6z" />
+                <path d="M3 10a1 1 0 011-1h12a1 1 0 011 1v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5z" />
+              </svg>
+              <span>Gerenciar Convênios</span>
+            </Link>
+          </li>
+        </ul>
       </div>
     </div>
   );

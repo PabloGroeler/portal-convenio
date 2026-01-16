@@ -17,7 +17,8 @@ const LoginPage = () => {
     try {
       const success = await login(email, password);
       if (success) {
-        navigate('/dashboard');
+        // App routes use "/painel" for the user dashboard — keep redirects consistent
+        navigate('/painel');
       } else {
         setError('Credenciais inválidas');
       }

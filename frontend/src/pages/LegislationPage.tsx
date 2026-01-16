@@ -14,7 +14,7 @@ const LegislationPage = () => {
     {
       id: 1,
       title: 'Lei Complementar Nº 600',
-      description: 'Dispõe sobre o Estatuto dos Servidores Públicos do Estado de Mato Grosso',
+      description: 'Dispõe sobre o Estatuto dos Servidores Públicos',
       category: 'Estatuto dos Servidores',
       year: 2021,
       fileUrl: '#'
@@ -22,7 +22,7 @@ const LegislationPage = () => {
     {
       id: 2,
       title: 'Lei Nº 11.009',
-      description: 'Institui o Código de Defesa do Contribuinte no âmbito do Estado de Mato Grosso',
+      description: 'Institui o Código de Defesa do Contribuinte',
       category: 'Código de Defesa',
       year: 2022,
       fileUrl: '#'
@@ -30,7 +30,7 @@ const LegislationPage = () => {
     {
       id: 3,
       title: 'Decreto Nº 2.168',
-      description: 'Regulamenta a Lei de Licitações no âmbito do Estado de Mato Grosso',
+      description: 'Regulamenta a Lei de Licitações',
       category: 'Licitações',
       year: 2023,
       fileUrl: '#'
@@ -43,10 +43,10 @@ const LegislationPage = () => {
       <div className="bg-white shadow overflow-hidden sm:rounded-lg">
         <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
           <h2 className="text-lg font-medium text-gray-900">
-            Legislação Estadual
+            Legislação
           </h2>
           <p className="mt-1 text-sm text-gray-500">
-            Acesso à legislação vigente no Estado de Mato Grosso
+            Acesso à legislação vigente
           </p>
         </div>
         <ul className="divide-y divide-gray-200">

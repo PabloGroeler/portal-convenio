@@ -13,6 +13,8 @@ import ContactPage from './pages/ContactPage';
 import ManualsPage from './pages/ManualsPage';
 import DownloadsPage from './pages/DownloadsPage';
 import LegislationPage from './pages/LegislationPage';
+import ConveniosPage from './pages/ConveniosPage';
+import ProtectedRoute from './components/ProtectedRoute';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -25,7 +27,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   const handleLogin = async (email: string, password: string) => {
     const success = await login(email, password);
     if (success) {
-      navigate('/dashboard');
+      navigate('/painel');
     }
     return success;
   };
@@ -49,13 +51,21 @@ function App() {
                 <Route path="/" element={<HomePage />} />
                 <Route path="/login" element={<LoginPage />} />
                 <Route path="/register" element={<RegisterPage />} />
-                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/painel" element={<DashboardPage />} />
                 <Route path="/news" element={<NewsPage />} />
                 <Route path="/news/:id" element={<NewsArticlePage />} />
                 <Route path="/contact" element={<ContactPage />} />
                 <Route path="/manuals" element={<ManualsPage />} />
                 <Route path="/downloads" element={<DownloadsPage />} />
                 <Route path="/legislation" element={<LegislationPage />} />
+                <Route
+                  path="/painel/convenios"
+                  element={
+                    <ProtectedRoute>
+                      <ConveniosPage />
+                    </ProtectedRoute>
+                  }
+                />
               </Routes>
             </Layout>
           </AuthWrapper>

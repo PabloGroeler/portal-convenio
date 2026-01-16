@@ -35,6 +35,19 @@ export const logout = async (): Promise<{ success: boolean }> => {
 };
 
 export const getCurrentUser = (): User | null => {
-  const user = localStorage.getItem('user');
-  return user ? JSON.parse(user) : null;
+  const userStr = localStorage.getItem('user');
+  if (!userStr) return null;
+  // Handle cases where `user` was stored as the string "undefined" or other invalid JSON
+  try {
+    const parsed = JSON.parse(userStr);
+    if (parsed && typeof parsed === 'object') {
+      return parsed as User;
+    }
+    return null;
+  } catch (e) {
+    console.warn('authService.getCurrentUser: failed to parse stored user, clearing invalid value', userStr, e);
+    // clear the invalid value to avoid repeated errors
+    localStorage.removeItem('user');
+    return null;
+  }
 };

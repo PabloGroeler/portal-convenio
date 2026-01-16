@@ -15,11 +15,14 @@ const Navbar = () => {
       <div className="container mx-auto px-6 py-3">
         <div className="flex items-center justify-between">
           <Link to="/" className="text-2xl font-bold">
-            Gov MT
+            Convênios
           </Link>
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/news" className="hover:text-blue-200">
               Notícias
+            </Link>
+            <Link to="/painel/convenios" className="hover:text-blue-200">
+              Convênios
             </Link>
             <Link to="/manuals" className="hover:text-blue-200">
               Manuais
@@ -35,7 +38,7 @@ const Navbar = () => {
             </Link>
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="hover:text-blue-200">
+                <Link to="/painel" className="hover:text-blue-200">
                   Painel
                 </Link>
                 <button

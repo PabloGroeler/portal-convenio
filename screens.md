@@ -1,6 +1,6 @@
 # Application Screens
 
-This document outlines the screens that need to be created for the Mato Grosso Government Portal Clone project.
+This document outlines the screens that need to be created for the Convenio Management App.
 
 ## 1. Home/Login Page (`index.html`)
 
@@ -25,7 +25,7 @@ This document outlines the screens that need to be created for the Mato Grosso G
     *   Provide access to the main features of the application, such as:
         *   News management.
         *   User profile management.
-        *   Access to other sections of the portal.
+        *   Access to other sections of the application.
 
 ## 4. News Page
 
