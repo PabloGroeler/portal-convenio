@@ -14,6 +14,8 @@ import ManualsPage from './pages/ManualsPage';
 import DownloadsPage from './pages/DownloadsPage';
 import LegislationPage from './pages/LegislationPage';
 import ConveniosPage from './pages/ConveniosPage';
+import EmendasPage from './pages/EmendasPage';
+import EmendaDetailPage from './pages/EmendaDetailPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Create a client
@@ -46,28 +48,33 @@ function App() {
       <Router>
         <AuthProvider>
           <AuthWrapper>
-            <Layout>
-              <Routes>
-                <Route path="/" element={<HomePage />} />
-                <Route path="/login" element={<LoginPage />} />
-                <Route path="/register" element={<RegisterPage />} />
-                <Route path="/painel" element={<DashboardPage />} />
-                <Route path="/news" element={<NewsPage />} />
-                <Route path="/news/:id" element={<NewsArticlePage />} />
-                <Route path="/contact" element={<ContactPage />} />
-                <Route path="/manuals" element={<ManualsPage />} />
-                <Route path="/downloads" element={<DownloadsPage />} />
-                <Route path="/legislation" element={<LegislationPage />} />
+            <Routes>
+              {/* Full-screen pages (no header/footer) */}
+              <Route path="/emendas" element={<EmendasPage />} />
+              <Route path="/emendas/:id" element={<EmendaDetailPage />} />
+
+              {/* All other routes rendered inside Layout */}
+              <Route path="/*" element={<Layout />}>
+                <Route index element={<HomePage />} />
+                <Route path="login" element={<LoginPage />} />
+                <Route path="register" element={<RegisterPage />} />
+                <Route path="painel" element={<DashboardPage />} />
+                <Route path="news" element={<NewsPage />} />
+                <Route path="news/:id" element={<NewsArticlePage />} />
+                <Route path="contact" element={<ContactPage />} />
+                <Route path="manuals" element={<ManualsPage />} />
+                <Route path="downloads" element={<DownloadsPage />} />
+                <Route path="legislation" element={<LegislationPage />} />
                 <Route
-                  path="/painel/convenios"
+                  path="painel/convenios"
                   element={
                     <ProtectedRoute>
                       <ConveniosPage />
                     </ProtectedRoute>
                   }
                 />
-              </Routes>
-            </Layout>
+              </Route>
+            </Routes>
           </AuthWrapper>
         </AuthProvider>
       </Router>

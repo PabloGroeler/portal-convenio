@@ -8,7 +8,7 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Sobre Nós</h3>
             <p className="text-gray-400">
-              Portal do Governo do Estado de Mato Grosso.
+              Aplicação de gestão de convênios.
             </p>
           </div>
           <div>
@@ -39,10 +39,10 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold mb-4">Contato</h3>
             <address className="not-italic text-gray-400">
-              <p>Palácio Paiaguás</p>
-              <p>Av. Rubens de Mendonça, 4.100 - CPA</p>
-              <p>Cuiabá - MT, 78050-970</p>
-              <p>Telefone: (65) 3613-6000</p>
+              <p>Rua Exemplo, 123</p>
+              <p>Bairro Centro</p>
+              <p>Cidade Exemplo, 00000-000</p>
+              <p>Telefone: (00) 0000-0000</p>
             </address>
           </div>
           <div>
@@ -78,7 +78,7 @@ const Footer = () => {
           </div>
         </div>
         <div className="mt-8 border-t border-gray-700 pt-8 text-center text-gray-400">
-          <p>&copy; {new Date().getFullYear()} Governo do Estado de Mato Grosso. Todos os direitos reservados.</p>
+          <p>&copy; {new Date().getFullYear()} Todos os direitos reservados.</p>
         </div>
       </div>
     </footer>
@@ -86,3 +86,4 @@ const Footer = () => {
 };
 
 export default Footer;
+

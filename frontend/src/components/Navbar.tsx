@@ -14,15 +14,32 @@ const Navbar = () => {
     <nav className="bg-blue-800 text-white shadow-lg">
       <div className="container mx-auto px-6 py-3">
         <div className="flex items-center justify-between">
-          <Link to="/" className="text-2xl font-bold">
-            Convênios
-          </Link>
+          {/* Left side: compact admin header when authenticated, full brand when not */}
+          {isAuthenticated ? (
+            <div className="flex items-center space-x-4">
+              <button
+                type="button"
+                onClick={() => navigate('/')}
+                className="text-white hover:text-blue-200 px-3 py-1 rounded"
+              >
+                Application name
+              </button>
+              <Link to="/painel" className="hover:text-blue-200">
+                Painel
+              </Link>
+            </div>
+          ) : (
+            // keep an empty placeholder for layout alignment — brand text removed
+            <div />
+          )}
+
+          {/* Right side: public links always visible; auth action (Entrar/Sair) conditional */}
           <div className="hidden md:flex items-center space-x-8">
             <Link to="/news" className="hover:text-blue-200">
               Notícias
             </Link>
-            <Link to="/painel/convenios" className="hover:text-blue-200">
-              Convênios
+            <Link to="/emendas" className="hover:text-blue-200">
+              Emendas
             </Link>
             <Link to="/manuals" className="hover:text-blue-200">
               Manuais
@@ -36,18 +53,14 @@ const Navbar = () => {
             <Link to="/contact" className="hover:text-blue-200">
               Contato
             </Link>
+
             {isAuthenticated ? (
-              <>
-                <Link to="/painel" className="hover:text-blue-200">
-                  Painel
-                </Link>
-                <button
-                  onClick={handleLogout}
-                  className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
-                >
-                  Sair
-                </button>
-              </>
+              <button
+                onClick={handleLogout}
+                className="bg-red-600 hover:bg-red-700 px-4 py-2 rounded"
+              >
+                Sair
+              </button>
             ) : (
               <Link
                 to="/login"
