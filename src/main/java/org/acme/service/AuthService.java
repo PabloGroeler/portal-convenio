@@ -6,10 +6,8 @@ import org.acme.dto.LoginRequest;
 import org.acme.entity.User;
 import org.acme.repository.UserRepository;
 import org.mindrot.jbcrypt.BCrypt;
-
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import org.acme.security.JwtUtil;
+import io.jsonwebtoken.Claims;
 
 @ApplicationScoped
 public class AuthService {
@@ -17,44 +15,40 @@ public class AuthService {
     @Inject
     UserRepository userRepository;
 
-    private final Map<String, String> users = new ConcurrentHashMap<>();
-    private final Map<String, String> tokens = new ConcurrentHashMap<>();
-
-    public AuthService() {
-        users.put("user", "password");
-    }
-
-    public String login(String username, String password) {
-        return "token";
-//        if (username == null || password == null) {
-//            return null;
-//        }
-//        String expectedPassword = users.get(username);
-//        if (expectedPassword == null || !expectedPassword.equals(password)) {
-//            return null;
-//        }
-//        String token = UUID.randomUUID().toString();
-//        tokens.put(token, username);
-//        return token;
+    public String login(String usernameOrEmail, String password) {
+        if (usernameOrEmail == null || password == null) return null;
+        User user = User.findByUsername(usernameOrEmail);
+        if (user == null) {
+            user = User.findByEmail(usernameOrEmail);
+        }
+        if (user == null) return null;
+        if (!BCrypt.checkpw(password, user.password)) return null;
+        // Generate JWT
+        return JwtUtil.generateToken(user.username, user.id);
     }
 
     public void logout(String token) {
-        if (token == null) {
-            return;
-        }
-        tokens.remove(token);
+        // Stateless JWT — logout is a no-op. If you want token revocation, implement a blacklist here.
     }
 
-
     public String authenticate(LoginRequest request) {
-        User user = userRepository.findByUsername(request.username());
+        User user = User.findByUsername(request.username());
+        if (user == null) {
+            user = User.findByEmail(request.username());
+        }
         if (user != null && BCrypt.checkpw(request.password(), user.password)) {
-            return "dummy-token"; // Replace with JWT token
+            return JwtUtil.generateToken(user.username, user.id);
         }
         throw new SecurityException("Invalid credentials");
     }
 
     public boolean isTokenValid(String token) {
-        return token != null && tokens.containsKey(token);
+        if (token == null) return false;
+        try {
+            Claims claims = JwtUtil.parseToken(token);
+            return !JwtUtil.isTokenExpired(claims);
+        } catch (Exception e) {
+            return false;
+        }
     }
 }

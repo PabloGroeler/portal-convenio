@@ -16,7 +16,7 @@ public class Startup {
         if (User.count() == 0) {
             User admin = new User();
             admin.username = "admin";
-            admin.email = "admin@admin.com";
+            admin.email = "a@a.com";
             admin.password = BCrypt.hashpw("123", BCrypt.gensalt());
             admin.persist();
             System.out.println("Created admin user with email: admin@admin.com");

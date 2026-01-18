@@ -1,4 +1,4 @@
 package org.acme.dto;
 
-public record LoginResponse(boolean success, String token) {
+public record LoginResponse(boolean success, String token, UserDTO user) {
 }

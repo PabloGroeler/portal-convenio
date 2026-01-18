@@ -8,10 +8,12 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
 import java.time.OffsetDateTime;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "emenda", indexes = {
-    @Index(name = "idx_emenda_cnpj", columnList = "cnpj")
+    @Index(name = "idx_emenda_cnpj", columnList = "cnpj"),
+    @Index(name = "idx_emenda_code", columnList = "code")
 })
 public class Emenda {
 
@@ -45,6 +47,31 @@ public class Emenda {
 
     @Column(name = "update_time")
     public OffsetDateTime updateTime;
+
+    // New fields for emenda management
+    @Column(name = "code", length = 50)
+    public String code;
+
+    @Column(name = "year")
+    public Integer year;
+
+    @Column(name = "value", precision = 15, scale = 2)
+    public BigDecimal value;
+
+    @Column(name = "status", length = 50)
+    public String status;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    public String description;
+
+    @Column(name = "institution")
+    public String institution;
+
+    @Column(name = "parlamentar")
+    public String parlamentar;
+
+    @Column(name = "has_detail")
+    public Boolean hasDetail;
 
     public Emenda() {
     }

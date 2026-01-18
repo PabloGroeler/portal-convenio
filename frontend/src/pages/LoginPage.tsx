@@ -1,6 +1,6 @@
 // src/pages/LoginPage.tsx
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
@@ -9,6 +9,21 @@ const LoginPage = () => {
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+  const successMessage = (location.state as any)?.message as string | undefined;
+
+  // Clear the navigation state after reading the success message so it doesn't persist
+  useEffect(() => {
+    if (successMessage) {
+      // Replace the current history entry with the same path but empty state
+      // Use a microtask to let the UI render the message first
+      const t = setTimeout(() => {
+        navigate(location.pathname, { replace: true, state: {} });
+      }, 0);
+      return () => clearTimeout(t);
+    }
+    return undefined;
+  }, [successMessage, navigate, location.pathname]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +46,7 @@ const LoginPage = () => {
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-6">Login</h1>
+      {successMessage && <div className="mb-4 p-2 bg-emerald-100 text-emerald-700 rounded">{successMessage}</div>}
       {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
@@ -62,6 +78,11 @@ const LoginPage = () => {
           Entrar
         </button>
       </form>
+
+      <div className="mt-4 text-center text-sm">
+        <span>Não tem uma conta? </span>
+        <Link to="/register" className="text-blue-600 hover:underline font-medium">Cadastrar-se</Link>
+      </div>
     </div>
   );
 };

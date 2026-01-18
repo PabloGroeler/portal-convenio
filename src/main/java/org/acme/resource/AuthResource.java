@@ -12,6 +12,8 @@ import org.acme.service.AuthService;
 import org.acme.dto.LoginRequest;
 import org.acme.dto.LoginResponse;
 import org.acme.dto.SuccessResponse;
+import org.acme.dto.UserDTO;
+import org.acme.entity.User;
 
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
@@ -29,7 +31,9 @@ public class AuthResource {
             if (token == null) {
                 throw new Exception("Invalid credentials");
             }
-            return Response.ok(new LoginResponse(true, token)).build();
+            User user = User.findByEmail(loginRequest.username());
+            UserDTO userDTO = new UserDTO(user.id, user.username, user.email);
+            return Response.ok(new LoginResponse(true, token, userDTO)).build();
         } catch (Exception e) {
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("{\"error\":\"Invalid credentials\"}")

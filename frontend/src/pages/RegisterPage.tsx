@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import userService from '../services/userService';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -31,17 +32,18 @@ const RegisterPage = () => {
     }
 
     try {
-      // TODO: Replace with actual API call
-      console.log('Registration data:', {
-        name: formData.name,
+      const payload = {
+        username: formData.name,
         email: formData.email,
-        password: formData.password
-      });
-
+        password: formData.password,
+      };
+      await userService.register(payload);
       // Redirect to login after successful registration
-      navigate('/login', { state: { message: 'Registration successful! Please log in.' } });
-    } catch (err) {
-      setError('Erro ao realizar cadastro. Tente novamente.');
+      navigate('/login', { state: { message: 'Cadastro realizado com sucesso! Faça login.' } });
+    } catch (err: any) {
+      console.error('Register error:', err);
+      const msg = err?.response?.data || err?.message || 'Erro ao realizar cadastro. Tente novamente.';
+      setError(String(msg));
     }
   };
 
