@@ -2,45 +2,59 @@ package org.acme.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
+import jakarta.persistence.PrePersist;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.math.BigDecimal;
+import java.util.UUID;
 
 @Entity
 @Table(name = "emenda", indexes = {
-    @Index(name = "idx_emenda_cnpj", columnList = "cnpj"),
-    @Index(name = "idx_emenda_code", columnList = "code")
+    @Index(name = "idx_emenda_councilor", columnList = "councilor_id"),
+    @Index(name = "idx_emenda_institution", columnList = "institution_id"),
+    @Index(name = "idx_emenda_official_code", columnList = "official_code")
 })
 public class Emenda {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
+    @Column(length = 36)
+    public String id;
 
-    @Column(name = "name", nullable = false)
-    public String name;
+    @Column(name = "councilor_id", length = 100)
+    public String councilorId;
 
-    @Column(name = "legal_name")
-    public String legalName;
+    @Column(name = "official_code", length = 100)
+    public String officialCode;
 
-    @Column(name = "cnpj", length = 32)
-    public String cnpj;
+    @Column(name = "date")
+    public LocalDate date;
 
-    @Column(name = "category")
+    @Column(name = "value", precision = 15, scale = 2)
+    public BigDecimal value;
+
+    @Column(name = "classification", length = 100)
+    public String classification;
+
+    @Column(name = "category", length = 100)
     public String category;
 
-    @Column(name = "link")
-    public String link;
+    @Column(name = "status", length = 50)
+    public String status;
 
-    @Column(name = "contact_email")
-    public String contactEmail;
+    @Column(name = "institution_id", length = 100)
+    public String institutionId;
 
-    @Column(name = "contact_phone", length = 50)
-    public String contactPhone;
+    @Column(name = "signed_link")
+    public String signedLink;
+
+    @Column(name = "description", columnDefinition = "TEXT")
+    public String description;
+
+    @Column(name = "object_detail", columnDefinition = "TEXT")
+    public String objectDetail;
 
     @Column(name = "create_time")
     public OffsetDateTime createTime;
@@ -48,43 +62,29 @@ public class Emenda {
     @Column(name = "update_time")
     public OffsetDateTime updateTime;
 
-    // New fields for emenda management
-    @Column(name = "code", length = 50)
-    public String code;
-
-    @Column(name = "year")
-    public Integer year;
-
-    @Column(name = "value", precision = 15, scale = 2)
-    public BigDecimal value;
-
-    @Column(name = "status", length = 50)
-    public String status;
-
-    @Column(name = "description", columnDefinition = "TEXT")
-    public String description;
-
-    @Column(name = "institution")
-    public String institution;
-
-    @Column(name = "parlamentar")
-    public String parlamentar;
-
-    @Column(name = "has_detail")
-    public Boolean hasDetail;
-
     public Emenda() {
     }
 
-    public Emenda(String name, String legalName, String cnpj, String category, String link, String contactEmail, String contactPhone, OffsetDateTime createTime, OffsetDateTime updateTime) {
-        this.name = name;
-        this.legalName = legalName;
-        this.cnpj = cnpj;
+    @PrePersist
+    public void generateId() {
+        if (this.id == null) {
+            this.id = UUID.randomUUID().toString();
+        }
+    }
+
+    public Emenda(String councilorId, String officialCode, LocalDate date, BigDecimal value, String classification, String category, String status, String institutionId, String signedLink, String description, String objectDetail) {
+        this.councilorId = councilorId;
+        this.officialCode = officialCode;
+        this.date = date;
+        this.value = value;
+        this.classification = classification;
         this.category = category;
-        this.link = link;
-        this.contactEmail = contactEmail;
-        this.contactPhone = contactPhone;
-        this.createTime = createTime;
-        this.updateTime = updateTime;
+        this.status = status;
+        this.institutionId = institutionId;
+        this.signedLink = signedLink;
+        this.description = description;
+        this.objectDetail = objectDetail;
+        this.createTime = OffsetDateTime.now();
+        this.updateTime = OffsetDateTime.now();
     }
 }

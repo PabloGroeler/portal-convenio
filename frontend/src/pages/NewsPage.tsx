@@ -32,7 +32,7 @@ const NewsPage = () => {
                 <p className="text-gray-600 mb-4 line-clamp-3">{item.summary}</p>
                 <div className="flex justify-between items-center">
                   <span className="text-sm text-gray-500">
-                    {new Date(item.createdAt).toLocaleDateString('pt-BR')}
+                    {new Date(item.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
                   </span>
                   <Link
                     to={`/news/${item.id}`}

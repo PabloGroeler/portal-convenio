@@ -30,7 +30,7 @@ const NewsArticlePage = () => {
       <header className="mb-8">
         <h1 className="text-3xl font-bold mb-2">{article.title}</h1>
         <p className="text-gray-500">
-          Publicado em {new Date(article.createdAt).toLocaleDateString('pt-BR')}
+          Publicado em {new Date(article.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}
         </p>
       </header>
       <div className="prose max-w-none">

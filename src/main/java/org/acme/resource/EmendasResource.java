@@ -14,9 +14,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import org.acme.entity.Emenda;
+import org.acme.service.EmendaService;
 import org.acme.dto.EmendaAcaoDTO;
 import org.acme.dto.EmendaHistoricoDTO;
-import org.acme.service.EmendaService;
+import org.acme.dto.EmendaDetailDTO;
 
 import java.util.List;
 
@@ -44,8 +45,14 @@ public class EmendasResource {
     }
 
     @GET
+    @Path("/with-details")
+    public List<EmendaDetailDTO> listWithDetails() {
+        return emendaService.listAllWithDetails();
+    }
+
+    @GET
     @Path("/{id}")
-    public Response getById(@PathParam("id") Long id) {
+    public Response getById(@PathParam("id") String id) {
         Emenda e = emendaService.findById(id);
         if (e == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
@@ -53,20 +60,25 @@ public class EmendasResource {
         return Response.ok(e).build();
     }
 
+    @GET
+    @Path("/{id}/with-details")
+    public Response getByIdWithDetails(@PathParam("id") String id) {
+        EmendaDetailDTO dto = emendaService.findByIdWithDetails(id);
+        if (dto == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        return Response.ok(dto).build();
+    }
+
     @POST
     public Response create(Emenda emenda) {
-        if (emenda.name == null || emenda.name.isBlank()) {
-            return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\": \"Nome é obrigatório\"}")
-                    .build();
-        }
         Emenda created = emendaService.create(emenda, getCurrentUser());
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
 
     @PUT
     @Path("/{id}")
-    public Response update(@PathParam("id") Long id, Emenda emenda) {
+    public Response update(@PathParam("id") String id, Emenda emenda) {
         Emenda updated = emendaService.update(id, emenda, getCurrentUser());
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
@@ -76,7 +88,7 @@ public class EmendasResource {
 
     @POST
     @Path("/{id}/acao")
-    public Response executarAcao(@PathParam("id") Long id, EmendaAcaoDTO acao) {
+    public Response executarAcao(@PathParam("id") String id, EmendaAcaoDTO acao) {
         if (acao.acao == null || acao.acao.isBlank()) {
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"error\": \"Ação é obrigatória\"}")
@@ -97,7 +109,7 @@ public class EmendasResource {
 
     @GET
     @Path("/{id}/historico")
-    public Response getHistorico(@PathParam("id") Long id) {
+    public Response getHistorico(@PathParam("id") String id) {
         Emenda emenda = emendaService.findById(id);
         if (emenda == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
@@ -108,7 +120,7 @@ public class EmendasResource {
 
     @DELETE
     @Path("/{id}")
-    public Response delete(@PathParam("id") Long id) {
+    public Response delete(@PathParam("id") String id) {
         boolean deleted = emendaService.delete(id);
         if (!deleted) {
             return Response.status(Response.Status.NOT_FOUND).build();

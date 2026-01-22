@@ -5,7 +5,7 @@ import java.time.OffsetDateTime;
 
 public class EmendaHistoricoDTO {
     public Long id;
-    public Long emendaId;
+    public String emendaId;
     public String acao;
     public String statusAnterior;
     public String statusNovo;

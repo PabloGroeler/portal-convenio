@@ -16,6 +16,8 @@ import LegislationPage from './pages/LegislationPage';
 import ConveniosPage from './pages/ConveniosPage';
 import EmendasPage from './pages/EmendasPage';
 import EmendaDetailPage from './pages/EmendaDetailPage';
+import InstitutionsPage from './pages/InstitutionsPage';
+import CouncilorsPage from './pages/CouncilorsPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Create a client
@@ -70,6 +72,22 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <ConveniosPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="painel/institutions"
+                  element={
+                    <ProtectedRoute>
+                      <InstitutionsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="painel/councilors"
+                  element={
+                    <ProtectedRoute>
+                      <CouncilorsPage />
                     </ProtectedRoute>
                   }
                 />

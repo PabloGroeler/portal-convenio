@@ -5,16 +5,21 @@ import emendaService from '../services/emendaService';
 import type { EmendaHistoricoDTO } from '../services/emendaService';
 
 interface Emenda {
-  id: number;
-  title: string;
-  year: number;
+  id: string;
+  councilorId?: string;
+  councilorName?: string;
+  officialCode?: string;
+  date?: string;
   value: string;
+  classification?: string;
+  category?: string;
   status: string;
+  institutionId?: string;
+  institutionName?: string;
+  institutionEmail?: string;
+  signedLink?: string;
   description?: string;
-  code?: string;
-  institution?: string;
-  parlamentar?: string;
-  hasDetail?: boolean;
+  objectDetail?: string;
 }
 
 const EmendasPage: React.FC = () => {
@@ -26,6 +31,7 @@ const EmendasPage: React.FC = () => {
   const [detailFilter, setDetailFilter] = useState('Todas');
   const [selectedEmenda, setSelectedEmenda] = useState<Emenda | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
+  const [isEditMode, setIsEditMode] = useState(false);
   const [historico, setHistorico] = useState<EmendaHistoricoDTO[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [despachoObservacao, setDespachoObservacao] = useState('');
@@ -53,20 +59,25 @@ const EmendasPage: React.FC = () => {
       setLoading(true);
       try {
         console.log('[EmendasPage] Fetching emendas from API...');
-        const data = await emendaService.list();
+        const data = await emendaService.listWithDetails();
         console.log('[EmendasPage] Received data:', data);
         // Map API data to frontend Emenda interface
         const mappedEmendas: Emenda[] = data.map((e) => ({
-          id: e.id || 0,
-          title: e.name || '',
-          year: e.year || new Date().getFullYear(),
+          id: e.id || '',
+          councilorId: e.councilorId,
+          councilorName: e.councilorName,
+          councilorPoliticalParty: e.councilorPoliticalParty,
+          officialCode: e.officialCode,
+          date: e.date,
           value: e.value ? `R$ ${e.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
+          classification: e.classification,
+          category: e.category,
           status: e.status || 'Pendente',
+          institutionId: e.institutionId,
+          institutionName: e.institutionName,
+          signedLink: e.signedLink,
           description: e.description,
-          code: e.code,
-          institution: e.institution,
-          parlamentar: e.parlamentar,
-          hasDetail: e.hasDetail,
+          objectDetail: e.objectDetail,
         }));
         console.log('[EmendasPage] Mapped emendas:', mappedEmendas);
         setEmendas(mappedEmendas);
@@ -115,15 +126,17 @@ const EmendasPage: React.FC = () => {
   const openCreateModal = () => {
     setEditForm({
       id: 0,
-      title: '',
-      year: new Date().getFullYear(),
-      value: '',
+      councilorId: undefined,
+      officialCode: '',
+      date: new Date().toISOString().split('T')[0],
+      value: 'R$ 0,00',
+      classification: '',
+      category: '',
       status: 'Pendente',
+      institutionId: undefined,
+      signedLink: '',
       description: '',
-      code: '',
-      institution: '',
-      parlamentar: '',
-      hasDetail: false,
+      objectDetail: '',
     });
     setIsCreateMode(true);
   };
@@ -152,6 +165,7 @@ const EmendasPage: React.FC = () => {
   const closeModal = () => {
     setSelectedEmenda(null);
     setIsCreateMode(false);
+    setIsEditMode(false);
     setHistorico([]);
     setDespachoObservacao('');
   };
@@ -190,35 +204,55 @@ const EmendasPage: React.FC = () => {
       }
 
       const emendaDTO = {
-        name: editForm.title,
-        code: editForm.code,
-        year: editForm.year,
+        councilorId: editForm.councilorId,
+        officialCode: editForm.officialCode,
+        date: editForm.date,
         value: valueNum,
+        classification: editForm.classification,
+        category: editForm.category,
         status: editForm.status,
+        institutionId: editForm.institutionId,
+        signedLink: editForm.signedLink,
         description: editForm.description,
-        institution: editForm.institution,
-        parlamentar: editForm.parlamentar,
-        hasDetail: editForm.hasDetail,
+        objectDetail: editForm.objectDetail,
       };
 
-      console.log('[EmendasPage] Creating emenda:', emendaDTO);
-      const created = await emendaService.create(emendaDTO);
-      console.log('[EmendasPage] Created emenda:', created);
+      let result;
+      if (editForm.id && editForm.id > 0) {
+        // Update existing emenda
+        console.log('[EmendasPage] Updating emenda:', emendaDTO);
+        result = await emendaService.update(editForm.id, emendaDTO);
+        console.log('[EmendasPage] Updated emenda:', result);
+      } else {
+        // Create new emenda
+        console.log('[EmendasPage] Creating emenda:', emendaDTO);
+        result = await emendaService.create(emendaDTO);
+        console.log('[EmendasPage] Created emenda:', result);
+      }
 
-      // Add to local state
-      const newEmenda: Emenda = {
-        id: created.id || 0,
-        title: created.name || '',
-        year: created.year || new Date().getFullYear(),
-        value: created.value ? `R$ ${created.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
-        status: created.status || 'Pendente',
-        description: created.description,
-        code: created.code,
-        institution: created.institution,
-        parlamentar: created.parlamentar,
-        hasDetail: created.hasDetail,
+      // Map to local state
+      const mappedEmenda: Emenda = {
+        id: result.id || 0,
+        councilorId: result.councilorId,
+        officialCode: result.officialCode,
+        date: result.date,
+        value: result.value ? `R$ ${result.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
+        classification: result.classification,
+        category: result.category,
+        status: result.status || 'Pendente',
+        institutionId: result.institutionId,
+        signedLink: result.signedLink,
+        description: result.description,
+        objectDetail: result.objectDetail,
       };
-      setEmendas((prev) => [newEmenda, ...prev]);
+
+      if (editForm.id && editForm.id > 0) {
+        // Update in list
+        setEmendas((prev) => prev.map((e) => (e.id === editForm.id ? mappedEmenda : e)));
+      } else {
+        // Add to list
+        setEmendas((prev) => [mappedEmenda, ...prev]);
+      }
 
       closeModal();
     } catch (err) {
@@ -229,7 +263,7 @@ const EmendasPage: React.FC = () => {
     }
   };
 
-  const handleAcao = async (acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR' | 'SOLICITAR_APROVACAO') => {
+  const handleAcao = async (acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR' | 'SOLICITAR_APROVACAO' | 'AGUARDAR_DETALHAMENTO') => {
     if (!selectedEmenda || selectedEmenda.id <= 0) {
       alert('Emenda inválida ou não selecionada');
       return;
@@ -272,16 +306,18 @@ const EmendasPage: React.FC = () => {
         try {
           const data = await emendaService.list();
           const mappedEmendas: Emenda[] = data.map((e) => ({
-            id: e.id || 0,
-            title: e.name || '',
-            year: e.year || new Date().getFullYear(),
+            id: e.id || '',
+            councilorId: e.councilorId,
+            officialCode: e.officialCode,
+            date: e.date,
             value: e.value ? `R$ ${e.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
+            classification: e.classification,
+            category: e.category,
             status: e.status || 'Pendente',
+            institutionId: e.institutionId,
+            signedLink: e.signedLink,
             description: e.description,
-            code: e.code,
-            institution: e.institution,
-            parlamentar: e.parlamentar,
-            hasDetail: e.hasDetail,
+            objectDetail: e.objectDetail,
           }));
           setEmendas(mappedEmendas);
         } catch (refreshErr) {
@@ -344,6 +380,28 @@ const EmendasPage: React.FC = () => {
             >
               + Nova Emenda
             </button>
+
+            <Link
+              to="/painel/convenios"
+              className="inline-flex items-center px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
+            >
+              Gerenciar Convênios
+            </Link>
+
+            <Link
+              to="/painel/institutions"
+              className="inline-flex items-center px-4 py-2 rounded bg-purple-600 text-white text-sm font-medium hover:bg-purple-700"
+            >
+              Gerenciar Instituições
+            </Link>
+
+            <Link
+              to="/painel/councilors"
+              className="inline-flex items-center px-4 py-2 rounded bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
+            >
+              Gerenciar Vereadores
+            </Link>
+
             <Link
               to="/"
               className="inline-flex items-center px-4 py-2 border rounded bg-white text-sm text-gray-700 hover:bg-gray-100"
@@ -436,29 +494,74 @@ const EmendasPage: React.FC = () => {
                  )}
                </div>
              ) : (
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+               <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-4">
                  {filtered.map((e) => (
-                   <div key={e.id} className="border rounded p-4 bg-gray-50">
-                     <div className="flex items-center justify-between">
-                       <h3 className="font-semibold">{e.title}</h3>
-                       <span className="text-sm text-gray-600">{e.year}</span>
-                     </div>
-                     <p className="text-gray-700 mt-2">Valor: {e.value}</p>
-                     <p className="mt-3 inline-flex items-center gap-2">
+                   <div key={e.id} className="border rounded-lg p-4 bg-white shadow-sm">
+                     {/* Status + Institution */}
+                     <div className="flex items-start justify-between gap-3">
+                       <div className="min-w-0">
+                         <div className="text-xs text-gray-500">Instituição</div>
+                         <div className="font-semibold text-gray-900 truncate">
+                           {e.institutionName || e.institutionId || '—'}
+                         </div>
+                       </div>
+
                        <span
-                         className={`px-2 py-1 text-xs rounded-full ${
-                           e.status === 'Aprovada' ? 'bg-green-100 text-green-800' : e.status === 'Rejeitada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'
+                         className={`shrink-0 px-2 py-1 text-xs rounded-full ${
+                           (e.status === 'Aprovada' || e.status === 'APROVADA' || e.status === 'APROVADO.' || e.status === 'Aprovado' || e.status === 'Aprovada pelo Gestor')
+                             ? 'bg-emerald-100 text-emerald-800'
+                             : (e.status === 'Rejeitada' || e.status === 'REJEITADA' || e.status === 'REJEITADO' || e.status === 'Rejeitado')
+                               ? 'bg-red-100 text-red-800'
+                               : 'bg-yellow-100 text-yellow-800'
                          }`}
                        >
                          {e.status}
                        </span>
-                     </p>
+                     </div>
+
+                     {/* Brief description */}
+                     <div className="mt-3">
+                       <div className="text-xs text-gray-500">Descrição</div>
+                       <p className="text-sm text-gray-700 line-clamp-2">
+                         {e.description || '—'}
+                       </p>
+                     </div>
+
+                     {/* Category */}
+                     <div className="mt-3">
+                       <div className="text-xs text-gray-500">Categoria</div>
+                       <div className="text-sm font-medium text-gray-900">
+                         {e.category || '—'}
+                       </div>
+                     </div>
+
+                     <hr className="my-4 border-gray-200" />
+
+                     {/* Value + Parlamentar */}
+                     <div className="grid grid-cols-2 gap-4">
+                       <div>
+                         <div className="text-xs text-gray-500">Valor</div>
+                         <div className="text-sm font-semibold text-gray-900">{e.value}</div>
+                       </div>
+                       <div className="text-right">
+                         <div className="text-xs text-gray-500">Parlamentar</div>
+                         <div className="text-sm font-semibold text-gray-900 truncate">
+                           {e.councilorName || e.councilorId || '—'}
+                         </div>
+                       </div>
+                     </div>
+
+                     {/* Official code */}
+                     <div className="mt-3 text-sm text-gray-700">
+                       <span className="text-gray-500">Emenda:</span>{' '}
+                       <span className="font-mono font-medium">{e.officialCode || '—'}</span>
+                     </div>
 
                      <div className="mt-4 flex gap-2">
                        <button
                          type="button"
                          onClick={() => openViewModal(e)}
-                         className="px-3 py-1 border rounded text-sm"
+                         className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
                        >
                          Visualizar
                        </button>
@@ -483,88 +586,107 @@ const EmendasPage: React.FC = () => {
              if (e.target === e.currentTarget) closeModal();
            }}
          >
-           <div className="max-w-5xl w-full bg-white rounded-lg shadow-lg overflow-auto max-h-[90vh]">
-             <div className="p-6 border-b bg-gray-50 flex items-center justify-between">
-               <div>
-                 <h2 id="emenda-title" className="text-2xl font-bold">
-                   {isCreateMode ? 'Nova Emenda' : editForm.title}
-                 </h2>
-                 <p className="text-sm text-gray-600">
-                   {isCreateMode ? 'Preencha os dados para criar uma nova emenda' : 'Área administrativa — Emenda'}
-                 </p>
+           <div className="max-w-5xl w-full bg-white rounded-2xl shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+             {/* Header Section */}
+             <div className="flex flex-col items-center pt-8 pb-6 px-6 border-b border-gray-100 bg-gray-50/50">
+               <div className="w-16 h-16 bg-purple-100 text-purple-600 rounded-full flex items-center justify-center mb-4 shadow-sm border border-purple-200">
+                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-8 h-8">
+                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                   <polyline points="14 2 14 8 20 8"></polyline>
+                   <line x1="16" y1="13" x2="8" y2="13"></line>
+                   <line x1="16" y1="17" x2="8" y2="17"></line>
+                   <polyline points="10 9 9 9 8 9"></polyline>
+                 </svg>
                </div>
-               <div className="flex items-center gap-2">
-                 {!isCreateMode && selectedEmenda && (
-                   <Link to={`/emendas/${selectedEmenda.id}`} className="px-3 py-1 border rounded text-sm">Abrir página</Link>
-                 )}
-                 {isCreateMode && (
-                   <button
-                     type="button"
-                     onClick={handleSave}
-                     disabled={saving}
-                     className="px-3 py-1 bg-emerald-600 text-white rounded disabled:bg-emerald-400"
-                   >
-                     {saving ? 'Salvando...' : 'Salvar'}
-                   </button>
-                 )}
-                 <button
-                   ref={closeButtonRef}
-                   type="button"
-                   onClick={closeModal}
-                   className="px-3 py-1 bg-red-600 text-white rounded"
-                   aria-label="Fechar detalhes da emenda"
-                 >
-                   Fechar
-                 </button>
+               <span className="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-1">
+                 {isCreateMode ? 'Nova Emenda' : 'Análise de Gestão'}
+               </span>
+               <h2 className="text-xl font-bold text-gray-900 text-center leading-tight mb-1">
+                 {isCreateMode ? 'Criar Nova Emenda' : (editForm.institution || editForm.title)}
+               </h2>
+               <div className="mt-2 flex gap-2">
+                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
+                   editForm.status === 'Aprovada' ? 'bg-green-100 text-green-800 border-green-200' :
+                   editForm.status === 'Rejeitada' ? 'bg-red-100 text-red-800 border-red-200' :
+                   editForm.status === 'Retificar' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                   'bg-gray-100 text-gray-700 border-gray-200'
+                 }`}>
+                   Status: {editForm.status}
+                 </span>
                </div>
              </div>
 
-             <div className="p-6 grid grid-cols-1 lg:grid-cols-12 gap-8">
+             {/* Close button */}
+             <button
+               ref={closeButtonRef}
+               type="button"
+               onClick={closeModal}
+               className="absolute right-4 top-4 rounded-sm opacity-70 hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-purple-500"
+               aria-label="Fechar"
+             >
+               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                 <path d="M18 6 6 18"></path>
+                 <path d="m6 6 12 12"></path>
+               </svg>
+             </button>
+
+             {/* Edit/Save button for non-create mode */}
+             {!isCreateMode && (
+               <div className="absolute left-4 top-4 flex gap-2">
+                 {isEditMode ? (
+                   <>
+                     <button
+                       type="button"
+                       onClick={handleSave}
+                       disabled={saving}
+                       className="px-3 py-1 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 disabled:opacity-50"
+                     >
+                       {saving ? 'Salvando...' : 'Salvar'}
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => {
+                         setIsEditMode(false);
+                         if (selectedEmenda) {
+                           setEditForm({ ...selectedEmenda });
+                         }
+                       }}
+                       className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
+                     >
+                       Cancelar
+                     </button>
+                   </>
+                 ) : (
+                   <button
+                     type="button"
+                     onClick={() => setIsEditMode(true)}
+                     className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                   >
+                     Editar
+                   </button>
+                 )}
+               </div>
+             )}
+
+             {/* Content Section */}
+             <div className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start overflow-y-auto">
+               {/* Left Column - Main Content */}
                <div className="lg:col-span-8 space-y-6">
-                 <section className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                 {/* Dados da Emenda */}
+                 <section className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-6 relative">
                    <h3 className="text-base font-semibold text-slate-800 mb-4 border-b pb-2">Dados da Emenda</h3>
                    <div className="space-y-4">
+                     {/* Número e Valor */}
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">Nome</span>
-                         {isCreateMode ? (
-                           <input
-                             type="text"
-                             value={editForm.title}
-                             onChange={(e) => handleFormChange('title', e.target.value)}
-                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Título da emenda"
-                           />
-                         ) : (
-                           <span className="font-mono text-slate-700 font-medium">{editForm.title}</span>
-                         )}
-                       </div>
-                       <div>
-                         <span className="text-xs text-slate-500 uppercase block">Ano</span>
-                         {isCreateMode ? (
-                           <input
-                             type="number"
-                             value={editForm.year}
-                             onChange={(e) => handleFormChange('year', parseInt(e.target.value) || 0)}
-                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Ano"
-                           />
-                         ) : (
-                           <span className="font-mono text-slate-700 font-medium">{editForm.year}</span>
-                         )}
-                       </div>
-                     </div>
-
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                       <div>
-                         <span className="text-xs text-slate-500 uppercase block">Código</span>
-                         {isCreateMode ? (
+                         <span className="text-xs text-slate-500 uppercase block">Código Oficial</span>
+                         {(isCreateMode || isEditMode) ? (
                            <input
                              type="text"
                              value={editForm.code || ''}
                              onChange={(e) => handleFormChange('code', e.target.value)}
                              className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Código da emenda"
+                             placeholder="Ex: 004-132-2025"
                            />
                          ) : (
                            <span className="font-mono text-slate-700 font-medium">{editForm.code || '—'}</span>
@@ -587,138 +709,242 @@ const EmendasPage: React.FC = () => {
                        </div>
                      </div>
 
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                       <div>
-                         <span className="text-xs text-slate-500 uppercase block">Instituição</span>
-                         {isCreateMode ? (
-                           <input
-                             type="text"
-                             value={editForm.institution || ''}
-                             onChange={(e) => handleFormChange('institution', e.target.value)}
-                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Nome da instituição"
-                           />
-                         ) : (
-                           <span className="font-mono text-slate-700 font-medium">{editForm.institution || '—'}</span>
-                         )}
-                       </div>
-                       <div>
-                         <span className="text-xs text-slate-500 uppercase block">Parlamentar</span>
-                         {isCreateMode ? (
-                           <input
-                             type="text"
-                             value={editForm.parlamentar || ''}
-                             onChange={(e) => handleFormChange('parlamentar', e.target.value)}
-                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Nome do parlamentar"
-                           />
-                         ) : (
-                           <span className="font-mono text-slate-700 font-medium">{editForm.parlamentar || '—'}</span>
-                         )}
-                       </div>
-                     </div>
-
+                     {/* Descrição Inicial */}
                      <div>
-                       <span className="text-xs text-slate-500 uppercase block">Descrição</span>
+                       <span className="text-xs text-slate-500 uppercase block">Descrição Inicial</span>
                        {isCreateMode ? (
                          <textarea
                            value={editForm.description || ''}
                            onChange={(e) => handleFormChange('description', e.target.value)}
-                           className="mt-1 w-full border rounded px-3 py-2 text-sm min-h-[100px]"
-                           placeholder="Descrição detalhada da emenda..."
+                           className="mt-1 w-full border rounded px-3 py-2 text-sm min-h-[60px]"
+                           placeholder="Descrição da emenda..."
                          />
                        ) : (
                          <p className="text-slate-700 text-sm mt-1">{editForm.description || '—'}</p>
                        )}
                      </div>
 
-                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+                     {/* Objeto Detalhado */}
+                     <div>
+                       <span className="text-xs text-slate-500 uppercase block">Objeto Detalhado</span>
+                       {isCreateMode ? (
+                         <textarea
+                           value={editForm.objectDetail || ''}
+                           onChange={(e) => handleFormChange('objectDetail', e.target.value)}
+                           className="mt-1 w-full border rounded px-3 py-2 text-sm min-h-[100px]"
+                           placeholder="Detalhamento do objeto da emenda..."
+                         />
+                       ) : (
+                         <div className="bg-white p-3 rounded border border-slate-200 text-sm text-slate-700 min-h-[60px] whitespace-pre-wrap mt-1">
+                           {editForm.objectDetail || '—'}
+                         </div>
+                       )}
+                     </div>
+
+                     {/* Data, Classificação e Categoria */}
+                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-200">
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">Status</span>
+                         <span className="text-xs text-slate-500 uppercase block">Data</span>
                          {isCreateMode ? (
-                           <select
-                             value={editForm.status}
-                             onChange={(e) => handleFormChange('status', e.target.value)}
+                           <input
+                             type="date"
+                             value={editForm.date || ''}
+                             onChange={(e) => handleFormChange('date', e.target.value)}
                              className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                           >
-                             <option value="Pendente">Pendente</option>
-                             <option value="Aprovada">Aprovada</option>
-                             <option value="Em Andamento">Em Andamento</option>
-                             <option value="Retificar">Retificar</option>
-                             <option value="Rejeitada">Rejeitada</option>
-                           </select>
+                           />
                          ) : (
-                           <div className="mt-2">
-                             <span className={`px-2 py-1 text-xs rounded-full ${editForm.status === 'Aprovada' ? 'bg-green-100 text-green-800' : editForm.status === 'Rejeitada' ? 'bg-red-100 text-red-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                               {editForm.status}
-                             </span>
-                           </div>
+                           <span className="text-slate-700 text-sm">{editForm.date ? new Date(editForm.date).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '—'}</span>
                          )}
                        </div>
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">Detalhamento</span>
+                         <span className="text-xs text-slate-500 uppercase block">Classificação</span>
                          {isCreateMode ? (
-                           <label className="mt-2 flex items-center gap-2">
-                             <input
-                               type="checkbox"
-                               checked={editForm.hasDetail || false}
-                               onChange={(e) => handleFormChange('hasDetail', e.target.checked)}
-                               className="rounded"
-                             />
-                             <span className="text-sm text-slate-700">Com detalhamento</span>
-                           </label>
+                           <input
+                             type="text"
+                             value={editForm.classification || ''}
+                             onChange={(e) => handleFormChange('classification', e.target.value)}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                             placeholder="Ex: Custeio"
+                           />
                          ) : (
-                           <p className="text-slate-700 text-sm mt-1">{editForm.hasDetail ? 'Com detalhamento' : 'Sem detalhamento'}</p>
+                           <span className="text-slate-700 text-sm">{editForm.classification || '—'}</span>
+                         )}
+                       </div>
+                       <div>
+                         <span className="text-xs text-slate-500 uppercase block">Categoria</span>
+                         {isCreateMode ? (
+                           <input
+                             type="text"
+                             value={editForm.category || ''}
+                             onChange={(e) => handleFormChange('category', e.target.value)}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                             placeholder="Ex: SAÚDE"
+                           />
+                         ) : (
+                           <span className="text-slate-700 text-sm">{editForm.category || '—'}</span>
+                         )}
+                       </div>
+                     </div>
+
+                     {/* Councilor ID, Institution ID e Signed Link */}
+                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                       <div>
+                         <span className="text-xs text-slate-500 uppercase block">ID Vereador</span>
+                         {isCreateMode ? (
+                           <input
+                             type="text"
+                             value={editForm.councilorId || ''}
+                             onChange={(e) => handleFormChange('councilorId', e.target.value)}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                             placeholder="ID do Vereador"
+                           />
+                         ) : (
+                           <span className="text-slate-700 text-sm">{editForm.councilorId || '—'}</span>
+                         )}
+                       </div>
+                       <div>
+                         <span className="text-xs text-slate-500 uppercase block">ID Instituição</span>
+                         {(isCreateMode || isEditMode) ? (
+                           <input
+                             type="text"
+                             value={editForm.institutionId || ''}
+                             onChange={(e) => handleFormChange('institutionId', e.target.value)}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                             placeholder="ID da Instituição"
+                           />
+                         ) : (
+                           <span className="text-slate-700 text-sm">{editForm.institutionId || '—'}</span>
+                         )}
+                       </div>
+                       <div>
+                         <span className="text-xs text-slate-500 uppercase block">Link Assinado</span>
+                         {isCreateMode ? (
+                           <input
+                             type="text"
+                             value={editForm.signedLink || ''}
+                             onChange={(e) => handleFormChange('signedLink', e.target.value)}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                             placeholder="URL"
+                           />
+                         ) : (
+                           <span className="text-slate-700 text-sm truncate block">{editForm.signedLink || '—'}</span>
                          )}
                        </div>
                      </div>
                    </div>
                  </section>
 
+                 {/* Área de Despacho */}
                  {!isCreateMode && (
-                   <section className="bg-white p-3 rounded border border-slate-200 space-y-3">
-                     <p className="font-semibold text-xs text-slate-500 uppercase">Área de Despacho</p>
-                     <textarea
-                       className="w-full min-h-[120px] rounded-md border p-3"
-                       placeholder="Descreva o parecer do gestor..."
-                       value={despachoObservacao}
-                       onChange={(e) => setDespachoObservacao(e.target.value)}
-                       disabled={executingAction}
-                     ></textarea>
-                     <div className="flex gap-3">
-                       <button
-                         className="flex-1 px-4 py-2 bg-emerald-600 text-white rounded disabled:bg-emerald-400"
-                         onClick={() => handleAcao('APROVAR')}
-                         disabled={executingAction}
-                       >
-                         {executingAction ? 'Processando...' : 'Aprovar'}
-                       </button>
-                       <button
-                         className="flex-1 px-4 py-2 bg-amber-500 text-white rounded disabled:bg-amber-300"
-                         onClick={() => handleAcao('DEVOLVER')}
-                         disabled={executingAction}
-                       >
-                         Devolver p/ Retificar
-                       </button>
-                       <button
-                         className="flex-1 px-4 py-2 bg-red-600 text-white rounded disabled:bg-red-400"
-                         onClick={() => handleAcao('REPROVAR')}
-                         disabled={executingAction}
-                       >
-                         Reprovar
-                       </button>
-                       <button
-                         className="flex-1 px-4 py-2 bg-blue-600 text-white rounded disabled:bg-blue-400"
-                         onClick={() => handleAcao('SOLICITAR_APROVACAO')}
-                         disabled={executingAction}
-                       >
-                         Solicitar Aprovação
-                       </button>
+                   <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
+                     <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
+                       <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
+                         <circle cx="12" cy="12" r="10"></circle>
+                         <line x1="12" x2="12" y1="8" y2="12"></line>
+                         <line x1="12" y1="16" x2="12.01" y2="16"></line>
+                       </svg>
+                       Área de Despacho
+                     </h3>
+                     <div className="space-y-4">
+                       <div>
+                         <label className="text-sm font-medium leading-none text-purple-900" htmlFor="dispatch-note">
+                           Motivo / Parecer do Gestor
+                         </label>
+                         <textarea
+                           id="dispatch-note"
+                           className="flex min-h-[80px] w-full rounded-md border px-3 py-2 text-sm mt-1 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                           placeholder="Descreva o motivo da aprovação, necessidade de retificação ou reprovação..."
+                           value={despachoObservacao}
+                           onChange={(e) => setDespachoObservacao(e.target.value)}
+                           disabled={executingAction}
+                         ></textarea>
+                       </div>
+                       <div className="flex flex-wrap gap-3 pt-2">
+                         <button
+                           className="inline-flex items-center justify-center gap-2 h-10 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded disabled:opacity-50 disabled:pointer-events-none flex-1"
+                           onClick={() => handleAcao('APROVAR')}
+                           disabled={executingAction}
+                         >
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                             <circle cx="12" cy="12" r="10"></circle>
+                             <path d="m9 12 2 2 4-4"></path>
+                           </svg>
+                           {executingAction ? 'Processando...' : 'Aprovar'}
+                         </button>
+                         <button
+                           className="inline-flex items-center justify-center gap-2 h-10 px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded disabled:opacity-50 disabled:pointer-events-none flex-1"
+                           onClick={() => handleAcao('DEVOLVER')}
+                           disabled={executingAction}
+                         >
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                             <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
+                             <path d="M3 3v5h5"></path>
+                           </svg>
+                           Devolver p/ Retificar
+                         </button>
+                         <button
+                           className="inline-flex items-center justify-center gap-2 h-10 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded disabled:opacity-50 disabled:pointer-events-none flex-1"
+                           onClick={() => handleAcao('REPROVAR')}
+                           disabled={executingAction}
+                         >
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                             <circle cx="12" cy="12" r="10"></circle>
+                             <path d="m15 9-6 6"></path>
+                             <path d="m9 9 6 6"></path>
+                           </svg>
+                           Reprovar
+                         </button>
+                         <button
+                           className="inline-flex items-center justify-center gap-2 h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50 disabled:pointer-events-none flex-1"
+                           onClick={() => handleAcao('SOLICITAR_APROVACAO')}
+                           disabled={executingAction}
+                         >
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                             <polyline points="17 8 12 3 7 8"></polyline>
+                             <line x1="12" y1="3" x2="12" y2="15"></line>
+                           </svg>
+                           Solicitar Aprovação
+                         </button>
+                         <button
+                           className="inline-flex items-center justify-center gap-2 h-10 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded disabled:opacity-50 disabled:pointer-events-none flex-1"
+                           onClick={() => handleAcao('AGUARDAR_DETALHAMENTO')}
+                           disabled={executingAction}
+                         >
+                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+                             <circle cx="12" cy="12" r="10"></circle>
+                             <polyline points="12 6 12 12 16 14"></polyline>
+                           </svg>
+                           Aguardar Detalhamento
+                         </button>
+                       </div>
                      </div>
-                   </section>
+                   </div>
+                 )}
+
+                 {/* Save button for create mode */}
+                 {isCreateMode && (
+                   <div className="flex justify-end gap-3">
+                     <button
+                       type="button"
+                       onClick={closeModal}
+                       className="px-6 py-2 border border-gray-300 rounded hover:bg-gray-50"
+                     >
+                       Cancelar
+                     </button>
+                     <button
+                       type="button"
+                       onClick={handleSave}
+                       disabled={saving}
+                       className="px-6 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 disabled:pointer-events-none"
+                     >
+                       {saving ? 'Salvando...' : 'Salvar Emenda'}
+                     </button>
+                   </div>
                  )}
                </div>
 
+               {/* Right Column - Timeline & Contacts */}
                <aside className="lg:col-span-4 space-y-6">
                  <div className="bg-white border border-slate-200 rounded-xl p-4">
                    <h3 className="text-sm font-semibold text-slate-800 mb-4">Linha do Tempo</h3>
@@ -734,45 +960,79 @@ const EmendasPage: React.FC = () => {
                    ) : historico.length === 0 ? (
                      <p className="text-sm text-slate-500">Nenhum histórico registrado.</p>
                    ) : (
-                     <div className="space-y-4 max-h-64 overflow-y-auto">
-                       {historico.map((h) => (
-                         <div key={h.id} className="border-l-2 border-slate-300 pl-3 py-1">
-                           <div className="flex items-center gap-2">
-                             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                               h.acao === 'APROVADA' ? 'bg-green-100 text-green-800' :
-                               h.acao === 'REPROVADA' ? 'bg-red-100 text-red-800' :
-                               h.acao === 'DEVOLVIDA' ? 'bg-amber-100 text-amber-800' :
-                               h.acao === 'SOLICITADA_APROVACAO' ? 'bg-blue-100 text-blue-800' :
-                               'bg-slate-100 text-slate-800'
-                             }`}>
-                               {h.acao === 'SOLICITADA_APROVACAO' ? 'SOLICITOU APROVAÇÃO' : h.acao}
+                     <div className="relative pl-4">
+                       <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-slate-200"></div>
+                       <div className="space-y-6">
+                         {historico.map((h) => (
+                           <div key={h.id} className="relative pl-8">
+                             <span className="absolute left-0 top-1.5 -translate-x-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-white ring-4 ring-white">
+                               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-2.5 w-2.5 ${
+                                 (h.acao === 'APROVADA' || h.acao === 'APROVADO' || h.acao === 'Aprovada pelo Gestor') ? 'text-emerald-600' :
+                                 (h.acao === 'REPROVADA' || h.acao === 'REPROVADO') ? 'text-red-600' :
+                                 h.acao === 'DEVOLVIDA' ? 'text-amber-500' :
+                                 h.acao === 'SOLICITADA_APROVACAO' ? 'text-blue-600' :
+                                 h.acao === 'DETALHAMENTO_PENDENTE' ? 'text-purple-600' :
+                                 h.acao === 'DETALHAMENTO_ENVIADO' ? 'text-purple-600' :
+                                 h.acao === 'AGUARDANDO_DETALHAMENTO' ? 'text-gray-600' :
+                                 'text-slate-400'
+                               }`}>
+                                 <circle cx="12" cy="12" r="10"></circle>
+                               </svg>
                              </span>
-                           </div>
-                           <div className="text-xs text-slate-500 mt-1">
-                             {h.statusAnterior && h.statusNovo && (
-                               <span>{h.statusAnterior} → {h.statusNovo}</span>
+                             <div className="flex flex-col gap-1">
+                               <h4 className={`text-sm font-semibold leading-tight ${
+                                 (h.acao === 'APROVADA' || h.acao === 'APROVADO' || h.acao === 'Aprovada pelo Gestor') ? 'text-emerald-700' :
+                                 (h.acao === 'REPROVADA' || h.acao === 'REPROVADO') ? 'text-red-700' :
+                                 h.acao === 'DEVOLVIDA' ? 'text-amber-700' :
+                                 h.acao === 'SOLICITADA_APROVACAO' ? 'text-blue-700' :
+                                 h.acao === 'DETALHAMENTO_PENDENTE' ? 'text-purple-700' :
+                                 h.acao === 'DETALHAMENTO_ENVIADO' ? 'text-purple-700' :
+                                 h.acao === 'AGUARDANDO_DETALHAMENTO' ? 'text-gray-700' :
+                                 'text-slate-700'
+                               }`}>
+                                 {h.acao === 'SOLICITADA_APROVACAO' ? 'Solicitou Aprovação' :
+                                  (h.acao === 'APROVADA' || h.acao === 'APROVADO' || h.acao === 'Aprovada pelo Gestor') ? 'Aprovada' :
+                                  h.acao === 'DEVOLVIDA' ? 'Devolvida para Retificação' :
+                                  (h.acao === 'REPROVADA' || h.acao === 'REPROVADO') ? 'Reprovada' :
+                                  h.acao === 'CRIADA' ? 'Emenda Criada' :
+                                  h.acao === 'ATUALIZADA' ? 'Atualizada' :
+                                  h.acao === 'DETALHAMENTO_PENDENTE' ? 'Formulário de detalhamento pendente' :
+                                  h.acao === 'DETALHAMENTO_ENVIADO' ? 'Formulário de detalhamento enviado' :
+                                  h.acao}
+                               </h4>
+                               <span className="text-[10px] sm:text-xs text-slate-400 font-medium">
+                                 {new Date(h.dataHora).toLocaleString('pt-BR', {
+                                   day: '2-digit',
+                                   month: '2-digit',
+                                   year: 'numeric',
+                                   hour: '2-digit',
+                                   minute: '2-digit'
+                                 })}
+                               </span>
+                             </div>
+                             {h.observacao && (
+                               <p className="text-sm text-slate-500 mt-1">{h.observacao}</p>
+                             )}
+                             {h.usuario && (
+                               <p className="text-xs text-slate-400 mt-1">Por: {h.usuario}</p>
                              )}
                            </div>
-                           {h.observacao && (
-                             <p className="text-xs text-slate-600 mt-1 italic">"{h.observacao}"</p>
-                           )}
-                           <div className="text-xs text-slate-400 mt-1">
-                             {h.usuario && <span>Por: {h.usuario} • </span>}
-                             {new Date(h.dataHora).toLocaleString('pt-BR')}
-                           </div>
-                         </div>
-                       ))}
+                         ))}
+                       </div>
                      </div>
                    )}
                  </div>
 
-                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
-                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Contatos da Instituição</h4>
-                   <div className="space-y-2 text-sm">
-                     <p><span className="text-slate-500">Email:</span> —</p>
-                     <p><span className="text-slate-500">Fone:</span> —</p>
+                 {!isCreateMode && editForm.signedLink && (
+                   <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                     <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Documento Assinado</h4>
+                     <div className="space-y-2 text-sm">
+                       <a href={editForm.signedLink} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline break-all">
+                         Abrir documento
+                       </a>
+                     </div>
                    </div>
-                 </div>
+                 )}
                </aside>
              </div>
            </div>

@@ -32,10 +32,10 @@ const DashboardPage = () => {
             <h2 className="text-lg font-semibold mb-4">Ações Administrativas</h2>
             <div className="space-y-3">
               <Link
-                to="/painel/convenios"
-                className="block w-full text-left px-4 py-3 bg-gradient-to-br from-blue-600 to-blue-500 text-white rounded-lg shadow"
+                to="/painel/institutions"
+                className="block w-full text-left px-4 py-3 bg-gradient-to-br from-purple-600 to-purple-500 text-white rounded-lg shadow"
               >
-                Gerenciar Convênios
+                Gerenciar Instituições
               </Link>
 
               <Link
@@ -61,6 +61,12 @@ const DashboardPage = () => {
             <ul className="space-y-2">
               <li>
                 <Link to="/painel/convenios" className="text-blue-600 underline">Convênios</Link>
+              </li>
+              <li>
+                 <Link to="/painel/institutions" className="text-purple-600 underline">Instituições</Link>
+              </li>
+              <li>
+                <Link to="/painel/councilors" className="text-green-600 underline">Vereadores</Link>
               </li>
               <li>
                 <Link to="/painel/news" className="text-blue-600 underline">Notícias</Link>

@@ -1,35 +1,32 @@
 import api from './api';
 
 export interface EmendaDTO {
-  id?: number;
-  name: string;
-  code?: string;
-  year?: number;
+  id?: string;
+  councilorId?: string;
+  councilorName?: string; // From Councilor entity
+  councilorPoliticalParty?: string; // From Councilor entity
+  officialCode?: string;
+  date?: string;
   value?: number;
-  status?: string;
-  description?: string;
-  institution?: string;
-  parlamentar?: string;
-  hasDetail?: boolean;
-  legalName?: string;
-  cnpj?: string;
+  classification?: string;
   category?: string;
-  link?: string;
-  contactEmail?: string;
-  contactPhone?: string;
-  createTime?: string;
-  updateTime?: string;
+  status?: string;
+  institutionId?: string;
+  institutionName?: string; // From Institution entity
+  signedLink?: string;
+  description?: string;
+  objectDetail?: string;
 }
 
 export interface EmendaAcaoDTO {
-  acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR' | 'SOLICITAR_APROVACAO';
+  acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR' | 'SOLICITAR_APROVACAO' | 'AGUARDAR_DETALHAMENTO';
   observacao?: string;
   usuario?: string;
 }
 
 export interface EmendaHistoricoDTO {
   id: number;
-  emendaId: number;
+  emendaId: string;
   acao: string;
   statusAnterior?: string;
   statusNovo?: string;
@@ -39,40 +36,49 @@ export interface EmendaHistoricoDTO {
 }
 
 export const emendaService = {
-  async list(): Promise<EmendaDTO[]> {
+  list: async (): Promise<EmendaDTO[]> => {
     const response = await api.get('/emendas');
     return response.data;
   },
 
-  async getById(id: number): Promise<EmendaDTO> {
+  listWithDetails: async (): Promise<EmendaDTO[]> => {
+    const response = await api.get('/emendas/with-details');
+    return response.data;
+  },
+
+  getById: async (id: string): Promise<EmendaDTO> => {
     const response = await api.get(`/emendas/${id}`);
     return response.data;
   },
 
-  async create(emenda: EmendaDTO): Promise<EmendaDTO> {
+  getByIdWithDetails: async (id: string): Promise<EmendaDTO> => {
+    const response = await api.get(`/emendas/${id}/with-details`);
+    return response.data;
+  },
+
+  create: async (emenda: Partial<EmendaDTO>): Promise<EmendaDTO> => {
     const response = await api.post('/emendas', emenda);
     return response.data;
   },
 
-  async update(id: number, emenda: EmendaDTO): Promise<EmendaDTO> {
+  update: async (id: string, emenda: Partial<EmendaDTO>): Promise<EmendaDTO> => {
     const response = await api.put(`/emendas/${id}`, emenda);
     return response.data;
   },
 
-  async delete(id: number): Promise<void> {
+  delete: async (id: string): Promise<void> => {
     await api.delete(`/emendas/${id}`);
   },
 
-  async executarAcao(id: number, acao: EmendaAcaoDTO): Promise<EmendaDTO> {
+  executarAcao: async (id: string, acao: EmendaAcaoDTO): Promise<EmendaDTO> => {
     const response = await api.post(`/emendas/${id}/acao`, acao);
     return response.data;
   },
 
-  async getHistorico(id: number): Promise<EmendaHistoricoDTO[]> {
+  getHistorico: async (id: string): Promise<EmendaHistoricoDTO[]> => {
     const response = await api.get(`/emendas/${id}/historico`);
     return response.data;
   },
 };
 
 export default emendaService;
-
