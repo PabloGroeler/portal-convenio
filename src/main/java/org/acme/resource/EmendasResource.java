@@ -18,6 +18,8 @@ import org.acme.service.EmendaService;
 import org.acme.dto.EmendaAcaoDTO;
 import org.acme.dto.EmendaHistoricoDTO;
 import org.acme.dto.EmendaDetailDTO;
+import org.acme.service.EmendaExternalSyncService;
+import org.acme.service.EmendaImportService;
 
 import java.util.List;
 
@@ -28,6 +30,9 @@ public class EmendasResource {
 
     @Inject
     EmendaService emendaService;
+
+    @Inject
+    EmendaExternalSyncService externalSyncService;
 
     @Context
     SecurityContext securityContext;
@@ -126,5 +131,24 @@ public class EmendasResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         return Response.noContent().build();
+    }
+
+    @POST
+    @Path("/sync-external")
+    public Response syncExternal() {
+        try {
+            EmendaImportService.ImportSummary summary = externalSyncService.syncNow(getCurrentUser());
+            return Response.ok(summary).build();
+        } catch (IllegalStateException e) {
+            // e.g. missing external token
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .build();
+        } catch (Exception e) {
+            // Propagate a helpful error (external 401, parsing, etc.)
+            return Response.status(Response.Status.BAD_GATEWAY)
+                    .entity("{\"error\": \"Falha ao sincronizar com API externa\", \"details\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .build();
+        }
     }
 }

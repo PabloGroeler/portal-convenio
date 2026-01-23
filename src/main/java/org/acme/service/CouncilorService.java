@@ -50,6 +50,19 @@ public class CouncilorService {
     }
 
     @Transactional
+    public Councilor updateStringId(String councilorId, Councilor updated) {
+        if (councilorId == null) return null;
+        Councilor existing = councilorRepository.findByCouncilorId(councilorId);
+        if (existing == null) return null;
+
+        existing.fullName = updated.fullName;
+        existing.politicalParty = updated.politicalParty;
+        existing.updateTime = OffsetDateTime.now();
+
+        return existing;
+    }
+
+    @Transactional
     public boolean delete(Long id) {
         Councilor existing = councilorRepository.findById(id);
         if (existing == null) return false;
@@ -57,4 +70,3 @@ public class CouncilorService {
         return true;
     }
 }
-

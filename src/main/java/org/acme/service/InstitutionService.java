@@ -50,6 +50,17 @@ public class InstitutionService {
     }
 
     @Transactional
+    public Institution updateStringId(String institutionId, Institution updated) {
+        if (institutionId == null || institutionId.isBlank()) return null;
+        Institution existing = institutionRepository.findByInstitutionId(institutionId);
+        if (existing == null) return null;
+
+        existing.name = updated.name;
+        existing.updateTime = OffsetDateTime.now();
+        return existing;
+    }
+
+    @Transactional
     public boolean delete(String id) {
         Institution existing = institutionRepository.findById(id);
         if (existing == null) return false;
@@ -57,4 +68,3 @@ public class InstitutionService {
         return true;
     }
 }
-
