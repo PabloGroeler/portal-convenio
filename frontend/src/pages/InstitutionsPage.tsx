@@ -98,9 +98,6 @@ const InstitutionsPage: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  ID da Instituição
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Nome
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -111,9 +108,6 @@ const InstitutionsPage: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {institutions.map((institution) => (
                 <tr key={institution.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                    {institution.institutionId}
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {institution.name}
                   </td>
