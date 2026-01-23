@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import EmendasStats from '../components/EmendasStats';
 import emendaService from '../services/emendaService';
+import institutionService, { type InstitutionDTO } from '../services/institutionService';
+import councilorService, { type CouncilorDTO } from '../services/councilorService';
 import type { EmendaHistoricoDTO } from '../services/emendaService';
 
 interface Emenda {
@@ -37,18 +39,28 @@ const EmendasPage: React.FC = () => {
   const [despachoObservacao, setDespachoObservacao] = useState('');
   const [executingAction, setExecutingAction] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Current emenda being created/edited/viewed in the modal
   const [editForm, setEditForm] = useState<Emenda>({
-    id: 0,
-    title: '',
-    year: new Date().getFullYear(),
-    value: '',
+    id: '',
+    councilorId: '',
+    officialCode: '',
+    date: new Date().toISOString().split('T')[0],
+    value: 'R$ 0,00',
+    classification: '',
+    category: '',
     status: 'Pendente',
+    institutionId: '',
+    signedLink: '',
     description: '',
-    code: '',
-    institution: '',
-    parlamentar: '',
-    hasDetail: false,
+    objectDetail: '',
   });
+
+  // Dropdown data for councilor/institution selectors
+  const [institutions, setInstitutions] = useState<InstitutionDTO[]>([]);
+  const [councilors, setCouncilors] = useState<CouncilorDTO[]>([]);
+  const [institutionSearch, setInstitutionSearch] = useState('');
+  const [councilorSearch, setCouncilorSearch] = useState('');
 
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousActiveRef = useRef<HTMLElement | null>(null);
@@ -123,17 +135,45 @@ const EmendasPage: React.FC = () => {
     return undefined;
   }, [selectedEmenda, isCreateMode]);
 
+  // Load institutions/councilors whenever the modal opens (create or view/edit)
+  useEffect(() => {
+    const shouldLoad = isCreateMode || isEditMode || selectedEmenda != null;
+    if (!shouldLoad) return;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        const [inst, coun] = await Promise.all([
+          institutionService.list(),
+          councilorService.list(),
+        ]);
+        if (cancelled) return;
+        setInstitutions(inst);
+        setCouncilors(coun);
+      } catch (e) {
+        if (cancelled) return;
+        // keep empty arrays on failure
+        setInstitutions([]);
+        setCouncilors([]);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isCreateMode, isEditMode, selectedEmenda]);
+
   const openCreateModal = () => {
     setEditForm({
-      id: 0,
-      councilorId: undefined,
+      id: '',
+      councilorId: '',
       officialCode: '',
       date: new Date().toISOString().split('T')[0],
       value: 'R$ 0,00',
       classification: '',
       category: '',
       status: 'Pendente',
-      institutionId: undefined,
+      institutionId: '',
       signedLink: '',
       description: '',
       objectDetail: '',
@@ -148,7 +188,7 @@ const EmendasPage: React.FC = () => {
     setDespachoObservacao('');
 
     // Fetch history for this emenda
-    if (emenda.id > 0) {
+    if (emenda.id) {
       setLoadingHistorico(true);
       try {
         const hist = await emendaService.getHistorico(emenda.id);
@@ -218,7 +258,7 @@ const EmendasPage: React.FC = () => {
       };
 
       let result;
-      if (editForm.id && editForm.id > 0) {
+      if (editForm.id) {
         // Update existing emenda
         console.log('[EmendasPage] Updating emenda:', emendaDTO);
         result = await emendaService.update(editForm.id, emendaDTO);
@@ -232,7 +272,7 @@ const EmendasPage: React.FC = () => {
 
       // Map to local state
       const mappedEmenda: Emenda = {
-        id: result.id || 0,
+        id: result.id || '',
         councilorId: result.councilorId,
         officialCode: result.officialCode,
         date: result.date,
@@ -246,7 +286,7 @@ const EmendasPage: React.FC = () => {
         objectDetail: result.objectDetail,
       };
 
-      if (editForm.id && editForm.id > 0) {
+      if (editForm.id) {
         // Update in list
         setEmendas((prev) => prev.map((e) => (e.id === editForm.id ? mappedEmenda : e)));
       } else {
@@ -263,8 +303,8 @@ const EmendasPage: React.FC = () => {
     }
   };
 
-  const handleAcao = async (acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR' | 'SOLICITAR_APROVACAO' | 'AGUARDAR_DETALHAMENTO') => {
-    if (!selectedEmenda || selectedEmenda.id <= 0) {
+  const handleAcao = async (acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR') => {
+    if (!selectedEmenda || !selectedEmenda.id) {
       alert('Emenda inválida ou não selecionada');
       return;
     }
@@ -335,10 +375,26 @@ const EmendasPage: React.FC = () => {
   const filtered = emendas.filter((e) => {
     const q = query.trim().toLowerCase();
     if (q) {
-      const hay = `${e.title} ${e.status} ${e.description ?? ''} ${e.code ?? ''} ${e.institution ?? ''} ${e.parlamentar ?? ''}`.toLowerCase();
+      const hay = [
+        e.status,
+        e.description,
+        e.officialCode,
+        e.institutionName,
+        e.institutionId,
+        e.councilorName,
+        e.councilorId,
+        e.category,
+        e.classification,
+      ]
+        .filter((v): v is string => Boolean(v && String(v).trim()))
+        .join(' ')
+        .toLowerCase();
+
       if (!hay.includes(q)) return false;
     }
-    if (year && String(e.year) !== year) return false;
+
+    // NOTE: year filter is still based on the legacy data model; keep it until the API provides a year field.
+    if (year && String((e as any).year) !== year) return false;
 
     // status filter logic (Portuguese labels)
     if (statusFilter && statusFilter !== 'Todas') {
@@ -357,24 +413,65 @@ const EmendasPage: React.FC = () => {
 
     // detail filter
     if (detailFilter && detailFilter !== 'Todas') {
-      if (detailFilter === 'Com Detalhamento' && !e.hasDetail) return false;
-      if (detailFilter === 'Sem Detalhamento' && e.hasDetail) return false;
+      const hasDetail = Boolean((e.objectDetail ?? '').trim());
+      if (detailFilter === 'Com Detalhamento' && !hasDetail) return false;
+      if (detailFilter === 'Sem Detalhamento' && hasDetail) return false;
     }
 
     return true;
   });
 
   return (
-    <div className="min-h-screen bg-gray-50 py-12 px-6">
-      {/* Summary stats (from provided file) */}
-     <div className="max-w-6xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold">Emendas</h1>
-            <p className="text-gray-600 mt-1">Gestão e consulta de emendas — área administrativa</p>
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-3 sm:space-x-4">
+              <Link
+                to="/"
+                aria-label="Início"
+                className="inline-flex items-center justify-center h-12 w-12 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ring-offset-background"
+              >
+                <img
+                  src="/favicon.ico"
+                  alt="Sistema de Emendas"
+                  className="h-6 w-6 sm:h-7 sm:w-7"
+                  loading="lazy"
+                />
+              </Link>
+              <div>
+                <h1 className="text-base sm:text-xl font-bold text-gray-900">Sistema de Emendas</h1>
+              </div>
+            </div>
+
+            <nav aria-label="Navegação principal" className="flex items-center space-x-2 sm:space-x-4">
+               <Link
+                 to="/"
+                 className="text-gray-600 hover:text-gray-900 px-4 py-3 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ring-offset-background inline-flex items-center"
+               >
+                 Sair
+               </Link>
+             </nav>
           </div>
-          <div className="flex items-center gap-3">
+        </div>
+      </header>
+
+      {/* Summary stats (from provided file) */}
+      <div className="max-w-6xl mx-auto py-8 px-6">
+          <div className="max-w-6xl mx-auto">
+              <EmendasStats
+                total={emendas.length}
+                pending={emendas.filter((e) => e.status === 'Pendente' || e.status === 'Em Andamento').length}
+                approved={emendas.filter((e) => e.status === 'Aprovada').length}
+                toRectify={emendas.filter((e) => e.status === 'Retificar').length}
+                rejected={emendas.filter((e) => e.status === 'Rejeitada' || e.status === 'Reprovada').length}
+              />
+            </div>
+
+          {/* Page actions (moved from header) */}
+          <div className="mt-6 mb-6 flex flex-wrap items-center gap-3">
             <button
+              type="button"
               onClick={openCreateModal}
               className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700"
             >
@@ -401,48 +498,32 @@ const EmendasPage: React.FC = () => {
             >
               Gerenciar Vereadores
             </Link>
-
-            <Link
-              to="/"
-              className="inline-flex items-center px-4 py-2 border rounded bg-white text-sm text-gray-700 hover:bg-gray-100"
-            >
-              Voltar para Home
-            </Link>
           </div>
-        </div>
-        <div className="max-w-6xl mx-auto">
-            <EmendasStats
-              total={emendas.length}
-              pending={emendas.filter((e) => e.status === 'Pendente' || e.status === 'Em Andamento').length}
-              approved={emendas.filter((e) => e.status === 'Aprovada').length}
-              toRectify={emendas.filter((e) => e.status === 'Retificar').length}
-              rejected={emendas.filter((e) => e.status === 'Rejeitada' || e.status === 'Reprovada').length}
-            />
-          </div>
-        <div className="bg-white rounded shadow p-6">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <input
-                type="text"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                placeholder="Buscar por descrição, código, instituição ou parlamentar..."
-                className="border rounded px-3 py-2 w-72"
-              />
 
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-3 py-2">
-                <option>Todas</option>
-                <option>Pendentes</option>
-                <option>Aprovadas</option>
-                <option>Retificar</option>
-                <option>Reprovadas</option>
-              </select>
+           <div className="bg-white rounded shadow p-6">
+           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+             <div className="flex items-center gap-3">
+               <input
+                 type="text"
+                 value={query}
+                 onChange={(e) => setQuery(e.target.value)}
+                 placeholder="Buscar por descrição, código, instituição ou parlamentar..."
+                 className="border rounded px-3 py-2 w-72"
+               />
 
-              <select value={detailFilter} onChange={(e) => setDetailFilter(e.target.value)} className="border rounded px-3 py-2">
-                <option>Todas</option>
-                <option>Com Detalhamento</option>
-                <option>Sem Detalhamento</option>
-              </select>
+               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-3 py-2">
+                 <option>Todas</option>
+                 <option>Pendentes</option>
+                 <option>Aprovadas</option>
+                 <option>Retificar</option>
+                 <option>Reprovadas</option>
+               </select>
+
+               <select value={detailFilter} onChange={(e) => setDetailFilter(e.target.value)} className="border rounded px-3 py-2">
+                 <option>Todas</option>
+                 <option>Com Detalhamento</option>
+                 <option>Sem Detalhamento</option>
+               </select>
 
                <select
                  value={year}
@@ -599,10 +680,16 @@ const EmendasPage: React.FC = () => {
                  </svg>
                </div>
                <span className="text-xs font-semibold text-purple-600 uppercase tracking-wider mb-1">
-                 {isCreateMode ? 'Nova Emenda' : 'Análise de Gestão'}
+                 {isCreateMode
+                   ? 'Nova Emenda'
+                   : (editForm.institutionName ||
+                      institutions.find((i) => i.institutionId === editForm.institutionId)?.name ||
+                      'Instituição')}
                </span>
                <h2 className="text-xl font-bold text-gray-900 text-center leading-tight mb-1">
-                 {isCreateMode ? 'Criar Nova Emenda' : (editForm.institution || editForm.title)}
+                 {isCreateMode
+                   ? 'Criar Nova Emenda'
+                   : (editForm.officialCode || 'Detalhes da Emenda')}
                </h2>
                <div className="mt-2 flex gap-2">
                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
@@ -720,7 +807,7 @@ const EmendasPage: React.FC = () => {
                            placeholder="Descrição da emenda..."
                          />
                        ) : (
-                         <p className="text-slate-700 text-sm mt-1">{editForm.description || '—'}</p>
+                         <p className="text-slate-700 text-sm mt-1 whitespace-pre-wrap break-words">{editForm.description || '—'}</p>
                        )}
                      </div>
 
@@ -789,31 +876,88 @@ const EmendasPage: React.FC = () => {
                      {/* Councilor ID, Institution ID e Signed Link */}
                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">ID Vereador</span>
-                         {isCreateMode ? (
-                           <input
-                             type="text"
-                             value={editForm.councilorId || ''}
-                             onChange={(e) => handleFormChange('councilorId', e.target.value)}
-                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="ID do Vereador"
-                           />
+                         <span className="text-xs text-slate-500 uppercase block">{(isCreateMode || isEditMode) ? 'ID Vereador' : 'Vereador'}</span>
+                         {(isCreateMode || isEditMode) ? (
+                           <div className="mt-1 space-y-2">
+                             <input
+                               type="text"
+                               value={councilorSearch}
+                               onChange={(e) => setCouncilorSearch(e.target.value)}
+                               className="w-full border rounded px-3 py-2 text-sm"
+                               placeholder="Buscar por nome ou ID do vereador..."
+                             />
+                             <select
+                               value={editForm.councilorId || ''}
+                               onChange={(e) => handleFormChange('councilorId', e.target.value)}
+                               className="w-full border rounded px-3 py-2 text-sm bg-white"
+                             >
+                               <option value="">Selecione um vereador</option>
+                               {councilors
+                                 .filter((c) => {
+                                   const q = councilorSearch.trim().toLowerCase();
+                                   if (!q) return true;
+                                   return (
+                                     c.councilorId.toLowerCase().includes(q) ||
+                                     c.fullName.toLowerCase().includes(q) ||
+                                     (c.politicalParty ?? '').toLowerCase().includes(q)
+                                   );
+                                 })
+                                 .slice(0, 50)
+                                 .map((c) => (
+                                   <option key={c.councilorId} value={c.councilorId}>
+                                     {c.fullName}{c.politicalParty ? ` (${c.politicalParty})` : ''} — {c.councilorId}
+                                   </option>
+                                 ))}
+                             </select>
+                           </div>
                          ) : (
-                           <span className="text-slate-700 text-sm">{editForm.councilorId || '—'}</span>
+                           <span className="text-slate-700 text-sm">
+                             {editForm.councilorName ||
+                               councilors.find((c) => c.councilorId === editForm.councilorId)?.fullName ||
+                               '—'}
+                           </span>
                          )}
                        </div>
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">ID Instituição</span>
+                         <span className="text-xs text-slate-500 uppercase block">{(isCreateMode || isEditMode) ? 'ID Instituição' : 'Instituição'}</span>
                          {(isCreateMode || isEditMode) ? (
-                           <input
-                             type="text"
-                             value={editForm.institutionId || ''}
-                             onChange={(e) => handleFormChange('institutionId', e.target.value)}
-                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="ID da Instituição"
-                           />
+                           <div className="mt-1 space-y-2">
+                             <input
+                               type="text"
+                               value={institutionSearch}
+                               onChange={(e) => setInstitutionSearch(e.target.value)}
+                               className="w-full border rounded px-3 py-2 text-sm"
+                               placeholder="Buscar por nome ou ID da instituição..."
+                             />
+                             <select
+                               value={editForm.institutionId || ''}
+                               onChange={(e) => handleFormChange('institutionId', e.target.value)}
+                               className="w-full border rounded px-3 py-2 text-sm bg-white"
+                             >
+                               <option value="">Selecione uma instituição</option>
+                               {institutions
+                                 .filter((i) => {
+                                   const q = institutionSearch.trim().toLowerCase();
+                                   if (!q) return true;
+                                   return (
+                                     i.institutionId.toLowerCase().includes(q) ||
+                                     i.name.toLowerCase().includes(q)
+                                   );
+                                 })
+                                 .slice(0, 50)
+                                 .map((i) => (
+                                   <option key={i.institutionId} value={i.institutionId}>
+                                     {i.name} — {i.institutionId}
+                                   </option>
+                                 ))}
+                             </select>
+                           </div>
                          ) : (
-                           <span className="text-slate-700 text-sm">{editForm.institutionId || '—'}</span>
+                           <span className="text-slate-700 text-sm">
+                             {editForm.institutionName ||
+                               institutions.find((i) => i.institutionId === editForm.institutionId)?.name ||
+                               '—'}
+                           </span>
                          )}
                        </div>
                        <div>
@@ -880,7 +1024,7 @@ const EmendasPage: React.FC = () => {
                              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"></path>
                              <path d="M3 3v5h5"></path>
                            </svg>
-                           Devolver p/ Retificar
+                          Devolver
                          </button>
                          <button
                            className="inline-flex items-center justify-center gap-2 h-10 px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded disabled:opacity-50 disabled:pointer-events-none flex-1"
@@ -893,29 +1037,6 @@ const EmendasPage: React.FC = () => {
                              <path d="m9 9 6 6"></path>
                            </svg>
                            Reprovar
-                         </button>
-                         <button
-                           className="inline-flex items-center justify-center gap-2 h-10 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded disabled:opacity-50 disabled:pointer-events-none flex-1"
-                           onClick={() => handleAcao('SOLICITAR_APROVACAO')}
-                           disabled={executingAction}
-                         >
-                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                             <polyline points="17 8 12 3 7 8"></polyline>
-                             <line x1="12" y1="3" x2="12" y2="15"></line>
-                           </svg>
-                           Solicitar Aprovação
-                         </button>
-                         <button
-                           className="inline-flex items-center justify-center gap-2 h-10 px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded disabled:opacity-50 disabled:pointer-events-none flex-1"
-                           onClick={() => handleAcao('AGUARDAR_DETALHAMENTO')}
-                           disabled={executingAction}
-                         >
-                           <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
-                             <circle cx="12" cy="12" r="10"></circle>
-                             <polyline points="12 6 12 12 16 14"></polyline>
-                           </svg>
-                           Aguardar Detalhamento
                          </button>
                        </div>
                      </div>
@@ -974,6 +1095,8 @@ const EmendasPage: React.FC = () => {
                                  h.acao === 'DETALHAMENTO_PENDENTE' ? 'text-purple-600' :
                                  h.acao === 'DETALHAMENTO_ENVIADO' ? 'text-purple-600' :
                                  h.acao === 'AGUARDANDO_DETALHAMENTO' ? 'text-gray-600' :
+                                 h.acao === 'CRIADA' ? 'text-slate-400' :
+                                 h.acao === 'PENDENTE' ? 'text-slate-400' :
                                  'text-slate-400'
                                }`}>
                                  <circle cx="12" cy="12" r="10"></circle>
@@ -988,6 +1111,8 @@ const EmendasPage: React.FC = () => {
                                  h.acao === 'DETALHAMENTO_PENDENTE' ? 'text-purple-700' :
                                  h.acao === 'DETALHAMENTO_ENVIADO' ? 'text-purple-700' :
                                  h.acao === 'AGUARDANDO_DETALHAMENTO' ? 'text-gray-700' :
+                                 h.acao === 'CRIADA' ? 'text-slate-700' :
+                                 h.acao === 'PENDENTE' ? 'text-slate-700' :
                                  'text-slate-700'
                                }`}>
                                  {h.acao === 'SOLICITADA_APROVACAO' ? 'Solicitou Aprovação' :
@@ -995,6 +1120,7 @@ const EmendasPage: React.FC = () => {
                                   h.acao === 'DEVOLVIDA' ? 'Devolvida para Retificação' :
                                   (h.acao === 'REPROVADA' || h.acao === 'REPROVADO') ? 'Reprovada' :
                                   h.acao === 'CRIADA' ? 'Emenda Criada' :
+                                  h.acao === 'PENDENTE' ? 'Emenda Criada' :
                                   h.acao === 'ATUALIZADA' ? 'Atualizada' :
                                   h.acao === 'DETALHAMENTO_PENDENTE' ? 'Formulário de detalhamento pendente' :
                                   h.acao === 'DETALHAMENTO_ENVIADO' ? 'Formulário de detalhamento enviado' :
@@ -1036,7 +1162,7 @@ const EmendasPage: React.FC = () => {
                </aside>
              </div>
            </div>
-          </div>
+         </div>
         )}
      </div>
    );
