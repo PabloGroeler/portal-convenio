@@ -55,12 +55,29 @@ function App() {
               <Route path="/emendas" element={<EmendasPage />} />
               <Route path="/emendas/:id" element={<EmendaDetailPage />} />
 
+              {/* Full-screen admin pages */}
+              <Route
+                path="/painel/emendas"
+                element={
+                  <ProtectedRoute>
+                    <EmendasPage />
+                  </ProtectedRoute>
+                }
+              />
+
               {/* All other routes rendered inside Layout */}
               <Route path="/*" element={<Layout />}>
                 <Route index element={<HomePage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
-                <Route path="painel" element={<DashboardPage />} />
+                <Route
+                  path="painel"
+                  element={
+                    <ProtectedRoute>
+                      <DashboardPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route path="news" element={<NewsPage />} />
                 <Route path="news/:id" element={<NewsArticlePage />} />
                 <Route path="contact" element={<ContactPage />} />

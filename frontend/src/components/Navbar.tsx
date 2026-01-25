@@ -35,6 +35,11 @@ const Navbar = () => {
 
           {/* Right side: public links always visible; auth action (Entrar/Sair) conditional */}
           <div className="hidden md:flex items-center space-x-8">
+            {!isAuthenticated && (
+              <Link to="/painel" className="hover:text-blue-200">
+                Painel
+              </Link>
+            )}
             <Link to="/news" className="hover:text-blue-200">
               Notícias
             </Link>
