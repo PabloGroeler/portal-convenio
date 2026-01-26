@@ -20,6 +20,7 @@ interface Emenda {
   institutionName?: string;
   institutionEmail?: string;
   signedLink?: string;
+  attachments?: string[];
   description?: string;
   objectDetail?: string;
 }
@@ -52,6 +53,7 @@ const EmendasPage: React.FC = () => {
     status: 'Pendente',
     institutionId: '',
     signedLink: '',
+    attachments: [],
     description: '',
     objectDetail: '',
   });
@@ -88,6 +90,7 @@ const EmendasPage: React.FC = () => {
           institutionId: e.institutionId,
           institutionName: e.institutionName,
           signedLink: e.signedLink,
+          attachments: Array.isArray(e.attachments) ? e.attachments : [],
           description: e.description,
           objectDetail: e.objectDetail,
         }));
@@ -175,6 +178,7 @@ const EmendasPage: React.FC = () => {
       status: 'Pendente',
       institutionId: '',
       signedLink: '',
+      attachments: [],
       description: '',
       objectDetail: '',
     });
@@ -253,6 +257,7 @@ const EmendasPage: React.FC = () => {
         status: editForm.status,
         institutionId: editForm.institutionId,
         signedLink: editForm.signedLink,
+        attachments: (editForm.attachments || []).filter((a) => (a ?? '').trim().length > 0),
         description: editForm.description,
         objectDetail: editForm.objectDetail,
       };
@@ -282,6 +287,7 @@ const EmendasPage: React.FC = () => {
         status: result.status || 'Pendente',
         institutionId: result.institutionId,
         signedLink: result.signedLink,
+        attachments: Array.isArray(result.attachments) ? result.attachments : [],
         description: result.description,
         objectDetail: result.objectDetail,
       };
@@ -1145,6 +1151,81 @@ const EmendasPage: React.FC = () => {
                            </div>
                          ))}
                        </div>
+                     </div>
+                   )}
+                 </div>
+
+                 {/* Attachments */}
+                 <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+                   <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Anexos</h4>
+
+                   {(isCreateMode || isEditMode) ? (
+                     <div className="space-y-3">
+                       {(editForm.attachments ?? []).length === 0 ? (
+                         <p className="text-sm text-slate-500">Nenhum anexo adicionado.</p>
+                       ) : (
+                         <ul className="space-y-2">
+                           {(editForm.attachments ?? []).map((url, idx) => (
+                             <li key={`${idx}-${url}`} className="flex items-start gap-2">
+                               <input
+                                 type="text"
+                                 value={url}
+                                 onChange={(e) => {
+                                   const next = [...(editForm.attachments ?? [])];
+                                   next[idx] = e.target.value;
+                                   setEditForm((prev) => ({ ...prev, attachments: next }));
+                                 }}
+                                 className="flex-1 border rounded px-3 py-2 text-sm"
+                                 placeholder="https://..."
+                               />
+                               <button
+                                 type="button"
+                                 onClick={() => {
+                                   const next = [...(editForm.attachments ?? [])];
+                                   next.splice(idx, 1);
+                                   setEditForm((prev) => ({ ...prev, attachments: next }));
+                                 }}
+                                 className="px-3 py-2 text-sm border rounded hover:bg-white"
+                               >
+                                 Remover
+                               </button>
+                             </li>
+                           ))}
+                         </ul>
+                       )}
+
+                       <button
+                         type="button"
+                         onClick={() => {
+                           const next = [...(editForm.attachments ?? [])];
+                           next.push('');
+                           setEditForm((prev) => ({ ...prev, attachments: next }));
+                         }}
+                         className="px-4 py-2 bg-white border border-slate-300 rounded text-sm hover:bg-slate-50"
+                       >
+                         + Adicionar anexo
+                       </button>
+                     </div>
+                   ) : (
+                     <div className="space-y-2 text-sm">
+                       {(editForm.attachments ?? []).length === 0 ? (
+                         <p className="text-slate-500">—</p>
+                       ) : (
+                         <ul className="space-y-2">
+                           {(editForm.attachments ?? []).map((url, idx) => (
+                             <li key={`${idx}-${url}`}>
+                               <a
+                                 href={url}
+                                 target="_blank"
+                                 rel="noopener noreferrer"
+                                 className="text-blue-600 hover:underline break-all"
+                               >
+                                 Abrir anexo {idx + 1}
+                               </a>
+                             </li>
+                           ))}
+                         </ul>
+                       )}
                      </div>
                    )}
                  </div>

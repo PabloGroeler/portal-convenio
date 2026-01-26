@@ -6,6 +6,8 @@ import org.acme.entity.Councilor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 public class EmendaDetailDTO {
     public String id;
@@ -20,6 +22,7 @@ public class EmendaDetailDTO {
     public String institutionId;
     public String institutionName; // From Institution entity
     public String signedLink;
+    public List<String> attachments;
     public String description;
     public String objectDetail;
 
@@ -39,6 +42,7 @@ public class EmendaDetailDTO {
         this.institutionId = emenda.institutionId;
         this.institutionName = institution != null ? institution.name : null;
         this.signedLink = emenda.signedLink;
+        this.attachments = emenda.attachments != null ? new ArrayList<>(emenda.attachments) : new ArrayList<>();
         this.description = emenda.description;
         this.objectDetail = emenda.objectDetail;
     }
@@ -55,9 +59,9 @@ public class EmendaDetailDTO {
         dto.status = emenda.status;
         dto.institutionId = emenda.institutionId;
         dto.signedLink = emenda.signedLink;
+        dto.attachments = emenda.attachments != null ? new ArrayList<>(emenda.attachments) : new ArrayList<>();
         dto.description = emenda.description;
         dto.objectDetail = emenda.objectDetail;
         return dto;
     }
 }
-

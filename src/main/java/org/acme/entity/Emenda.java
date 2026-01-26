@@ -1,14 +1,19 @@
 package org.acme.entity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
+import java.util.ArrayList;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
@@ -49,6 +54,15 @@ public class Emenda {
 
     @Column(name = "signed_link")
     public String signedLink;
+
+    /**
+     * One or more attachment links related to the emenda.
+     * Stored as a separate table emenda_attachment(emenda_id, url).
+     */
+    @ElementCollection
+    @CollectionTable(name = "emenda_attachment", joinColumns = @JoinColumn(name = "emenda_id"))
+    @Column(name = "url", columnDefinition = "TEXT")
+    public List<String> attachments = new ArrayList<>();
 
     @Column(name = "description", columnDefinition = "TEXT")
     public String description;

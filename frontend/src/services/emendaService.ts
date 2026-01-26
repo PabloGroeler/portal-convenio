@@ -14,6 +14,7 @@ export interface EmendaDTO {
   institutionId?: string;
   institutionName?: string; // From Institution entity
   signedLink?: string;
+  attachments?: string[];
   description?: string;
   objectDetail?: string;
 }

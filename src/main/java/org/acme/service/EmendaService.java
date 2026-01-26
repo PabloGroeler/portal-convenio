@@ -141,6 +141,13 @@ public class EmendaService {
         existing.status = updated.status;
         existing.institutionId = updated.institutionId;
         existing.signedLink = updated.signedLink;
+        // Replace attachments list (null-safe)
+        existing.attachments.clear();
+        if (updated.attachments != null) {
+            existing.attachments.addAll(updated.attachments.stream()
+                    .filter(a -> a != null && !a.isBlank())
+                    .toList());
+        }
         existing.description = updated.description;
         existing.objectDetail = updated.objectDetail;
         existing.updateTime = OffsetDateTime.now();
