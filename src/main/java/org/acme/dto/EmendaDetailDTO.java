@@ -19,6 +19,7 @@ public class EmendaDetailDTO {
     public String classification;
     public String category;
     public String status;
+    public String federalStatus;
     public String institutionId;
     public String institutionName; // From Institution entity
     public String signedLink;
@@ -39,6 +40,7 @@ public class EmendaDetailDTO {
         this.classification = emenda.classification;
         this.category = emenda.category;
         this.status = emenda.status;
+        this.federalStatus = emenda.federalStatus;
         this.institutionId = emenda.institutionId;
         this.institutionName = institution != null ? institution.name : null;
         this.signedLink = emenda.signedLink;
@@ -57,6 +59,7 @@ public class EmendaDetailDTO {
         dto.classification = emenda.classification;
         dto.category = emenda.category;
         dto.status = emenda.status;
+        dto.federalStatus = emenda.federalStatus;
         dto.institutionId = emenda.institutionId;
         dto.signedLink = emenda.signedLink;
         dto.attachments = emenda.attachments != null ? new ArrayList<>(emenda.attachments) : new ArrayList<>();

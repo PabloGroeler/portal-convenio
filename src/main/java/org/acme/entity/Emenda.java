@@ -49,6 +49,9 @@ public class Emenda {
     @Column(name = "status", length = 50)
     public String status;
 
+    @Column(name = "federal_status", length = 100)
+    public String federalStatus;
+
     @Column(name = "institution_id", length = 100)
     public String institutionId;
 

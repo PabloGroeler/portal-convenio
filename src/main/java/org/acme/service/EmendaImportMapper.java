@@ -19,12 +19,20 @@ public class EmendaImportMapper {
         e.value = parseBigDecimal(valueToString(src.value));
         e.classification = blankToNull(src.classification);
         e.category = blankToNull(src.category);
-        e.status = blankToNull(src.status);
+        e.status = normalizeStatus(src);
+        e.federalStatus = blankToNull(src.federalStatus);
         e.institutionId = blankToNull(src.institutionId);
         e.signedLink = blankToNull(src.signedLink);
         e.description = blankToNull(src.description);
         e.objectDetail = blankToNull(src.objectDetail);
         return e;
+    }
+
+    private static String normalizeStatus(ExternalEmendaDTO src) {
+        String s = blankToNull(src.status);
+        if (s == null) s = blankToNull(src.state);
+        if (s == null) s = blankToNull(src.situation);
+        return s != null ? s : "Pendente";
     }
 
     private static String blankToNull(String s) {

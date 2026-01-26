@@ -139,6 +139,7 @@ public class EmendaService {
         existing.classification = updated.classification;
         existing.category = updated.category;
         existing.status = updated.status;
+        existing.federalStatus = updated.federalStatus;
         existing.institutionId = updated.institutionId;
         existing.signedLink = updated.signedLink;
         // Replace attachments list (null-safe)

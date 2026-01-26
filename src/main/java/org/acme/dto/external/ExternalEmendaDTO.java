@@ -43,6 +43,21 @@ public class ExternalEmendaDTO {
     @JsonProperty("status")
     public String status;
 
+    /**
+     * New field present in the consolidated endpoint.
+     * Typically represents the federal-level status and may be used as a fallback.
+     */
+    @JsonProperty("federalStatus")
+    public String federalStatus;
+
+    /** Alternative names used by some external datasets. */
+    @JsonProperty("state")
+    public String state;
+
+    /** Alternative names used by some external datasets. */
+    @JsonProperty("situation")
+    public String situation;
+
     @JsonProperty("institutionId")
     public String institutionId;
 
