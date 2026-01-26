@@ -30,8 +30,12 @@ services:
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: update
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_HTTP_HOST: 0.0.0.0
-      QUARKUS_HTTP_CORS_ORIGINS: "http://localhost:3000"
+      QUARKUS_HTTP_CORS_ORIGINS: "http://localhost:3000,http://76.13.168.39:3000"
       QUARKUS_SWAGGER_UI_PATH: /swagger-ui
+      # Ensure JWT secret is available in container
+      JWT_SECRET: "changeit-changeit-changeit-changeit"
+      # External sync token (optional)
+      EXTERNAL_EMENDAS_API_TOKEN: "a0c466c8230dc031ea5b833c0c03983fe892ec55298f3ebe6523b320acc29c3c"
 
   # Frontend service
   frontend:
@@ -43,11 +47,12 @@ services:
     depends_on:
       - app
     environment:
-      - VITE_API_URL=http://localhost:8080/api
+      # Force axios to use the same-origin /api path so Vite proxy handles routing in Docker.
+      - VITE_API_URL=/api
     volumes:
       - ./frontend:/app
       - /app/node_modules
-    command: sh -c "npm run dev"
+    command: sh -c "npm run dev -- --config vite.config.docker.ts"
 
 volumes:
   postgres_data:

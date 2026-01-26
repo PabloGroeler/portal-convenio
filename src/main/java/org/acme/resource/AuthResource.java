@@ -8,6 +8,7 @@ import jakarta.ws.rs.Path;
 import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import lombok.extern.slf4j.Slf4j;
 import org.acme.service.AuthService;
 import org.acme.dto.LoginRequest;
 import org.acme.dto.LoginResponse;
@@ -18,6 +19,7 @@ import org.acme.entity.User;
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
+@Slf4j
 public class AuthResource {
 
     @Inject
@@ -26,6 +28,7 @@ public class AuthResource {
     @POST
     @Path("/login")
     public Response login(LoginRequest loginRequest) {
+        log.info("Login request for user: {}", loginRequest.username());
         try {
             String token = authService.login(loginRequest.username(), loginRequest.password());
             if (token == null) {

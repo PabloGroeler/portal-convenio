@@ -1,3 +1,11 @@
 *
+!pom.xml
+!mvnw
+!mvnw.cmd
+!.mvn/
+!.mvn/**
+!src/
+!src/**
+# Needed for Quarkus build output (fast-jar) in some Dockerfiles
 !target/
 !target/**
