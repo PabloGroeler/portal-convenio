@@ -19,9 +19,9 @@ public class CouncilorService {
         return councilorRepository.listAll();
     }
 
-    public Councilor findById(Long id) {
-        if (id == null) return null;
-        return councilorRepository.findById(id);
+    public Councilor findById(String id) {
+        if (id == null || id.isBlank()) return null;
+        return councilorRepository.findByCouncilorId(id);
     }
 
     public Councilor findByCouncilorId(String councilorId) {
@@ -37,11 +37,11 @@ public class CouncilorService {
     }
 
     @Transactional
-    public Councilor update(Long id, Councilor updated) {
-        Councilor existing = councilorRepository.findById(id);
+    public Councilor update(String id, Councilor updated) {
+        Councilor existing = councilorRepository.findByCouncilorId(id);
         if (existing == null) return null;
 
-        existing.councilorId = updated.councilorId;
+        // Do not overwrite primary key
         existing.fullName = updated.fullName;
         existing.politicalParty = updated.politicalParty;
         existing.updateTime = OffsetDateTime.now();
@@ -63,8 +63,8 @@ public class CouncilorService {
     }
 
     @Transactional
-    public boolean delete(Long id) {
-        Councilor existing = councilorRepository.findById(id);
+    public boolean delete(String id) {
+        Councilor existing = councilorRepository.findByCouncilorId(id);
         if (existing == null) return false;
         councilorRepository.delete(existing);
         return true;

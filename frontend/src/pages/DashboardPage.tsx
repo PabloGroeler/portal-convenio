@@ -50,7 +50,7 @@ const DashboardPage = () => {
                 to="/painel/councilors"
                 className="px-4 py-3 border rounded-lg hover:bg-gray-50 text-center font-medium"
               >
-                Vereadores
+                Parlamentares
               </Link>
               <Link
                 to="/painel/convenios"

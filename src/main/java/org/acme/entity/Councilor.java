@@ -8,8 +8,8 @@ import jakarta.persistence.Index;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "vereadores", indexes = {
-    @Index(name = "idx_vereadores_councilor_id", columnList = "councilor_id", unique = true)
+@Table(name = "parlamentares", indexes = {
+    @Index(name = "idx_parlamentares_councilor_id", columnList = "councilor_id", unique = true)
 })
 public class Councilor {
 

@@ -24,7 +24,7 @@ public class CouncilorResource {
 
     @GET
     @Path("/{id}")
-    public Response getById(@PathParam("id") Long id) {
+    public Response getById(@PathParam("id") String id) {
         Councilor councilor = councilorService.findById(id);
         if (councilor == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
@@ -58,7 +58,7 @@ public class CouncilorResource {
 
     @PUT
     @Path("/{id}")
-    public Response update(@PathParam("id") Long id, Councilor councilor) {
+    public Response update(@PathParam("id") String id, Councilor councilor) {
         Councilor updated = councilorService.update(id, councilor);
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
@@ -68,7 +68,7 @@ public class CouncilorResource {
 
     @DELETE
     @Path("/{id}")
-    public Response delete(@PathParam("id") Long id) {
+    public Response delete(@PathParam("id") String id) {
         boolean deleted = councilorService.delete(id);
         if (!deleted) {
             return Response.status(Response.Status.NOT_FOUND).build();

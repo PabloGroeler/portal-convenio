@@ -502,7 +502,7 @@ const EmendasPage: React.FC = () => {
               to="/painel/councilors"
               className="inline-flex items-center px-4 py-2 rounded bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
             >
-              Gerenciar Vereadores
+              Gerenciar Parlamentares
             </Link>
           </div>
 
@@ -882,7 +882,7 @@ const EmendasPage: React.FC = () => {
                      {/* Councilor ID, Institution ID e Signed Link */}
                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">{(isCreateMode || isEditMode) ? 'ID Vereador' : 'Vereador'}</span>
+                         <span className="text-xs text-slate-500 uppercase block">{(isCreateMode || isEditMode) ? 'ID Parlamentar' : 'Parlamentar'}</span>
                          {(isCreateMode || isEditMode) ? (
                            <div className="mt-1 space-y-2">
                              <input
@@ -890,14 +890,14 @@ const EmendasPage: React.FC = () => {
                                value={councilorSearch}
                                onChange={(e) => setCouncilorSearch(e.target.value)}
                                className="w-full border rounded px-3 py-2 text-sm"
-                               placeholder="Buscar por nome ou ID do vereador..."
+                               placeholder="Buscar por nome ou ID do parlamentar..."
                              />
                              <select
                                value={editForm.councilorId || ''}
                                onChange={(e) => handleFormChange('councilorId', e.target.value)}
                                className="w-full border rounded px-3 py-2 text-sm bg-white"
                              >
-                               <option value="">Selecione um vereador</option>
+                               <option value="">Selecione um parlamentar</option>
                                {councilors
                                  .filter((c) => {
                                    const q = councilorSearch.trim().toLowerCase();
