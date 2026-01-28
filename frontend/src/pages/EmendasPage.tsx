@@ -485,13 +485,6 @@ const EmendasPage: React.FC = () => {
             </button>
 
             <Link
-              to="/painel/convenios"
-              className="inline-flex items-center px-4 py-2 rounded bg-blue-600 text-white text-sm font-medium hover:bg-blue-700"
-            >
-              Gerenciar Convênios
-            </Link>
-
-            <Link
               to="/painel/institutions"
               className="inline-flex items-center px-4 py-2 rounded bg-purple-600 text-white text-sm font-medium hover:bg-purple-700"
             >

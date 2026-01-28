@@ -19,12 +19,17 @@ const AuthContext = createContext<AuthContextType | null>(null);
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  // Seed auth state from storage so refresh keeps the session.
+  const [isAuthenticated, setIsAuthenticated] = useState(() => Boolean(localStorage.getItem('token')));
 
   useEffect(() => {
+    // On refresh, restore user from localStorage if present.
+    // If a token exists but user is missing, keep isAuthenticated true and let pages load; UI can still work.
     const currentUser = getCurrentUser();
     if (currentUser) {
       setUser(currentUser);
+      setIsAuthenticated(true);
+    } else if (localStorage.getItem('token')) {
       setIsAuthenticated(true);
     }
   }, []);
