@@ -16,7 +16,7 @@ public class InstitutionService {
     InstitutionRepository institutionRepository;
 
     public List<Institution> listAll() {
-        return institutionRepository.listAll();
+        return institutionRepository.listAllOrdered();
     }
 
     public Institution findById(String id) {
@@ -42,8 +42,7 @@ public class InstitutionService {
         Institution existing = institutionRepository.findById(id);
         if (existing == null) return null;
 
-        existing.institutionId = updated.institutionId;
-        existing.name = updated.name;
+        applyUpdates(existing, updated);
         existing.updateTime = OffsetDateTime.now();
 
         return existing;
@@ -55,9 +54,44 @@ public class InstitutionService {
         Institution existing = institutionRepository.findByInstitutionId(institutionId);
         if (existing == null) return null;
 
-        existing.name = updated.name;
+        applyUpdates(existing, updated);
         existing.updateTime = OffsetDateTime.now();
         return existing;
+    }
+
+    private void applyUpdates(Institution existing, Institution updated) {
+        // Important: do NOT overwrite the primary key unless explicitly required.
+        if (updated.institutionId != null && !updated.institutionId.isBlank()) {
+            existing.institutionId = updated.institutionId;
+        }
+
+        existing.razaoSocial = updated.razaoSocial;
+        existing.nomeFantasia = updated.nomeFantasia;
+        existing.cnpj = updated.cnpj;
+        existing.inscricaoEstadual = updated.inscricaoEstadual;
+        existing.inscricaoMunicipal = updated.inscricaoMunicipal;
+        existing.dataFundacao = updated.dataFundacao;
+        existing.areasAtuacao = updated.areasAtuacao != null ? updated.areasAtuacao : existing.areasAtuacao;
+
+        existing.telefone = updated.telefone;
+        existing.celular = updated.celular;
+        existing.emailInstitucional = updated.emailInstitucional;
+        existing.emailSecundario = updated.emailSecundario;
+        existing.website = updated.website;
+
+        existing.cep = updated.cep;
+        existing.logradouro = updated.logradouro;
+        existing.numero = updated.numero;
+        existing.complemento = updated.complemento;
+        existing.bairro = updated.bairro;
+        existing.cidade = updated.cidade;
+        existing.uf = updated.uf;
+        existing.pontoReferencia = updated.pontoReferencia;
+
+        existing.numeroRegistroConselhoMunicipal = updated.numeroRegistroConselhoMunicipal;
+        existing.dataRegistroConselho = updated.dataRegistroConselho;
+        existing.objetoSocial = updated.objetoSocial;
+        existing.quantidadeBeneficiarios = updated.quantidadeBeneficiarios;
     }
 
     @Transactional

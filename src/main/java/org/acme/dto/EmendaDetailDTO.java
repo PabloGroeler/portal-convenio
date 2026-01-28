@@ -42,7 +42,7 @@ public class EmendaDetailDTO {
         this.status = emenda.status;
         this.federalStatus = emenda.federalStatus;
         this.institutionId = emenda.institutionId;
-        this.institutionName = institution != null ? institution.name : null;
+        this.institutionName = institution != null ? institution.razaoSocial : null;
         this.signedLink = emenda.signedLink;
         this.attachments = emenda.attachments != null ? new ArrayList<>(emenda.attachments) : new ArrayList<>();
         this.description = emenda.description;

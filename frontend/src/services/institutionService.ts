@@ -3,7 +3,42 @@ import api from './api';
 export interface InstitutionDTO {
   id?: string;
   institutionId: string;
-  name: string;
+
+  // Dados Básicos
+  razaoSocial: string;
+  nomeFantasia?: string;
+  cnpj: string;
+  inscricaoEstadual?: string;
+  inscricaoMunicipal: string;
+  dataFundacao?: string; // yyyy-MM-dd
+  areasAtuacao?: string[];
+
+  // Contato
+  telefone: string;
+  celular?: string;
+  emailInstitucional: string;
+  emailSecundario?: string;
+  website?: string;
+
+  // Endereço
+  cep: string;
+  logradouro: string;
+  numero: string;
+  complemento?: string;
+  bairro: string;
+  cidade: string;
+  uf: string;
+  pontoReferencia?: string;
+
+  // Adicionais
+  numeroRegistroConselhoMunicipal: string;
+  dataRegistroConselho?: string; // yyyy-MM-dd
+  objetoSocial?: string;
+  quantidadeBeneficiarios?: number;
+
+  // Auditoria
+  createTime?: string;
+  updateTime?: string;
 }
 
 const institutionService = {
@@ -13,7 +48,8 @@ const institutionService = {
   },
 
   getById: async (id: string): Promise<InstitutionDTO> => {
-    const response = await api.get(`/institutions/${id}`);
+    // Backend uses institutionId as the identifier (@Id).
+    const response = await api.get(`/institutions/by-institution-id/${encodeURIComponent(id)}`);
     return response.data;
   },
 
@@ -28,12 +64,13 @@ const institutionService = {
   },
 
   update: async (id: string, institution: Partial<InstitutionDTO>): Promise<InstitutionDTO> => {
-    const response = await api.put(`/institutions/${id}`, institution);
+    // Backend uses institutionId as the identifier (@Id).
+    const response = await api.put(`/institutions/${encodeURIComponent(id)}`, institution);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await api.delete(`/institutions/${id}`);
+    await api.delete(`/institutions/${encodeURIComponent(id)}`);
   },
 };
 

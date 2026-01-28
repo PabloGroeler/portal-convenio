@@ -1,17 +1,13 @@
 import React, { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import institutionService from '../services/institutionService';
 import type { InstitutionDTO } from '../services/institutionService';
 
 const InstitutionsPage: React.FC = () => {
+  const navigate = useNavigate();
   const [institutions, setInstitutions] = useState<InstitutionDTO[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showModal, setShowModal] = useState(false);
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [formData, setFormData] = useState<Partial<InstitutionDTO>>({
-    institutionId: '',
-    name: '',
-  });
-  const [error, setError] = useState('');
+  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchInstitutions();
@@ -28,64 +24,40 @@ const InstitutionsPage: React.FC = () => {
     }
   };
 
-  const openCreateModal = () => {
-    setEditingId(null);
-    setFormData({
-      institutionId: '',
-      name: '',
-    });
-    setError('');
-    setShowModal(true);
+  const handleEdit = (institution: InstitutionDTO) => {
+    // Backend uses institutionId as the entity identifier.
+    navigate(`/painel/cadastro-dados-institucionais?id=${encodeURIComponent(institution.institutionId)}`);
   };
 
-  const openEditModal = (institution: InstitutionDTO) => {
-    setEditingId(institution.id || null);
-    setFormData({
-      institutionId: institution.institutionId,
-      name: institution.name,
-    });
-    setError('');
-    setShowModal(true);
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
-
-    try {
-      if (editingId) {
-        await institutionService.update(editingId, formData);
-      } else {
-        await institutionService.create(formData);
-      }
-      setShowModal(false);
-      fetchInstitutions();
-    } catch (err: any) {
-      setError(err.response?.data?.error || 'Erro ao salvar instituição');
-    }
-  };
-
-  const handleDelete = async (id: string) => {
-    if (window.confirm('Deseja realmente excluir esta instituição?')) {
-      try {
-        await institutionService.delete(id);
-        fetchInstitutions();
-      } catch (err) {
-        alert('Erro ao excluir instituição');
-      }
-    }
-  };
+  const filteredInstitutions = institutions.filter((inst) => {
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (inst.razaoSocial ?? '').toLowerCase().includes(q) ||
+      (inst.institutionId ?? '').toLowerCase().includes(q)
+    );
+  });
 
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Instituições</h1>
         <button
-          onClick={openCreateModal}
+          onClick={() => navigate('/painel/cadastro-dados-institucionais')}
           className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
         >
           + Nova Instituição
         </button>
+      </div>
+
+      <div className="mb-4">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar por razão social..."
+          className="w-full md:w-96 px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
+        />
       </div>
 
       {loading ? (
@@ -98,7 +70,7 @@ const InstitutionsPage: React.FC = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Nome
+                  Razão Social
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Ações
@@ -106,91 +78,23 @@ const InstitutionsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {institutions.map((institution) => (
-                <tr key={institution.id}>
+              {filteredInstitutions.map((institution) => (
+                <tr key={institution.institutionId}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {institution.name}
+                    {institution.razaoSocial}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      onClick={() => openEditModal(institution)}
+                      onClick={() => handleEdit(institution)}
                       className="text-blue-600 hover:text-blue-900 mr-4"
                     >
                       Editar
-                    </button>
-                    <button
-                      onClick={() => handleDelete(institution.id!)}
-                      className="text-red-600 hover:text-red-900"
-                    >
-                      Excluir
                     </button>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {showModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-8 max-w-md w-full">
-            <h2 className="text-2xl font-bold mb-4">
-              {editingId ? 'Editar Instituição' : 'Nova Instituição'}
-            </h2>
-
-            {error && (
-              <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ID da Instituição *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.institutionId}
-                  onChange={(e) => setFormData({ ...formData, institutionId: e.target.value })}
-                  className="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ex: INST001"
-                />
-              </div>
-
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Nome *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Nome da instituição"
-                />
-              </div>
-
-              <div className="flex justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-4 py-2 border rounded hover:bg-gray-50"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-                >
-                  {editingId ? 'Atualizar' : 'Criar'}
-                </button>
-              </div>
-            </form>
-          </div>
         </div>
       )}
     </div>

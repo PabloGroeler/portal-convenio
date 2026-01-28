@@ -18,6 +18,7 @@ import EmendasPage from './pages/EmendasPage';
 import EmendaDetailPage from './pages/EmendaDetailPage';
 import InstitutionsPage from './pages/InstitutionsPage';
 import CouncilorsPage from './pages/CouncilorsPage';
+import CadastroDadosInstitucionaisPage from './pages/CadastroDadosInstitucionaisPage';
 import ProtectedRoute from './components/ProtectedRoute';
 
 // Create a client
@@ -97,6 +98,14 @@ function App() {
                   element={
                     <ProtectedRoute>
                       <InstitutionsPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="painel/cadastro-dados-institucionais"
+                  element={
+                    <ProtectedRoute>
+                      <CadastroDadosInstitucionaisPage />
                     </ProtectedRoute>
                   }
                 />

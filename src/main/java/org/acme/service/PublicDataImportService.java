@@ -78,13 +78,29 @@ public class PublicDataImportService {
                 if (existing == null) {
                     Institution entity = new Institution();
                     entity.institutionId = i.institutionId;
-                    entity.name = i.name != null ? i.name : "";
+                    // Map external 'name' into Razão Social as best-effort.
+                    entity.razaoSocial = i.name != null ? i.name : "";
+
+                    // Required fields that external API may not provide.
+                    // Keep empty strings to satisfy non-null constraints, and allow later completion via UI.
+                    entity.cnpj = "00000000000000";
+                    entity.inscricaoMunicipal = "";
+                    entity.telefone = "";
+                    entity.emailInstitucional = (i.institutionId + "@invalido.local");
+                    entity.cep = "00000000";
+                    entity.logradouro = "";
+                    entity.numero = "";
+                    entity.bairro = "";
+                    entity.cidade = "";
+                    entity.uf = "MT";
+                    entity.numeroRegistroConselhoMunicipal = "";
+
                     institutionService.create(entity);
                     summary.institutionsCreated++;
                 } else {
                     Institution updated = new Institution();
                     updated.institutionId = i.institutionId;
-                    updated.name = i.name != null ? i.name : existing.name;
+                    updated.razaoSocial = i.name != null ? i.name : existing.razaoSocial;
                     institutionService.updateStringId(existing.institutionId, updated);
                     summary.institutionsUpdated++;
                 }
