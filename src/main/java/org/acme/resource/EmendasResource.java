@@ -78,7 +78,7 @@ public class EmendasResource {
     @POST
     public Response create(Emenda emenda) {
         Emenda created = emendaService.create(emenda, getCurrentUser());
-        return Response.status(Response.Status.CREATED).entity(created).build();
+        return Response.status(Response.Status.CREATED).entity(EmendaDetailDTO.fromEmenda(created)).build();
     }
 
     @PUT
@@ -88,7 +88,7 @@ public class EmendasResource {
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(updated).build();
+        return Response.ok(EmendaDetailDTO.fromEmenda(updated)).build();
     }
 
     @POST
@@ -105,11 +105,18 @@ public class EmendasResource {
             acao.usuario = getCurrentUser();
         }
 
-        Emenda updated = emendaService.executarAcao(id, acao);
+        Emenda updated;
+        try {
+            updated = emendaService.executarAcao(id, acao);
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .build();
+        }
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(updated).build();
+        return Response.ok(EmendaDetailDTO.fromEmenda(updated)).build();
     }
 
     @GET

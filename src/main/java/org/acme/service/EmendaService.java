@@ -33,19 +33,39 @@ public class EmendaService {
     CouncilorService councilorService;
 
     public List<Emenda> listAll() {
-        return emendaRepository.listAll();
+        // Note: Emenda.attachments is an @ElementCollection and can be lazily loaded.
+        // If we return entities outside a transaction, Jackson serialization may trigger
+        // LazyInitializationException. Keep listing transactional and initialize attachments.
+        return listAllInitialized();
+    }
+
+    @Transactional
+    public List<Emenda> listAllInitialized() {
+        List<Emenda> emendas = emendaRepository.listAll();
+        // Force initialization of attachments while the session is open
+        for (Emenda e : emendas) {
+            if (e.attachments != null) {
+                int ignored = e.attachments.size();
+            }
+        }
+        return emendas;
     }
 
     public Emenda findById(String id) {
         if (id == null) return null;
-        return emendaRepository.findById(id);
+        Emenda e = emendaRepository.findById(id);
+        if (e != null && e.attachments != null) {
+            // Ensure attachments are initialized for serialization
+            int ignored = e.attachments.size();
+        }
+        return e;
     }
 
     /**
      * Get all emendas with enriched institution and councilor data
      */
     public List<EmendaDetailDTO> listAllWithDetails() {
-        List<Emenda> emendas = emendaRepository.listAll();
+        List<Emenda> emendas = listAllInitialized();
         return emendas.stream()
                 .map(this::enrichEmendaWithDetails)
                 .collect(Collectors.toList());
@@ -194,6 +214,16 @@ public class EmendaService {
         Emenda emenda = emendaRepository.findById(id);
         if (emenda == null) return null;
 
+        // Attachments is an @ElementCollection and may be lazily loaded.
+        // Ensure it's initialized inside the transaction so DTO mapping/JSON serialization won't fail.
+        if (emenda.attachments != null) {
+            int ignored = emenda.attachments.size();
+        }
+
+        if (acao == null || acao.acao == null || acao.acao.isBlank()) {
+            throw new IllegalArgumentException("Ação é obrigatória");
+        }
+
         String statusAnterior = emenda.status;
         String novoStatus;
         String acaoRegistrada;
@@ -220,7 +250,8 @@ public class EmendaService {
                 acaoRegistrada = "AGUARDANDO_DETALHAMENTO";
                 break;
             default:
-                return null;
+                // Unknown action should be treated as a client error, not a server error.
+                throw new IllegalArgumentException("Ação inválida: " + acao.acao);
         }
 
         emenda.status = novoStatus;
@@ -233,9 +264,14 @@ public class EmendaService {
             statusAnterior,
             novoStatus,
             acao.observacao,
-            acao.usuario
+            (acao.usuario == null || acao.usuario.isBlank()) ? "sistema" : acao.usuario
         );
         historicoRepository.persist(historico);
+
+        // Keep attachments initialized after the change as well.
+        if (emenda.attachments != null) {
+            int ignored = emenda.attachments.size();
+        }
 
         return emenda;
     }

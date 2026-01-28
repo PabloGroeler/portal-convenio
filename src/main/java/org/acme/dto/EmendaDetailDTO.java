@@ -8,6 +8,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import org.hibernate.LazyInitializationException;
 
 public class EmendaDetailDTO {
     public String id;
@@ -62,7 +63,12 @@ public class EmendaDetailDTO {
         dto.federalStatus = emenda.federalStatus;
         dto.institutionId = emenda.institutionId;
         dto.signedLink = emenda.signedLink;
-        dto.attachments = emenda.attachments != null ? new ArrayList<>(emenda.attachments) : new ArrayList<>();
+        try {
+            dto.attachments = emenda.attachments != null ? new ArrayList<>(emenda.attachments) : new ArrayList<>();
+        } catch (LazyInitializationException e) {
+            // Safety net: don't fail the whole request if attachments couldn't be loaded.
+            dto.attachments = new ArrayList<>();
+        }
         dto.description = emenda.description;
         dto.objectDetail = emenda.objectDetail;
         return dto;

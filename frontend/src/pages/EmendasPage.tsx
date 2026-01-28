@@ -275,10 +275,38 @@ const EmendasPage: React.FC = () => {
         console.log('[EmendasPage] Created emenda:', result);
       }
 
+      // Enrich with details so the UI shows names instead of IDs immediately.
+      // Prefer server-enriched endpoint, fallback to local lookup.
+      try {
+        if (result?.id) {
+          const detailed = await emendaService.getByIdWithDetails(result.id);
+          result = { ...result, ...detailed };
+        }
+      } catch {
+        // ignore and fallback to local lookups below
+      }
+
+      const institutionFromList = result.institutionId
+        ? institutions.find((i) => i.institutionId === result.institutionId)
+        : undefined;
+      const councilorFromList = result.councilorId
+        ? councilors.find((c) => c.councilorId === result.councilorId)
+        : undefined;
+
+      const institutionName =
+        result.institutionName ||
+        editForm.institutionName ||
+        (institutionFromList?.razaoSocial ?? (institutionFromList as any)?.name);
+      const councilorName =
+        result.councilorName ||
+        editForm.councilorName ||
+        councilorFromList?.fullName;
+
       // Map to local state
       const mappedEmenda: Emenda = {
         id: result.id || '',
         councilorId: result.councilorId,
+        councilorName,
         officialCode: result.officialCode,
         date: result.date,
         value: result.value ? `R$ ${result.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
@@ -286,6 +314,7 @@ const EmendasPage: React.FC = () => {
         category: result.category,
         status: result.status || 'Pendente',
         institutionId: result.institutionId,
+        institutionName,
         signedLink: result.signedLink,
         attachments: Array.isArray(result.attachments) ? result.attachments : [],
         description: result.description,
@@ -479,7 +508,7 @@ const EmendasPage: React.FC = () => {
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700"
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
             >
               + Nova Emenda
             </button>
@@ -567,7 +596,7 @@ const EmendasPage: React.FC = () => {
                  {emendas.length === 0 && (
                    <button
                      onClick={openCreateModal}
-                     className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded text-sm font-medium hover:bg-emerald-700"
+                     className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
                    >
                      + Nova Emenda
                    </button>
@@ -582,7 +611,7 @@ const EmendasPage: React.FC = () => {
                        <div className="min-w-0">
                          <div className="text-xs text-gray-500">Instituição</div>
                          <div className="font-semibold text-gray-900 truncate">
-                           {e.institutionName || e.institutionId || '—'}
+                           {e.institutionName || '—'}
                          </div>
                        </div>
 
@@ -682,8 +711,9 @@ const EmendasPage: React.FC = () => {
                  {isCreateMode
                    ? 'Nova Emenda'
                    : (editForm.institutionName ||
-                      institutions.find((i) => i.institutionId === editForm.institutionId)?.name ||
-                      'Instituição')}
+                      institutions.find((i) => i.institutionId === editForm.institutionId)?.razaoSocial ||
+                      (institutions as any).find?.((i: any) => i.institutionId === editForm.institutionId)?.name ||
+                       'Instituição')}
                </span>
                <h2 className="text-xl font-bold text-gray-900 text-center leading-tight mb-1">
                  {isCreateMode
@@ -875,16 +905,9 @@ const EmendasPage: React.FC = () => {
                      {/* Councilor ID, Institution ID e Signed Link */}
                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">{(isCreateMode || isEditMode) ? 'ID Parlamentar' : 'Parlamentar'}</span>
+                         <span className="text-xs text-slate-500 uppercase block">Parlamentar</span>
                          {(isCreateMode || isEditMode) ? (
                            <div className="mt-1 space-y-2">
-                             <input
-                               type="text"
-                               value={councilorSearch}
-                               onChange={(e) => setCouncilorSearch(e.target.value)}
-                               className="w-full border rounded px-3 py-2 text-sm"
-                               placeholder="Buscar por nome ou ID do parlamentar..."
-                             />
                              <select
                                value={editForm.councilorId || ''}
                                onChange={(e) => handleFormChange('councilorId', e.target.value)}
@@ -918,16 +941,9 @@ const EmendasPage: React.FC = () => {
                          )}
                        </div>
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">{(isCreateMode || isEditMode) ? 'ID Instituição' : 'Instituição'}</span>
+                         <span className="text-xs text-slate-500 uppercase block">Instituição</span>
                          {(isCreateMode || isEditMode) ? (
                            <div className="mt-1 space-y-2">
-                             <input
-                               type="text"
-                               value={institutionSearch}
-                               onChange={(e) => setInstitutionSearch(e.target.value)}
-                               className="w-full border rounded px-3 py-2 text-sm"
-                               placeholder="Buscar por nome ou ID da instituição..."
-                             />
                              <select
                                value={editForm.institutionId || ''}
                                onChange={(e) => handleFormChange('institutionId', e.target.value)}
@@ -939,14 +955,15 @@ const EmendasPage: React.FC = () => {
                                    const q = institutionSearch.trim().toLowerCase();
                                    if (!q) return true;
                                    return (
-                                     i.institutionId.toLowerCase().includes(q) ||
-                                     i.name.toLowerCase().includes(q)
+                                     (i.razaoSocial ?? '').toLowerCase().includes(q) ||
+                                     (i.nomeFantasia ?? '').toLowerCase().includes(q) ||
+                                     (i as any).name?.toLowerCase?.().includes(q)
                                    );
                                  })
                                  .slice(0, 50)
                                  .map((i) => (
                                    <option key={i.institutionId} value={i.institutionId}>
-                                     {i.name} — {i.institutionId}
+                                     {i.razaoSocial || (i as any).name || '—'}
                                    </option>
                                  ))}
                              </select>
@@ -954,7 +971,8 @@ const EmendasPage: React.FC = () => {
                          ) : (
                            <span className="text-slate-700 text-sm">
                              {editForm.institutionName ||
-                               institutions.find((i) => i.institutionId === editForm.institutionId)?.name ||
+                               institutions.find((i) => i.institutionId === editForm.institutionId)?.razaoSocial ||
+                               (institutions as any).find?.((i: any) => i.institutionId === editForm.institutionId)?.name ||
                                '—'}
                            </span>
                          )}
