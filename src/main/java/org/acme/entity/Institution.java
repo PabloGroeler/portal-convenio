@@ -10,8 +10,8 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 @Entity
-@Table(name = "institution", indexes = {
-    @Index(name = "idx_institution_institution_id", columnList = "institution_id", unique = true)
+@Table(name = "instituicoes", indexes = {
+    @Index(name = "idx_instituicoes_institution_id", columnList = "institution_id", unique = true)
 })
 public class Institution {
 
@@ -45,4 +45,3 @@ public class Institution {
         this.updateTime = OffsetDateTime.now();
     }
 }
-

@@ -2,16 +2,14 @@ package org.acme.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import jakarta.persistence.Index;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "councilor", indexes = {
-    @Index(name = "idx_councilor_councilor_id", columnList = "councilor_id", unique = true)
+@Table(name = "vereadores", indexes = {
+    @Index(name = "idx_vereadores_councilor_id", columnList = "councilor_id", unique = true)
 })
 public class Councilor {
 
@@ -42,4 +40,3 @@ public class Councilor {
         this.updateTime = OffsetDateTime.now();
     }
 }
-

@@ -10,7 +10,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
 @Entity
-@Table(name = "app_user")
+@Table(name = "usuarios")
 public class User extends PanacheEntity {
 
     @NotBlank

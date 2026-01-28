@@ -12,7 +12,7 @@ import jakarta.persistence.FetchType;
 import java.time.OffsetDateTime;
 
 @Entity
-@Table(name = "emenda_historico")
+@Table(name = "emendas_historico")
 public class EmendaHistorico {
 
     @Id
@@ -54,4 +54,3 @@ public class EmendaHistorico {
         this.dataHora = OffsetDateTime.now();
     }
 }
-

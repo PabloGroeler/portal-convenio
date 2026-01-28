@@ -17,10 +17,10 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "emenda", indexes = {
-    @Index(name = "idx_emenda_councilor", columnList = "councilor_id"),
-    @Index(name = "idx_emenda_institution", columnList = "institution_id"),
-    @Index(name = "idx_emenda_official_code", columnList = "official_code")
+@Table(name = "emendas", indexes = {
+    @Index(name = "idx_emendas_vereador", columnList = "councilor_id"),
+    @Index(name = "idx_emendas_instituicao", columnList = "institution_id"),
+    @Index(name = "idx_emendas_codigo_oficial", columnList = "official_code")
 })
 public class Emenda {
 
@@ -63,7 +63,7 @@ public class Emenda {
      * Stored as a separate table emenda_attachment(emenda_id, url).
      */
     @ElementCollection
-    @CollectionTable(name = "emenda_attachment", joinColumns = @JoinColumn(name = "emenda_id"))
+    @CollectionTable(name = "emendas_anexos", joinColumns = @JoinColumn(name = "emenda_id"))
     @Column(name = "url", columnDefinition = "TEXT")
     public List<String> attachments = new ArrayList<>();
 
