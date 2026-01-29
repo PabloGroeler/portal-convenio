@@ -53,8 +53,22 @@ function App() {
           <AuthWrapper>
             <Routes>
               {/* Full-screen pages (no header/footer) */}
-              <Route path="/emendas" element={<EmendasPage />} />
-              <Route path="/emendas/:id" element={<EmendaDetailPage />} />
+              <Route
+                path="/emendas"
+                element={
+                  <ProtectedRoute>
+                    <EmendasPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/emendas/:id"
+                element={
+                  <ProtectedRoute>
+                    <EmendaDetailPage />
+                  </ProtectedRoute>
+                }
+              />
 
               {/* Full-screen admin pages */}
               <Route

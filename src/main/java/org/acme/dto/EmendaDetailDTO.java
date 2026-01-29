@@ -18,8 +18,13 @@ public class EmendaDetailDTO {
     public LocalDate date;
     public BigDecimal value;
     public String classification;
+    public String esfera;
+    public boolean existeConvenio;
+    public String numeroConvenio;
+    public Integer anoConvenio;
     public String category;
     public String status;
+    public String statusCicloVida;
     public String federalStatus;
     public String institutionId;
     public String institutionName; // From Institution entity
@@ -39,8 +44,13 @@ public class EmendaDetailDTO {
         this.date = emenda.date;
         this.value = emenda.value;
         this.classification = emenda.classification;
+        this.esfera = emenda.esfera;
+        this.existeConvenio = emenda.existeConvenio;
+        this.numeroConvenio = emenda.numeroConvenio;
+        this.anoConvenio = emenda.anoConvenio;
         this.category = emenda.category;
         this.status = emenda.status;
+        this.statusCicloVida = emenda.statusCicloVida;
         this.federalStatus = emenda.federalStatus;
         this.institutionId = emenda.institutionId;
         this.institutionName = institution != null ? institution.razaoSocial : null;
@@ -58,8 +68,13 @@ public class EmendaDetailDTO {
         dto.date = emenda.date;
         dto.value = emenda.value;
         dto.classification = emenda.classification;
+        dto.esfera = emenda.esfera;
+        dto.existeConvenio = emenda.existeConvenio;
+        dto.numeroConvenio = emenda.numeroConvenio;
+        dto.anoConvenio = emenda.anoConvenio;
         dto.category = emenda.category;
         dto.status = emenda.status;
+        dto.statusCicloVida = emenda.statusCicloVida;
         dto.federalStatus = emenda.federalStatus;
         dto.institutionId = emenda.institutionId;
         dto.signedLink = emenda.signedLink;

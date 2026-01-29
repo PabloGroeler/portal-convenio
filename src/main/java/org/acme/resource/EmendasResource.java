@@ -20,6 +20,10 @@ import org.acme.dto.EmendaHistoricoDTO;
 import org.acme.dto.EmendaDetailDTO;
 import org.acme.service.EmendaExternalSyncService;
 import org.acme.service.EmendaImportService;
+import org.acme.service.TipoEmendaService;
+import org.acme.service.EsferaEmendaService;
+import org.acme.service.ConvenioValidationService;
+import org.acme.service.StatusCicloVidaEmendaService;
 
 import java.util.List;
 
@@ -33,6 +37,18 @@ public class EmendasResource {
 
     @Inject
     EmendaExternalSyncService externalSyncService;
+
+    @Inject
+    TipoEmendaService tipoEmendaService;
+
+    @Inject
+    EsferaEmendaService esferaEmendaService;
+
+    @Inject
+    ConvenioValidationService convenioValidationService;
+
+    @Inject
+    StatusCicloVidaEmendaService statusCicloVidaEmendaService;
 
     @Context
     SecurityContext securityContext;
@@ -77,18 +93,68 @@ public class EmendasResource {
 
     @POST
     public Response create(Emenda emenda) {
-        Emenda created = emendaService.create(emenda, getCurrentUser());
-        return Response.status(Response.Status.CREATED).entity(EmendaDetailDTO.fromEmenda(created)).build();
+        try {
+            // JIRA 9: default/validate status do ciclo de vida
+            if (emenda.statusCicloVida == null || emenda.statusCicloVida.isBlank()) {
+                emenda.statusCicloVida = "Recebido";
+            }
+            statusCicloVidaEmendaService.validateOrThrow(emenda.statusCicloVida);
+            emenda.statusCicloVida = statusCicloVidaEmendaService.normalize(emenda.statusCicloVida);
+
+            // JIRA 4: validate tipo de emenda (mapped in 'classification')
+            tipoEmendaService.validateCodigoAtivoOrThrow(emenda.classification);
+
+            // JIRA 6: validate esfera
+            esferaEmendaService.validateOrThrow(emenda.esfera);
+            emenda.esfera = esferaEmendaService.normalize(emenda.esfera);
+
+            // JIRA 7: validate convênio fields
+            convenioValidationService.validateOrThrow(emenda.existeConvenio, emenda.numeroConvenio, emenda.anoConvenio);
+            convenioValidationService.normalize(emenda);
+
+            // JIRA 5: validate business rules per tipo (executed in service)
+            Emenda created = emendaService.create(emenda, getCurrentUser());
+            return Response.status(Response.Status.CREATED).entity(EmendaDetailDTO.fromEmenda(created)).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .build();
+        }
     }
 
     @PUT
     @Path("/{id}")
     public Response update(@PathParam("id") String id, Emenda emenda) {
-        Emenda updated = emendaService.update(id, emenda, getCurrentUser());
-        if (updated == null) {
-            return Response.status(Response.Status.NOT_FOUND).build();
+        try {
+            // JIRA 9: default/validate status do ciclo de vida
+            if (emenda.statusCicloVida == null || emenda.statusCicloVida.isBlank()) {
+                emenda.statusCicloVida = "Recebido";
+            }
+            statusCicloVidaEmendaService.validateOrThrow(emenda.statusCicloVida);
+            emenda.statusCicloVida = statusCicloVidaEmendaService.normalize(emenda.statusCicloVida);
+
+            // JIRA 4: validate tipo de emenda (mapped in 'classification')
+            tipoEmendaService.validateCodigoAtivoOrThrow(emenda.classification);
+
+            // JIRA 6: validate esfera
+            esferaEmendaService.validateOrThrow(emenda.esfera);
+            emenda.esfera = esferaEmendaService.normalize(emenda.esfera);
+
+            // JIRA 7: validate convênio fields
+            convenioValidationService.validateOrThrow(emenda.existeConvenio, emenda.numeroConvenio, emenda.anoConvenio);
+            convenioValidationService.normalize(emenda);
+
+            // JIRA 5: validate business rules per tipo (executed in service)
+            Emenda updated = emendaService.update(id, emenda, getCurrentUser());
+            if (updated == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+            return Response.ok(EmendaDetailDTO.fromEmenda(updated)).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .build();
         }
-        return Response.ok(EmendaDetailDTO.fromEmenda(updated)).build();
     }
 
     @POST

@@ -25,6 +25,24 @@ public class EmendaImportMapper {
         e.signedLink = blankToNull(src.signedLink);
         e.description = blankToNull(src.description);
         e.objectDetail = blankToNull(src.objectDetail);
+
+        // JIRA 7: convênio (optional in external dataset)
+        if (src.existeConvenio != null) {
+            e.existeConvenio = src.existeConvenio;
+        }
+        e.numeroConvenio = blankToNull(src.numeroConvenio);
+        e.anoConvenio = src.anoConvenio;
+
+        // JIRA 6: esfera (best-effort)
+        // Prefer explicit esfera; otherwise infer from federalStatus.
+        if (src.esfera != null && !src.esfera.isBlank()) {
+            e.esfera = src.esfera.trim();
+        } else if (src.federalStatus != null && !src.federalStatus.isBlank()) {
+            e.esfera = "Federal";
+        } else {
+            e.esfera = "Municipal";
+        }
+
         return e;
     }
 

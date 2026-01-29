@@ -32,6 +32,9 @@ public class EmendaService {
     @Inject
     CouncilorService councilorService;
 
+    @Inject
+    EmendaRulesEngine emendaRulesEngine;
+
     public List<Emenda> listAll() {
         // Note: Emenda.attachments is an @ElementCollection and can be lazily loaded.
         // If we return entities outside a transaction, Jackson serialization may trigger
@@ -100,8 +103,16 @@ public class EmendaService {
 
     @Transactional
     public Emenda create(Emenda emenda, String usuario) {
+        // JIRA 5: apply business rules per tipo de emenda
+        emendaRulesEngine.validateOrThrow(emenda);
+
         emenda.createTime = OffsetDateTime.now();
         emenda.updateTime = OffsetDateTime.now();
+
+        // JIRA 9: default lifecycle status
+        if (emenda.statusCicloVida == null || emenda.statusCicloVida.isBlank()) {
+            emenda.statusCicloVida = "Recebido";
+        }
 
         boolean hasDetail = (emenda.objectDetail != null && !emenda.objectDetail.isBlank());
 
@@ -143,6 +154,9 @@ public class EmendaService {
 
     @Transactional
     public Emenda update(String id, Emenda updated, String usuario) {
+        // JIRA 5: apply business rules per tipo de emenda
+        emendaRulesEngine.validateOrThrow(updated);
+
         Emenda existing = emendaRepository.findById(id);
         if (existing == null) return null;
 
@@ -157,8 +171,13 @@ public class EmendaService {
         existing.date = updated.date;
         existing.value = updated.value;
         existing.classification = updated.classification;
+        existing.esfera = updated.esfera;
+        existing.existeConvenio = updated.existeConvenio;
+        existing.numeroConvenio = updated.numeroConvenio;
+        existing.anoConvenio = updated.anoConvenio;
         existing.category = updated.category;
         existing.status = updated.status;
+        existing.statusCicloVida = updated.statusCicloVida;
         existing.federalStatus = updated.federalStatus;
         existing.institutionId = updated.institutionId;
         existing.signedLink = updated.signedLink;

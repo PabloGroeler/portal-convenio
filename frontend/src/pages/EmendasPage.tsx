@@ -4,6 +4,7 @@ import EmendasStats from '../components/EmendasStats';
 import emendaService from '../services/emendaService';
 import institutionService, { type InstitutionDTO } from '../services/institutionService';
 import councilorService, { type CouncilorDTO } from '../services/councilorService';
+import tipoEmendaService, { type TipoEmendaDTO } from '../services/tipoEmendaService';
 import type { EmendaHistoricoDTO } from '../services/emendaService';
 
 interface Emenda {
@@ -14,6 +15,10 @@ interface Emenda {
   date?: string;
   value: string;
   classification?: string;
+  esfera?: string;
+  existeConvenio?: boolean;
+  numeroConvenio?: string;
+  anoConvenio?: number;
   category?: string;
   status: string;
   institutionId?: string;
@@ -49,6 +54,10 @@ const EmendasPage: React.FC = () => {
     date: new Date().toISOString().split('T')[0],
     value: 'R$ 0,00',
     classification: '',
+    esfera: 'Municipal',
+    existeConvenio: false,
+    numeroConvenio: '',
+    anoConvenio: undefined,
     category: '',
     status: 'Pendente',
     institutionId: '',
@@ -61,6 +70,7 @@ const EmendasPage: React.FC = () => {
   // Dropdown data for councilor/institution selectors
   const [institutions, setInstitutions] = useState<InstitutionDTO[]>([]);
   const [councilors, setCouncilors] = useState<CouncilorDTO[]>([]);
+  const [tiposEmenda, setTiposEmenda] = useState<TipoEmendaDTO[]>([]);
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [councilorSearch, setCouncilorSearch] = useState('');
 
@@ -85,6 +95,10 @@ const EmendasPage: React.FC = () => {
           date: e.date,
           value: e.value ? `R$ ${e.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
           classification: e.classification,
+          esfera: (e as any).esfera,
+          existeConvenio: (e as any).existeConvenio,
+          numeroConvenio: (e as any).numeroConvenio,
+          anoConvenio: (e as any).anoConvenio,
           category: e.category,
           status: e.status || 'Pendente',
           institutionId: e.institutionId,
@@ -105,6 +119,23 @@ const EmendasPage: React.FC = () => {
       }
     };
     fetchEmendas();
+  }, []);
+
+  // Load "Tipos de Emenda" catalog on page mount so the select always has data.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const tipos = await tipoEmendaService.list();
+        if (!cancelled) setTiposEmenda(tipos);
+      } catch (e) {
+        console.error('[EmendasPage] Error fetching tipos de emenda:', e);
+        if (!cancelled) setTiposEmenda([]);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // close modal on Escape globally
@@ -153,11 +184,20 @@ const EmendasPage: React.FC = () => {
         if (cancelled) return;
         setInstitutions(inst);
         setCouncilors(coun);
+
+        // Tipos de emenda (JIRA 3)
+        try {
+          const tipos = await tipoEmendaService.list();
+          if (!cancelled) setTiposEmenda(tipos);
+        } catch {
+          if (!cancelled) setTiposEmenda([]);
+        }
       } catch (e) {
         if (cancelled) return;
         // keep empty arrays on failure
         setInstitutions([]);
         setCouncilors([]);
+        setTiposEmenda([]);
       }
     })();
 
@@ -174,6 +214,10 @@ const EmendasPage: React.FC = () => {
       date: new Date().toISOString().split('T')[0],
       value: 'R$ 0,00',
       classification: '',
+      esfera: 'Municipal',
+      existeConvenio: false,
+      numeroConvenio: '',
+      anoConvenio: undefined,
       category: '',
       status: 'Pendente',
       institutionId: '',
@@ -240,6 +284,12 @@ const EmendasPage: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
+      // JIRA 3: tipo de emenda is mandatory (using existing 'classification' field for now).
+      if (!(editForm.classification ?? '').trim()) {
+        alert('Selecione o tipo de emenda.');
+        return;
+      }
+
       // Parse value string to number (remove R$ and formatting)
       let valueNum = 0;
       if (editForm.value) {
@@ -252,7 +302,12 @@ const EmendasPage: React.FC = () => {
         officialCode: editForm.officialCode,
         date: editForm.date,
         value: valueNum,
+        // NOTE: mapped as codigo (e.g. EMENDA_PIX) until backend adds a dedicated field (JIRA 4/5).
         classification: editForm.classification,
+        esfera: editForm.esfera,
+        existeConvenio: Boolean(editForm.existeConvenio),
+        numeroConvenio: editForm.existeConvenio ? (editForm.numeroConvenio || '').trim() : null,
+        anoConvenio: editForm.existeConvenio ? (editForm.anoConvenio ?? null) : null,
         category: editForm.category,
         status: editForm.status,
         institutionId: editForm.institutionId,
@@ -311,6 +366,10 @@ const EmendasPage: React.FC = () => {
         date: result.date,
         value: result.value ? `R$ ${result.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
         classification: result.classification,
+        esfera: (result as any).esfera,
+        existeConvenio: (result as any).existeConvenio,
+        numeroConvenio: (result as any).numeroConvenio,
+        anoConvenio: (result as any).anoConvenio,
         category: result.category,
         status: result.status || 'Pendente',
         institutionId: result.institutionId,
@@ -799,13 +858,13 @@ const EmendasPage: React.FC = () => {
                          {(isCreateMode || isEditMode) ? (
                            <input
                              type="text"
-                             value={editForm.code || ''}
-                             onChange={(e) => handleFormChange('code', e.target.value)}
+                             value={editForm.officialCode || ''}
+                             onChange={(e) => handleFormChange('officialCode', e.target.value)}
                              className="mt-1 w-full border rounded px-3 py-2 text-sm"
                              placeholder="Ex: 004-132-2025"
                            />
                          ) : (
-                           <span className="font-mono text-slate-700 font-medium">{editForm.code || '—'}</span>
+                           <span className="font-mono text-slate-700 font-medium">{editForm.officialCode || '—'}</span>
                          )}
                        </div>
                        <div>
@@ -857,7 +916,7 @@ const EmendasPage: React.FC = () => {
                        )}
                      </div>
 
-                     {/* Data, Classificação e Categoria */}
+                     {/* Data, Esfera e Tipo de Emenda */}
                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 border-t border-slate-200">
                        <div>
                          <span className="text-xs text-slate-500 uppercase block">Data</span>
@@ -873,19 +932,49 @@ const EmendasPage: React.FC = () => {
                          )}
                        </div>
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">Classificação</span>
-                         {isCreateMode ? (
-                           <input
-                             type="text"
-                             value={editForm.classification || ''}
-                             onChange={(e) => handleFormChange('classification', e.target.value)}
-                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Ex: Custeio"
-                           />
+                         <span className="text-xs text-slate-500 uppercase block">Esfera</span>
+                         {(isCreateMode || isEditMode) ? (
+                           <select
+                             value={editForm.esfera || ''}
+                             onChange={(e) => handleFormChange('esfera', e.target.value)}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm bg-white"
+                             required
+                           >
+                             <option value="">Selecione a esfera</option>
+                             <option value="Municipal">Municipal</option>
+                             <option value="Estadual">Estadual</option>
+                             <option value="Federal">Federal</option>
+                           </select>
                          ) : (
-                           <span className="text-slate-700 text-sm">{editForm.classification || '—'}</span>
+                           <span className="text-slate-700 text-sm">{editForm.esfera || '—'}</span>
                          )}
                        </div>
+                        <div>
+                          <span className="text-xs text-slate-500 uppercase block">Tipo de Emenda</span>
+                          {(isCreateMode || isEditMode) ? (
+                            <select
+                              value={editForm.classification || ''}
+                              onChange={(e) => handleFormChange('classification', e.target.value)}
+                              className="mt-1 w-full border rounded px-3 py-2 text-sm bg-white"
+                              required
+                            >
+                              <option value="">Selecione o tipo</option>
+                              {tiposEmenda.map((t) => (
+                                <option key={t.codigo} value={t.codigo}>
+                                  {t.nome}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <span className="text-slate-700 text-sm">
+                              {tiposEmenda.find((t) => t.codigo === editForm.classification)?.nome || editForm.classification || '—'}
+                            </span>
+                          )}
+                        </div>
+                     </div>
+
+                     {/* Categoria */}
+                     <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
                        <div>
                          <span className="text-xs text-slate-500 uppercase block">Categoria</span>
                          {isCreateMode ? (
@@ -902,8 +991,76 @@ const EmendasPage: React.FC = () => {
                        </div>
                      </div>
 
-                     {/* Councilor ID, Institution ID e Signed Link */}
-                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                     {/* Convênio (JIRA 7) */}
+                     <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5">
+                       <h4 className="text-sm font-semibold text-slate-800 mb-3">Convênio</h4>
+
+                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                         <div>
+                           <span className="text-xs text-slate-500 uppercase block">Existe Convênio?</span>
+                           {(isCreateMode || isEditMode) ? (
+                             <select
+                               value={editForm.existeConvenio ? 'SIM' : 'NAO'}
+                               onChange={(e) => {
+                                 const value = e.target.value === 'SIM';
+                                 setEditForm((prev) => ({
+                                   ...prev,
+                                   existeConvenio: value,
+                                   numeroConvenio: value ? prev.numeroConvenio : '',
+                                   anoConvenio: value ? prev.anoConvenio : undefined,
+                                 }));
+                               }}
+                               className="mt-1 w-full border rounded px-3 py-2 text-sm bg-white"
+                             >
+                               <option value="NAO">Não</option>
+                               <option value="SIM">Sim</option>
+                             </select>
+                           ) : (
+                             <span className="text-slate-700 text-sm">{editForm.existeConvenio ? 'Sim' : 'Não'}</span>
+                           )}
+                         </div>
+
+                         <div>
+                           <span className="text-xs text-slate-500 uppercase block">Número do Convênio</span>
+                           {(isCreateMode || isEditMode) ? (
+                             <input
+                               type="text"
+                               value={editForm.numeroConvenio || ''}
+                               onChange={(e) => handleFormChange('numeroConvenio', e.target.value)}
+                               maxLength={16}
+                               disabled={!editForm.existeConvenio}
+                               className="mt-1 w-full border rounded px-3 py-2 text-sm disabled:bg-slate-100"
+                             />
+                           ) : (
+                             <span className="text-slate-700 text-sm">{editForm.existeConvenio ? (editForm.numeroConvenio || '—') : '—'}</span>
+                           )}
+                         </div>
+
+                         <div>
+                           <span className="text-xs text-slate-500 uppercase block">Ano do Convênio</span>
+                           {(isCreateMode || isEditMode) ? (
+                             <input
+                               type="number"
+                               value={editForm.anoConvenio ?? ''}
+                               onChange={(e) => {
+                                 const v = e.target.value;
+                                 handleFormChange('anoConvenio', v === '' ? (undefined as any) : Number(v));
+                               }}
+                               min={1900}
+                               max={new Date().getFullYear() + 5}
+                               disabled={!editForm.existeConvenio}
+                               className="mt-1 w-full border rounded px-3 py-2 text-sm disabled:bg-slate-100"
+                               placeholder="YYYY"
+                             />
+                           ) : (
+                             <span className="text-slate-700 text-sm">{editForm.existeConvenio ? (editForm.anoConvenio ?? '—') : '—'}</span>
+                           )}
+                         </div>
+                       </div>
+                     </div>
+
+                     {/* Councilor, Institution e Signed Link */}
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                        <div>
                          <span className="text-xs text-slate-500 uppercase block">Parlamentar</span>
                          {(isCreateMode || isEditMode) ? (

@@ -9,6 +9,10 @@ export interface EmendaDTO {
   date?: string;
   value?: number;
   classification?: string;
+  esfera?: string;
+  existeConvenio?: boolean;
+  numeroConvenio?: string;
+  anoConvenio?: number;
   category?: string;
   status?: string;
   institutionId?: string;

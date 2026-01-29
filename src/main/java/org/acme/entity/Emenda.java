@@ -49,8 +49,34 @@ public class Emenda {
     @Column(name = "status", length = 50)
     public String status;
 
+    /**
+     * JIRA 9 — Status do ciclo de vida da emenda.
+     * Valores: Recebido, Iniciado, Em execução, Concluído, Devolvido.
+     */
+    @Column(name = "status_ciclo_vida", length = 30, nullable = false)
+    public String statusCicloVida = "Recebido";
+
     @Column(name = "federal_status", length = 100)
     public String federalStatus;
+
+    /**
+     * JIRA 6 — Esfera da Emenda (Municipal/Estadual/Federal).
+     * Stored as a string column for simplicity.
+     */
+    @Column(name = "esfera", length = 20)
+    public String esfera;
+
+    /**
+     * JIRA 7 — Convênio fields.
+     */
+    @Column(name = "existe_convenio", nullable = false)
+    public boolean existeConvenio = false;
+
+    @Column(name = "numero_convenio", length = 16)
+    public String numeroConvenio;
+
+    @Column(name = "ano_convenio")
+    public Integer anoConvenio;
 
     @Column(name = "institution_id", length = 100)
     public String institutionId;

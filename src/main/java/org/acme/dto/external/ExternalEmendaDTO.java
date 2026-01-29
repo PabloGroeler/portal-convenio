@@ -58,6 +58,19 @@ public class ExternalEmendaDTO {
     @JsonProperty("situation")
     public String situation;
 
+    /** JIRA 6 — Optional sphere classification from external dataset. */
+    @JsonProperty("esfera")
+    public String esfera;
+
+    @JsonProperty("existeConvenio")
+    public Boolean existeConvenio;
+
+    @JsonProperty("numeroConvenio")
+    public String numeroConvenio;
+
+    @JsonProperty("anoConvenio")
+    public Integer anoConvenio;
+
     @JsonProperty("institutionId")
     public String institutionId;
 
