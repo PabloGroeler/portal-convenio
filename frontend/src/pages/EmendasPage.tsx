@@ -1081,7 +1081,6 @@ const EmendasPage: React.FC = () => {
                                      (c.politicalParty ?? '').toLowerCase().includes(q)
                                    );
                                  })
-                                 .slice(0, 50)
                                  .map((c) => (
                                    <option key={c.councilorId} value={c.councilorId}>
                                      {c.fullName}{c.politicalParty ? ` (${c.politicalParty})` : ''} — {c.councilorId}
@@ -1117,7 +1116,6 @@ const EmendasPage: React.FC = () => {
                                      (i as any).name?.toLowerCase?.().includes(q)
                                    );
                                  })
-                                 .slice(0, 50)
                                  .map((i) => (
                                    <option key={i.institutionId} value={i.institutionId}>
                                      {i.razaoSocial || (i as any).name || '—'}
