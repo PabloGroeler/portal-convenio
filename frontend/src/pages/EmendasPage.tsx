@@ -59,7 +59,7 @@ const EmendasPage: React.FC = () => {
     numeroConvenio: '',
     anoConvenio: undefined,
     category: '',
-    status: 'Pendente',
+    status: 'Recebido',
     institutionId: '',
     signedLink: '',
     attachments: [],
@@ -86,28 +86,32 @@ const EmendasPage: React.FC = () => {
         const data = await emendaService.listWithDetails();
         console.log('[EmendasPage] Received data:', data);
         // Map API data to frontend Emenda interface
-        const mappedEmendas: Emenda[] = data.map((e) => ({
-          id: e.id || '',
-          councilorId: e.councilorId,
-          councilorName: e.councilorName,
-          councilorPoliticalParty: e.councilorPoliticalParty,
-          officialCode: e.officialCode,
-          date: e.date,
-          value: e.value ? `R$ ${e.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
-          classification: e.classification,
-          esfera: (e as any).esfera,
-          existeConvenio: (e as any).existeConvenio,
-          numeroConvenio: (e as any).numeroConvenio,
-          anoConvenio: (e as any).anoConvenio,
-          category: e.category,
-          status: e.status || 'Pendente',
-          institutionId: e.institutionId,
-          institutionName: e.institutionName,
-          signedLink: e.signedLink,
-          attachments: Array.isArray(e.attachments) ? e.attachments : [],
-          description: e.description,
-          objectDetail: e.objectDetail,
-        }));
+        const mappedEmendas: Emenda[] = data.map((e) => {
+          const status = (e.status || 'Recebido') as string;
+          const safeStatus = typeof status === 'string' && status.trim() ? status : 'Recebido';
+          return ({
+            id: e.id || '',
+            councilorId: e.councilorId,
+            councilorName: e.councilorName,
+            councilorPoliticalParty: e.councilorPoliticalParty,
+            officialCode: e.officialCode,
+            date: e.date,
+            value: e.value ? `R$ ${e.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
+            classification: e.classification,
+            esfera: (e as any).esfera,
+            existeConvenio: (e as any).existeConvenio,
+            numeroConvenio: (e as any).numeroConvenio,
+            anoConvenio: (e as any).anoConvenio,
+            category: e.category,
+            status: safeStatus,
+            institutionId: e.institutionId,
+            institutionName: e.institutionName,
+            signedLink: e.signedLink,
+            attachments: Array.isArray(e.attachments) ? e.attachments : [],
+            description: e.description,
+            objectDetail: e.objectDetail,
+          });
+        });
         console.log('[EmendasPage] Mapped emendas:', mappedEmendas);
         setEmendas(mappedEmendas);
       } catch (err) {
@@ -219,7 +223,7 @@ const EmendasPage: React.FC = () => {
       numeroConvenio: '',
       anoConvenio: undefined,
       category: '',
-      status: 'Pendente',
+      status: 'Recebido',
       institutionId: '',
       signedLink: '',
       attachments: [],
@@ -371,7 +375,7 @@ const EmendasPage: React.FC = () => {
         numeroConvenio: (result as any).numeroConvenio,
         anoConvenio: (result as any).anoConvenio,
         category: result.category,
-        status: result.status || 'Pendente',
+        status: (result.status || 'Recebido') as string,
         institutionId: result.institutionId,
         institutionName,
         signedLink: result.signedLink,
@@ -415,7 +419,7 @@ const EmendasPage: React.FC = () => {
       // Update the emenda in the local state
       const updatedLocal: Emenda = {
         ...selectedEmenda,
-        status: updatedEmenda.status || selectedEmenda.status,
+        status: (updatedEmenda.status || selectedEmenda.status) as string,
       };
       setSelectedEmenda(updatedLocal);
       setEditForm(updatedLocal);
@@ -447,7 +451,7 @@ const EmendasPage: React.FC = () => {
             value: e.value ? `R$ ${e.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
             classification: e.classification,
             category: e.category,
-            status: e.status || 'Pendente',
+            status: (e.status || 'Recebido') as string,
             institutionId: e.institutionId,
             signedLink: e.signedLink,
             description: e.description,
@@ -490,19 +494,11 @@ const EmendasPage: React.FC = () => {
     // NOTE: year filter is still based on the legacy data model; keep it until the API provides a year field.
     if (year && String((e as any).year) !== year) return false;
 
-    // status filter logic (Portuguese labels)
+    // status filter relies on the emenda "status" field with NEW lifecycle values
     if (statusFilter && statusFilter !== 'Todas') {
-      const sf = statusFilter;
-      if (sf === 'Pendentes') {
-        // treat 'Em Andamento' as pendente
-        if (!(e.status === 'Em Andamento' || e.status === 'Pendente')) return false;
-      } else if (sf === 'Aprovadas') {
-        if (e.status !== 'Aprovada') return false;
-      } else if (sf === 'Retificar') {
-        if (e.status !== 'Retificar') return false;
-      } else if (sf === 'Reprovadas') {
-        if (e.status !== 'Rejeitada' && e.status !== 'Reprovada') return false;
-      }
+      const st = (e.status || '').trim().toLowerCase();
+      const sf = statusFilter.trim().toLowerCase();
+      if (st !== sf) return false;
     }
 
     // detail filter
@@ -555,10 +551,10 @@ const EmendasPage: React.FC = () => {
           <div className="max-w-6xl mx-auto">
               <EmendasStats
                 total={emendas.length}
-                pending={emendas.filter((e) => e.status === 'Pendente' || e.status === 'Em Andamento').length}
-                approved={emendas.filter((e) => e.status === 'Aprovada').length}
-                toRectify={emendas.filter((e) => e.status === 'Retificar').length}
-                rejected={emendas.filter((e) => e.status === 'Rejeitada' || e.status === 'Reprovada').length}
+                pending={emendas.filter((e) => e.status === 'Recebido' || e.status === 'Iniciado').length}
+                approved={emendas.filter((e) => e.status === 'Concluído').length}
+                toRectify={emendas.filter((e) => e.status === 'Devolvido').length}
+                rejected={0}
               />
             </div>
 
@@ -600,10 +596,11 @@ const EmendasPage: React.FC = () => {
 
                <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-3 py-2">
                  <option>Todas</option>
-                 <option>Pendentes</option>
-                 <option>Aprovadas</option>
-                 <option>Retificar</option>
-                 <option>Reprovadas</option>
+                 <option>Recebido</option>
+                 <option>Iniciado</option>
+                 <option>Em execução</option>
+                 <option>Concluído</option>
+                 <option>Devolvido</option>
                </select>
 
                <select value={detailFilter} onChange={(e) => setDetailFilter(e.target.value)} className="border rounded px-3 py-2">
@@ -676,11 +673,15 @@ const EmendasPage: React.FC = () => {
 
                        <span
                          className={`shrink-0 px-2 py-1 text-xs rounded-full ${
-                           (e.status === 'Aprovada' || e.status === 'APROVADA' || e.status === 'APROVADO.' || e.status === 'Aprovado' || e.status === 'Aprovada pelo Gestor')
+                           (e.status || '').toLowerCase() === 'aprovado'
                              ? 'bg-emerald-100 text-emerald-800'
-                             : (e.status === 'Rejeitada' || e.status === 'REJEITADA' || e.status === 'REJEITADO' || e.status === 'Rejeitado')
+                             : (e.status || '').toLowerCase() === 'devolvido'
                                ? 'bg-red-100 text-red-800'
-                               : 'bg-yellow-100 text-yellow-800'
+                               : (e.status || '').toLowerCase() === 'recebido'
+                                 ? 'bg-blue-100 text-blue-800'
+                                 : (e.status || '').toLowerCase() === 'iniciado'
+                                   ? 'bg-amber-100 text-amber-800'
+                                   : 'bg-gray-100 text-gray-800'
                          }`}
                        >
                          {e.status}
@@ -781,9 +782,10 @@ const EmendasPage: React.FC = () => {
                </h2>
                <div className="mt-2 flex gap-2">
                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
-                   editForm.status === 'Aprovada' ? 'bg-green-100 text-green-800 border-green-200' :
-                   editForm.status === 'Rejeitada' ? 'bg-red-100 text-red-800 border-red-200' :
-                   editForm.status === 'Retificar' ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                   (editForm.status || '').toLowerCase() === 'concluído' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                   (editForm.status || '').toLowerCase() === 'devolvido' ? 'bg-red-100 text-red-800 border-red-200' :
+                   (editForm.status || '').toLowerCase() === 'em execução' ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                   (editForm.status || '').toLowerCase() === 'iniciado' ? 'bg-amber-100 text-amber-800 border-amber-200' :
                    'bg-gray-100 text-gray-700 border-gray-200'
                  }`}>
                    Status: {editForm.status}
@@ -1260,7 +1262,7 @@ const EmendasPage: React.FC = () => {
                            <div key={h.id} className="relative pl-8">
                              <span className="absolute left-0 top-1.5 -translate-x-1/2 flex h-4 w-4 items-center justify-center rounded-full bg-white ring-4 ring-white">
                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-2.5 w-2.5 ${
-                                 (h.acao === 'APROVADA' || h.acao === 'APROVADO' || h.acao === 'Aprovada pelo Gestor') ? 'text-emerald-600' :
+                                 (h.acao === 'APROVADA' || h.acao === 'concluído' || h.acao === 'Aprovada pelo Gestor') ? 'text-emerald-600' :
                                  (h.acao === 'REPROVADA' || h.acao === 'REPROVADO') ? 'text-red-600' :
                                  h.acao === 'DEVOLVIDA' ? 'text-amber-500' :
                                  h.acao === 'SOLICITADA_APROVACAO' ? 'text-blue-600' :
@@ -1276,7 +1278,7 @@ const EmendasPage: React.FC = () => {
                              </span>
                              <div className="flex flex-col gap-1">
                                <h4 className={`text-sm font-semibold leading-tight ${
-                                 (h.acao === 'APROVADA' || h.acao === 'APROVADO' || h.acao === 'Aprovada pelo Gestor') ? 'text-emerald-700' :
+                                 (h.acao === 'APROVADA' || h.acao === 'concluído' || h.acao === 'Aprovada pelo Gestor') ? 'text-emerald-700' :
                                  (h.acao === 'REPROVADA' || h.acao === 'REPROVADO') ? 'text-red-700' :
                                  h.acao === 'DEVOLVIDA' ? 'text-amber-700' :
                                  h.acao === 'SOLICITADA_APROVACAO' ? 'text-blue-700' :

@@ -9,21 +9,21 @@ import org.acme.entity.StatusCicloVidaEmenda;
 @ApplicationScoped
 public class StatusCicloVidaEmendaService {
 
-    public void validateOrThrow(String statusCicloVida) {
-        if (statusCicloVida == null || statusCicloVida.isBlank()) {
+    public void validateOrThrow(String status) {
+        if (status == null || status.isBlank()) {
             throw new IllegalArgumentException("Status do ciclo de vida é obrigatório");
         }
 
-        StatusCicloVidaEmenda parsed = StatusCicloVidaEmenda.fromStringOrNull(statusCicloVida);
+        StatusCicloVidaEmenda parsed = StatusCicloVidaEmenda.fromStringOrNull(status);
         if (parsed == null) {
             throw new IllegalArgumentException(
-                    "Status do ciclo de vida inválido: " + statusCicloVida + ". Valores aceitos: Recebido, Iniciado, Em execução, Concluído, Devolvido"
+                    "Status do ciclo de vida inválido: " + status + ". Valores aceitos: Recebido, Iniciado, Em execução, Concluído, Devolvido"
             );
         }
     }
 
-    public String normalize(String statusCicloVida) {
-        StatusCicloVidaEmenda parsed = StatusCicloVidaEmenda.fromStringOrNull(statusCicloVida);
+    public String normalize(String status) {
+        StatusCicloVidaEmenda parsed = StatusCicloVidaEmenda.fromStringOrNull(status);
         return parsed == null ? null : parsed.toLabel();
     }
 }

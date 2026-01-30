@@ -14,16 +14,10 @@ import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import org.acme.entity.Emenda;
-import org.acme.service.EmendaService;
+import org.acme.service.*;
 import org.acme.dto.EmendaAcaoDTO;
 import org.acme.dto.EmendaHistoricoDTO;
 import org.acme.dto.EmendaDetailDTO;
-import org.acme.service.EmendaExternalSyncService;
-import org.acme.service.EmendaImportService;
-import org.acme.service.TipoEmendaService;
-import org.acme.service.EsferaEmendaService;
-import org.acme.service.ConvenioValidationService;
-import org.acme.service.StatusCicloVidaEmendaService;
 
 import java.util.List;
 

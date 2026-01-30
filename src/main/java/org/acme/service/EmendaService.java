@@ -35,6 +35,9 @@ public class EmendaService {
     @Inject
     EmendaRulesEngine emendaRulesEngine;
 
+    @Inject
+    StatusCicloVidaEmendaService statusCicloVidaEmendaService;
+
     public List<Emenda> listAll() {
         // Note: Emenda.attachments is an @ElementCollection and can be lazily loaded.
         // If we return entities outside a transaction, Jackson serialization may trigger
@@ -109,17 +112,33 @@ public class EmendaService {
         emenda.createTime = OffsetDateTime.now();
         emenda.updateTime = OffsetDateTime.now();
 
-        // JIRA 9: default lifecycle status
-        if (emenda.statusCicloVida == null || emenda.statusCicloVida.isBlank()) {
-            emenda.statusCicloVida = "Recebido";
+        if (emenda.status == null || emenda.status.isBlank()) {
+            emenda.status = "Recebido";
         }
+
+        if (emenda.status == null) {
+            emenda.status = null;
+        } else {
+            switch (emenda.status.trim()) {
+                case "Aprovada pelo Gestor":
+                    emenda.status = "Concluído";
+                    break;
+                case "Em andamento":
+                    emenda.status = "Recebido";
+                    break;
+                case "Devolvida para Retificação":
+                    emenda.status = "Devolvido";
+                    break;
+                default:
+                    emenda.status = "Recebido";
+            }
+        }
+
+        statusCicloVidaEmendaService.validateOrThrow(emenda.status);
+        emenda.status = statusCicloVidaEmendaService.normalize(emenda.status);
 
         boolean hasDetail = (emenda.objectDetail != null && !emenda.objectDetail.isBlank());
 
-        // On creation we always start as "Pendente"
-        if (emenda.status == null || emenda.status.isBlank()) {
-            emenda.status = "Pendente";
-        }
         if (emenda.date == null) {
             emenda.date = java.time.LocalDate.now();
         }
@@ -133,7 +152,7 @@ public class EmendaService {
             "PENDENTE",
             null,
             "Pendente",
-            "Emenda criada como pendente",
+            "Emenda criada",
             usuario != null ? usuario : "sistema"
         ));
 
@@ -249,23 +268,23 @@ public class EmendaService {
 
         switch (acao.acao.toUpperCase()) {
             case "APROVAR":
-                novoStatus = "Aprovada";
+                novoStatus = "Concluído";
                 acaoRegistrada = "APROVADA";
                 break;
             case "DEVOLVER":
-                novoStatus = "Retificar";
+                novoStatus = "Devolvido";
                 acaoRegistrada = "DEVOLVIDA";
                 break;
             case "REPROVAR":
-                novoStatus = "Rejeitada";
+                novoStatus = "Devolvido";
                 acaoRegistrada = "REPROVADA";
                 break;
             case "SOLICITAR_APROVACAO":
-                novoStatus = "Pendente";
+                novoStatus = "Recebido";
                 acaoRegistrada = "SOLICITADA_APROVACAO";
                 break;
             case "AGUARDAR_DETALHAMENTO":
-                novoStatus = "Aguardando Detalhamento";
+                novoStatus = "Iniciado";
                 acaoRegistrada = "AGUARDANDO_DETALHAMENTO";
                 break;
             default:
@@ -274,6 +293,7 @@ public class EmendaService {
         }
 
         emenda.status = novoStatus;
+        // Keep lifecycle field aligned if present
         emenda.updateTime = OffsetDateTime.now();
 
         // Register action in history

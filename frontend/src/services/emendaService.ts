@@ -14,7 +14,10 @@ export interface EmendaDTO {
   numeroConvenio?: string;
   anoConvenio?: number;
   category?: string;
+  /** Legacy field (keep for backward compatibility). */
   status?: string;
+  /** Canonical status used by the UI (lifecycle). */
+  statusCicloVida?: string;
   institutionId?: string;
   institutionName?: string; // From Institution entity
   signedLink?: string;
