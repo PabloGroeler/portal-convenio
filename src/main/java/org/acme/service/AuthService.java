@@ -22,6 +22,10 @@ public class AuthService {
             user = User.findByEmail(usernameOrEmail);
         }
         if (user == null) return null;
+
+        // Blocked users cannot authenticate
+        if (user.status == User.UserStatus.BLOQUEADO) return null;
+
         if (!BCrypt.checkpw(password, user.password)) return null;
         // Generate JWT
         return JwtUtil.generateToken(user.username, user.id);

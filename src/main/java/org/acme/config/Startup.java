@@ -20,14 +20,20 @@ public class Startup {
 
     @Transactional
     public void onStart(@Observes StartupEvent ev) {
-        // Check if admin user already exists
-        if (User.count() == 0) {
+        // Ensure an admin user exists (idempotent)
+        if (User.findByEmail("admin@local.test") == null) {
             User admin = new User();
+            admin.nomeCompleto = "Administrador";
+            admin.cpf = "00000000000";
             admin.username = "admin";
-            admin.email = "a@a.com";
+            admin.email = "admin@local.test";
+            admin.telefone = null;
+            admin.cargoFuncao = "Administrador";
+            admin.status = User.UserStatus.ATIVO;
+            admin.role = User.UserRole.ADMIN;
             admin.password = BCrypt.hashpw("123", BCrypt.gensalt());
             admin.persist();
-            System.out.println("Created admin user with email: admin@admin.com");
+            System.out.println("Created admin user with email: admin@local.test");
         }
 
         // Seed Tipos de Emenda (catalog) on startup (idempotent)

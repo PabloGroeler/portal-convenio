@@ -1,11 +1,13 @@
 ---
 id: task-6
 title: Dashboard with Sidebar Navigation After Login
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-01-30 14:38'
+updated_date: '2026-01-30 15:08'
 labels: []
 dependencies: []
+ordinal: 4000
 ---
 
 ## Description
