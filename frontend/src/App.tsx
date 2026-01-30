@@ -1,5 +1,5 @@
 // In App.tsx
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Layout from './components/Layout';
@@ -20,6 +20,10 @@ import InstitutionsPage from './pages/InstitutionsPage';
 import CouncilorsPage from './pages/CouncilorsPage';
 import CadastroDadosInstitucionaisPage from './pages/CadastroDadosInstitucionaisPage';
 import ProtectedRoute from './components/ProtectedRoute';
+import DashboardLayout from './components/DashboardLayout';
+import DashboardHomePage from './pages/DashboardHomePage';
+import DashboardEmendasPage from './pages/DashboardEmendasPage';
+import UsersPage from './pages/UsersPage';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -32,7 +36,7 @@ const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
   const handleLogin = async (email: string, password: string) => {
     const success = await login(email, password);
     if (success) {
-      navigate('/painel');
+      navigate('/dashboard');
     }
     return success;
   };
@@ -52,6 +56,23 @@ function App() {
         <AuthProvider>
           <AuthWrapper>
             <Routes>
+              {/* Dashboard SPA layout (task-6) */}
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <DashboardLayout />
+                  </ProtectedRoute>
+                }
+              >
+                {/* default content */}
+                <Route index element={<DashboardHomePage />} />
+                <Route path="emendas" element={<DashboardEmendasPage />} />
+                <Route path="instituicoes" element={<InstitutionsPage />} />
+                <Route path="parlamentares" element={<CouncilorsPage />} />
+                <Route path="usuarios" element={<UsersPage />} />
+              </Route>
+
               {/* Full-screen pages (no header/footer) */}
               <Route
                 path="/emendas"
@@ -85,59 +106,63 @@ function App() {
                 <Route index element={<HomePage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
-                <Route
-                  path="painel"
+
+                {/* Backward compatible redirect: /painel -> /dashboard */}
+                <Route path="painel" element={<Navigate to="/dashboard" replace />} />
+
+                 <Route
+                  path="painel-old"
                   element={
                     <ProtectedRoute>
                       <DashboardPage />
                     </ProtectedRoute>
                   }
                 />
-                <Route path="news" element={<NewsPage />} />
-                <Route path="news/:id" element={<NewsArticlePage />} />
-                <Route path="contact" element={<ContactPage />} />
-                <Route path="manuals" element={<ManualsPage />} />
-                <Route path="downloads" element={<DownloadsPage />} />
-                <Route path="legislation" element={<LegislationPage />} />
-                <Route
-                  path="painel/convenios"
-                  element={
-                    <ProtectedRoute>
-                      <ConveniosPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="painel/institutions"
-                  element={
-                    <ProtectedRoute>
-                      <InstitutionsPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="painel/cadastro-dados-institucionais"
-                  element={
-                    <ProtectedRoute>
-                      <CadastroDadosInstitucionaisPage />
-                    </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="painel/councilors"
-                  element={
-                    <ProtectedRoute>
-                      <CouncilorsPage />
-                    </ProtectedRoute>
-                  }
-                />
-              </Route>
-            </Routes>
-          </AuthWrapper>
-        </AuthProvider>
-      </Router>
-    </QueryClientProvider>
-  );
+                 <Route path="news" element={<NewsPage />} />
+                 <Route path="news/:id" element={<NewsArticlePage />} />
+                 <Route path="contact" element={<ContactPage />} />
+                 <Route path="manuals" element={<ManualsPage />} />
+                 <Route path="downloads" element={<DownloadsPage />} />
+                 <Route path="legislation" element={<LegislationPage />} />
+                 <Route
+                   path="painel/convenios"
+                   element={
+                     <ProtectedRoute>
+                       <ConveniosPage />
+                     </ProtectedRoute>
+                   }
+                 />
+                 <Route
+                   path="painel/institutions"
+                   element={
+                     <ProtectedRoute>
+                       <InstitutionsPage />
+                     </ProtectedRoute>
+                   }
+                 />
+                 <Route
+                   path="painel/cadastro-dados-institucionais"
+                   element={
+                     <ProtectedRoute>
+                       <CadastroDadosInstitucionaisPage />
+                     </ProtectedRoute>
+                   }
+                 />
+                 <Route
+                   path="painel/councilors"
+                   element={
+                     <ProtectedRoute>
+                       <CouncilorsPage />
+                     </ProtectedRoute>
+                   }
+                 />
+               </Route>
+             </Routes>
+           </AuthWrapper>
+         </AuthProvider>
+       </Router>
+     </QueryClientProvider>
+   );
 }
 
 export default App;
