@@ -673,7 +673,7 @@ const EmendasPage: React.FC = () => {
 
                        <span
                          className={`shrink-0 px-2 py-1 text-xs rounded-full ${
-                           (e.status || '').toLowerCase() === 'aprovado'
+                           (e.status || '').toLowerCase() === 'concluído'
                              ? 'bg-emerald-100 text-emerald-800'
                              : (e.status || '').toLowerCase() === 'devolvido'
                                ? 'bg-red-100 text-red-800'
