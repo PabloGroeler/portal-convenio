@@ -513,38 +513,6 @@ const EmendasPage: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-3 sm:space-x-4">
-              <Link
-                to="/"
-                aria-label="Início"
-                className="inline-flex items-center justify-center h-12 w-12 rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ring-offset-background"
-              >
-                <img
-                  src="/favicon.ico"
-                  alt="Sistema de Emendas"
-                  className="h-6 w-6 sm:h-7 sm:w-7"
-                  loading="lazy"
-                />
-              </Link>
-              <div>
-                <h1 className="text-base sm:text-xl font-bold text-gray-900">Sistema de Emendas</h1>
-              </div>
-            </div>
-
-            <nav aria-label="Navegação principal" className="flex items-center space-x-2 sm:space-x-4">
-               <Link
-                 to="/"
-                 className="text-gray-600 hover:text-gray-900 px-4 py-3 rounded-md text-sm font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-purple-500 focus-visible:ring-offset-2 ring-offset-background inline-flex items-center"
-               >
-                 Sair
-               </Link>
-             </nav>
-          </div>
-        </div>
-      </header>
 
       {/* Summary stats (from provided file) */}
       <div className="max-w-6xl mx-auto py-8 px-6">
@@ -853,49 +821,68 @@ const EmendasPage: React.FC = () => {
                  <section className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-6 relative">
                    <h3 className="text-base font-semibold text-slate-800 mb-4 border-b pb-2">Dados da Emenda</h3>
                    <div className="space-y-4">
-                     {/* Número e Valor */}
+                     {/* Task-10: Número e Exercício */}
                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">Código Oficial</span>
+                         <label className="text-xs text-slate-500 uppercase block">
+                           Número da Emenda <span className="text-red-500">*</span>
+                         </label>
                          {(isCreateMode || isEditMode) ? (
                            <input
-                             type="text"
-                             value={editForm.officialCode || ''}
-                             onChange={(e) => handleFormChange('officialCode', e.target.value)}
+                             type="number"
+                             value={editForm.numeroEmenda || ''}
+                             onChange={(e) => handleFormChange('numeroEmenda', e.target.value ? parseInt(e.target.value) : undefined)}
                              className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Ex: 004-132-2025"
+                             placeholder="Ex: 1"
+                             min="1"
+                             required
                            />
                          ) : (
-                           <span className="font-mono text-slate-700 font-medium">{editForm.officialCode || '—'}</span>
+                           <span className="font-mono text-slate-700 font-medium">{editForm.numeroEmenda || '—'}</span>
                          )}
+                         <p className="text-xs text-slate-400 mt-1">Deve ser maior que zero e único por exercício</p>
                        </div>
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">Valor</span>
-                         {isCreateMode ? (
+                         <label className="text-xs text-slate-500 uppercase block">
+                           Exercício (Ano) <span className="text-red-500">*</span>
+                         </label>
+                         {(isCreateMode || isEditMode) ? (
                            <input
-                             type="text"
-                             value={editForm.value}
-                             onChange={(e) => handleFormChange('value', e.target.value)}
-                             onBlur={handleValorBlur}
+                             type="number"
+                             value={editForm.exercicio || new Date().getFullYear()}
+                             onChange={(e) => handleFormChange('exercicio', e.target.value ? parseInt(e.target.value) : undefined)}
                              className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="R$ 0,00"
+                             placeholder="Ex: 2026"
+                             min="2020"
+                             max="2099"
+                             required
                            />
                          ) : (
-                           <span className="font-mono text-slate-700 font-medium">{editForm.value}</span>
+                           <span className="font-mono text-slate-700 font-medium">{editForm.exercicio || '—'}</span>
                          )}
                        </div>
                      </div>
 
                      {/* Descrição Inicial */}
                      <div>
-                       <span className="text-xs text-slate-500 uppercase block">Descrição Inicial</span>
-                       {isCreateMode ? (
-                         <textarea
-                           value={editForm.description || ''}
-                           onChange={(e) => handleFormChange('description', e.target.value)}
-                           className="mt-1 w-full border rounded px-3 py-2 text-sm min-h-[60px]"
-                           placeholder="Descrição da emenda..."
-                         />
+                       <label className="text-xs text-slate-500 uppercase block">Objeto da Emenda (máx. 250 caracteres)</label>
+                       {(isCreateMode || isEditMode) ? (
+                         <>
+                           <textarea
+                             value={editForm.description || ''}
+                             onChange={(e) => {
+                               if (e.target.value.length <= 250) {
+                                 handleFormChange('description', e.target.value);
+                               }
+                             }}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm min-h-[60px]"
+                             placeholder="Descrição da emenda..."
+                             maxLength={250}
+                           />
+                           <p className="text-xs text-slate-400 mt-1">
+                             {(editForm.description || '').length}/250 caracteres
+                           </p>
+                         </>
                        ) : (
                          <p className="text-slate-700 text-sm mt-1 whitespace-pre-wrap break-words">{editForm.description || '—'}</p>
                        )}
@@ -993,6 +980,84 @@ const EmendasPage: React.FC = () => {
                        </div>
                      </div>
 
+                     {/* Task-10: Previsão de Conclusão e Situação */}
+                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                       <div>
+                         <label className="text-xs text-slate-500 uppercase block">Previsão de Conclusão</label>
+                         {(isCreateMode || isEditMode) ? (
+                           <input
+                             type="date"
+                             value={editForm.previsaoConclusao || ''}
+                             onChange={(e) => handleFormChange('previsaoConclusao', e.target.value)}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                           />
+                         ) : (
+                           <span className="text-slate-700 text-sm">
+                             {editForm.previsaoConclusao ? new Date(editForm.previsaoConclusao).toLocaleDateString('pt-BR') : '—'}
+                           </span>
+                         )}
+                       </div>
+                       <div>
+                         <label className="text-xs text-slate-500 uppercase block">
+                           Situação da Emenda <span className="text-red-500">*</span>
+                         </label>
+                         {(isCreateMode || isEditMode) ? (
+                           <select
+                             value={editForm.status || 'Recebido'}
+                             onChange={(e) => handleFormChange('status', e.target.value)}
+                             className="mt-1 w-full border rounded px-3 py-2 text-sm bg-white"
+                             required
+                           >
+                             <option value="Recebido">Recebido</option>
+                             <option value="Iniciado">Iniciado</option>
+                             <option value="Em execução">Em execução</option>
+                             <option value="Concluído">Concluído</option>
+                             <option value="Devolvido">Devolvido</option>
+                           </select>
+                         ) : (
+                           <span className="text-slate-700 text-sm">{editForm.status || '—'}</span>
+                         )}
+                       </div>
+                     </div>
+
+                     {/* Task-10: Justificativa */}
+                     <div>
+                       <label className="text-xs text-slate-500 uppercase block">
+                         Justificativa (mín. 20, máx. 250 caracteres)
+                       </label>
+                       {(isCreateMode || isEditMode) ? (
+                         <>
+                           <textarea
+                             value={editForm.justificativa || ''}
+                             onChange={(e) => {
+                               if (e.target.value.length <= 250) {
+                                 handleFormChange('justificativa', e.target.value);
+                               }
+                             }}
+                             className={`mt-1 w-full border rounded px-3 py-2 text-sm min-h-[80px] ${
+                               editForm.justificativa && editForm.justificativa.length < 20
+                                 ? 'border-red-300'
+                                 : ''
+                             }`}
+                             placeholder="Justificativa da emenda (mínimo 20 caracteres)..."
+                             maxLength={250}
+                           />
+                           <p className={`text-xs mt-1 ${
+                             !editForm.justificativa || editForm.justificativa.length < 20
+                               ? 'text-red-500'
+                               : 'text-slate-400'
+                           }`}>
+                             {(editForm.justificativa || '').length}/250 caracteres
+                             {editForm.justificativa && editForm.justificativa.length < 20 &&
+                               ` (faltam ${20 - editForm.justificativa.length} caracteres)`
+                             }
+                           </p>
+                         </>
+                       ) : (
+                         <p className="text-slate-700 text-sm mt-1 whitespace-pre-wrap break-words">{editForm.justificativa || '—'}</p>
+                       )}
+                     </div>
+
                      {/* Convênio (JIRA 7) */}
                      <div className="bg-white border border-slate-200 rounded-xl p-4 sm:p-5">
                        <h4 className="text-sm font-semibold text-slate-800 mb-3">Convênio</h4>
@@ -1085,7 +1150,7 @@ const EmendasPage: React.FC = () => {
                                  })
                                  .map((c) => (
                                    <option key={c.councilorId} value={c.councilorId}>
-                                     {c.fullName}{c.politicalParty ? ` (${c.politicalParty})` : ''} — {c.councilorId}
+                                     {c.fullName}
                                    </option>
                                  ))}
                              </select>

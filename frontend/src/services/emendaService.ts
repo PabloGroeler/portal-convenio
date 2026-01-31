@@ -2,6 +2,8 @@ import api from './api';
 
 export interface EmendaDTO {
   id?: string;
+  numeroEmenda?: number; // Task-10
+  exercicio?: number; // Task-10
   councilorId?: string;
   councilorName?: string; // From Councilor entity
   councilorPoliticalParty?: string; // From Councilor entity
@@ -24,6 +26,8 @@ export interface EmendaDTO {
   attachments?: string[];
   description?: string;
   objectDetail?: string;
+  previsaoConclusao?: string; // Task-10
+  justificativa?: string; // Task-10
 }
 
 export interface EmendaAcaoDTO {

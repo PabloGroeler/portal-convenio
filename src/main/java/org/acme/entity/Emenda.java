@@ -21,12 +21,19 @@ import java.util.UUID;
     @Index(name = "idx_emendas_vereador", columnList = "councilor_id"),
     @Index(name = "idx_emendas_instituicao", columnList = "institution_id"),
     @Index(name = "idx_emendas_codigo_oficial", columnList = "official_code")
+//    @Index(name = "idx_emendas_numero_exercicio", columnList = "numero_emenda, exercicio", unique = true)
 })
 public class Emenda {
 
     @Id
     @Column(length = 36)
     public String id;
+
+    @Column(name = "numero_emenda")
+    public Integer numeroEmenda;
+
+    @Column(name = "exercicio", nullable = false)
+    public Integer exercicio;
 
     @Column(name = "councilor_id", length = 100)
     public String councilorId;
@@ -93,11 +100,17 @@ public class Emenda {
     @Column(name = "url", columnDefinition = "TEXT")
     public List<String> attachments = new ArrayList<>();
 
-    @Column(name = "description", columnDefinition = "TEXT")
+    @Column(name = "description", length = 1000)
     public String description;
 
     @Column(name = "object_detail", columnDefinition = "TEXT")
     public String objectDetail;
+
+    @Column(name = "previsao_conclusao")
+    public LocalDate previsaoConclusao;
+
+    @Column(name = "justificativa", length = 1000)
+    public String justificativa;
 
     @Column(name = "create_time")
     public OffsetDateTime createTime;

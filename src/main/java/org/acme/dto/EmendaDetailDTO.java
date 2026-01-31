@@ -12,6 +12,8 @@ import org.hibernate.LazyInitializationException;
 
 public class EmendaDetailDTO {
     public String id;
+    public Integer numeroEmenda; // Task-10
+    public Integer exercicio; // Task-10
     public String councilorId;
     public String councilorName; // From Councilor entity
     public String officialCode;
@@ -32,12 +34,16 @@ public class EmendaDetailDTO {
     public List<String> attachments;
     public String description;
     public String objectDetail;
+    public LocalDate previsaoConclusao; // Task-10
+    public String justificativa; // Task-10
 
     public EmendaDetailDTO() {
     }
 
     public EmendaDetailDTO(Emenda emenda, Institution institution, Councilor councilor) {
         this.id = emenda.id;
+        this.numeroEmenda = emenda.numeroEmenda;
+        this.exercicio = emenda.exercicio;
         this.councilorId = emenda.councilorId;
         this.councilorName = councilor != null ? councilor.fullName : null;
          this.officialCode = emenda.officialCode;
@@ -58,11 +64,15 @@ public class EmendaDetailDTO {
         this.attachments = emenda.attachments != null ? new ArrayList<>(emenda.attachments) : new ArrayList<>();
         this.description = emenda.description;
         this.objectDetail = emenda.objectDetail;
+        this.previsaoConclusao = emenda.previsaoConclusao;
+        this.justificativa = emenda.justificativa;
     }
 
     public static EmendaDetailDTO fromEmenda(Emenda emenda) {
         EmendaDetailDTO dto = new EmendaDetailDTO();
         dto.id = emenda.id;
+        dto.numeroEmenda = emenda.numeroEmenda;
+        dto.exercicio = emenda.exercicio;
         dto.councilorId = emenda.councilorId;
         dto.officialCode = emenda.officialCode;
         dto.date = emenda.date;
@@ -86,6 +96,8 @@ public class EmendaDetailDTO {
         }
         dto.description = emenda.description;
         dto.objectDetail = emenda.objectDetail;
+        dto.previsaoConclusao = emenda.previsaoConclusao;
+        dto.justificativa = emenda.justificativa;
         return dto;
     }
 }

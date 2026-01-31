@@ -38,6 +38,9 @@ public class EmendaService {
     @Inject
     StatusCicloVidaEmendaService statusCicloVidaEmendaService;
 
+    @Inject
+    EmendaValidationService emendaValidationService;
+
     public List<Emenda> listAll() {
         // Note: Emenda.attachments is an @ElementCollection and can be lazily loaded.
         // If we return entities outside a transaction, Jackson serialization may trigger
@@ -106,16 +109,6 @@ public class EmendaService {
 
     @Transactional
     public Emenda create(Emenda emenda, String usuario) {
-        // JIRA 5: apply business rules per tipo de emenda
-        emendaRulesEngine.validateOrThrow(emenda);
-
-        emenda.createTime = OffsetDateTime.now();
-        emenda.updateTime = OffsetDateTime.now();
-
-        if (emenda.status == null || emenda.status.isBlank()) {
-            emenda.status = "Recebido";
-        }
-
         if (emenda.status == null) {
             emenda.status = null;
         } else {
@@ -132,6 +125,18 @@ public class EmendaService {
                 default:
                     emenda.status = "Recebido";
             }
+        }
+
+        emendaValidationService.validateOrThrow(emenda, false);
+
+        // JIRA 5: apply business rules per tipo de emenda
+        emendaRulesEngine.validateOrThrow(emenda);
+
+        emenda.createTime = OffsetDateTime.now();
+        emenda.updateTime = OffsetDateTime.now();
+
+        if (emenda.status == null || emenda.status.isBlank()) {
+            emenda.status = "Recebido";
         }
 
         statusCicloVidaEmendaService.validateOrThrow(emenda.status);
@@ -173,6 +178,9 @@ public class EmendaService {
 
     @Transactional
     public Emenda update(String id, Emenda updated, String usuario) {
+        // Task-10: Validate all required fields and constraints
+        emendaValidationService.validateOrThrow(updated, true);
+
         // JIRA 5: apply business rules per tipo de emenda
         emendaRulesEngine.validateOrThrow(updated);
 
