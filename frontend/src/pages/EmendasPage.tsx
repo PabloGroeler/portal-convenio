@@ -46,6 +46,9 @@ const EmendasPage: React.FC = () => {
   const [executingAction, setExecutingAction] = useState(false);
   const [saving, setSaving] = useState(false);
 
+  // Track last action taken per emenda to prevent duplicate consecutive actions
+  const [lastActionByEmenda, setLastActionByEmenda] = useState<Record<string, string>>({});
+
   // Current emenda being created/edited/viewed in the modal
   const [editForm, setEditForm] = useState<Emenda>({
     id: '',
@@ -255,6 +258,15 @@ const EmendasPage: React.FC = () => {
   };
 
   const closeModal = () => {
+    // Clear last action tracking for the emenda being closed
+    if (selectedEmenda?.id) {
+      setLastActionByEmenda((prev) => {
+        const updated = { ...prev };
+        delete updated[selectedEmenda.id];
+        return updated;
+      });
+    }
+
     setSelectedEmenda(null);
     setIsCreateMode(false);
     setIsEditMode(false);
@@ -407,6 +419,20 @@ const EmendasPage: React.FC = () => {
       return;
     }
 
+    // Check if this is a duplicate action (same action on same emenda)
+    const lastAction = lastActionByEmenda[selectedEmenda.id];
+    if (lastAction === acao) {
+      console.log(`[EmendasPage] Duplicate action ${acao} ignored for emenda ${selectedEmenda.id}`);
+      alert(`A ação "${acao}" já foi executada nesta emenda. Escolha uma ação diferente ou feche e reabra a emenda.`);
+      return;
+    }
+
+    // Prevent multiple simultaneous actions
+    if (executingAction) {
+      console.log('[EmendasPage] Action already in progress, ignoring click');
+      return;
+    }
+
     setExecutingAction(true);
     try {
       console.log(`[EmendasPage] Executing action ${acao} on emenda ID ${selectedEmenda.id}`);
@@ -415,6 +441,12 @@ const EmendasPage: React.FC = () => {
         observacao: despachoObservacao,
       });
       console.log('[EmendasPage] Action result:', updatedEmenda);
+
+      // Record this action as the last one for this emenda
+      setLastActionByEmenda((prev) => ({
+        ...prev,
+        [selectedEmenda.id]: acao,
+      }));
 
       // Update the emenda in the local state
       const updatedLocal: Emenda = {
