@@ -18,9 +18,9 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "emendas", indexes = {
-    @Index(name = "idx_emendas_vereador", columnList = "councilor_id"),
-    @Index(name = "idx_emendas_instituicao", columnList = "institution_id"),
-    @Index(name = "idx_emendas_codigo_oficial", columnList = "official_code")
+    @Index(name = "idx_emendas_parlamentar", columnList = "id_parlamentar"),
+    @Index(name = "idx_emendas_instituicao", columnList = "id_instituicao"),
+    @Index(name = "idx_emendas_codigo_oficial", columnList = "codigo_oficial")
 //    @Index(name = "idx_emendas_numero_exercicio", columnList = "numero_emenda, exercicio", unique = true)
 })
 public class Emenda {
@@ -100,10 +100,10 @@ public class Emenda {
     @Column(name = "url", columnDefinition = "TEXT")
     public List<String> attachments = new ArrayList<>();
 
-    @Column(name = "description", length = 1000)
+    @Column(name = "descricao", length = 1000)
     public String description;
 
-    @Column(name = "object_detail", columnDefinition = "TEXT")
+    @Column(name = "objeto_detalhado", columnDefinition = "TEXT")
     public String objectDetail;
 
     @Column(name = "previsao_conclusao")
@@ -112,10 +112,10 @@ public class Emenda {
     @Column(name = "justificativa", length = 1000)
     public String justificativa;
 
-    @Column(name = "create_time")
+    @Column(name = "data_criacao")
     public OffsetDateTime createTime;
 
-    @Column(name = "update_time")
+    @Column(name = "data_atualizacao")
     public OffsetDateTime updateTime;
 
     public Emenda() {

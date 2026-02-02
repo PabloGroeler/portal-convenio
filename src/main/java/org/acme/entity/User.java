@@ -60,23 +60,23 @@ public class User extends PanacheEntity {
     public UserStatus status = UserStatus.ATIVO;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 30)
+    @Column(name = "perfil", nullable = false, length = 30)
     public UserRole role = UserRole.OPERADOR;
 
     @NotBlank
     @Size(min = 3, max = 50)
-    @Column(name = "username", unique = true, nullable = false, length = 50)
+    @Column(name = "nome_usuario", unique = true, nullable = false, length = 50)
     public String username;
 
     @NotBlank
     @Size(min = 6)
-    @Column(name = "password", nullable = false)
+    @Column(name = "senha", nullable = false)
     public String password;
 
-    @Column(name = "create_time", nullable = false)
+    @Column(name = "data_criacao", nullable = false)
     public OffsetDateTime createTime;
 
-    @Column(name = "update_time", nullable = false)
+    @Column(name = "data_atualizacao", nullable = false)
     public OffsetDateTime updateTime;
 
     @PrePersist

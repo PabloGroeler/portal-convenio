@@ -17,14 +17,14 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "instituicoes", indexes = {
-    @Index(name = "idx_instituicoes_institution_id", columnList = "institution_id", unique = true),
+    @Index(name = "idx_instituicoes_id_instituicao", columnList = "id_instituicao", unique = true),
     @Index(name = "idx_instituicoes_cnpj", columnList = "cnpj"),
     @Index(name = "idx_instituicoes_email", columnList = "email_institucional", unique = true)
 })
 public class Institution {
 
     @Id
-    @Column(name = "institution_id", nullable = false, unique = true, length = 100)
+    @Column(name = "id_instituicao", nullable = false, unique = true, length = 100)
     public String institutionId;
 
     // ===== Dados Básicos =====
@@ -74,25 +74,25 @@ public class Institution {
 
     // ===== Endereço =====
 
-    @Column(name = "cep", nullable = false, length = 8)
+    @Column(name = "cep", length = 8)
     public String cep;
 
-    @Column(name = "logradouro", nullable = false, length = 200)
+    @Column(name = "logradouro", length = 200)
     public String logradouro;
 
-    @Column(name = "numero", nullable = false, length = 20)
+    @Column(name = "numero", length = 20)
     public String numero;
 
     @Column(name = "complemento", length = 100)
     public String complemento;
 
-    @Column(name = "bairro", nullable = false, length = 100)
+    @Column(name = "bairro", length = 100)
     public String bairro;
 
-    @Column(name = "cidade", nullable = false, length = 120)
+    @Column(name = "cidade", length = 120)
     public String cidade;
 
-    @Column(name = "uf", nullable = false, length = 2)
+    @Column(name = "uf", length = 2)
     public String uf;
 
     @Column(name = "ponto_referencia", length = 200)
@@ -100,7 +100,7 @@ public class Institution {
 
     // ===== Informações Adicionais =====
 
-    @Column(name = "numero_registro_conselho_municipal", nullable = false, length = 100)
+    @Column(name = "numero_registro_conselho_municipal", length = 100)
     public String numeroRegistroConselhoMunicipal;
 
     @Column(name = "data_registro_conselho")

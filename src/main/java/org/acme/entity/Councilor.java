@@ -9,24 +9,24 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "parlamentares", indexes = {
-    @Index(name = "idx_parlamentares_councilor_id", columnList = "councilor_id", unique = true)
+    @Index(name = "idx_parlamentares_id", columnList = "id_parlamentar", unique = true)
 })
 public class Councilor {
 
     @Id
-    @Column(name = "councilor_id", nullable = false, unique = true, length = 100)
+    @Column(name = "id_parlamentar", nullable = false, unique = true, length = 100)
     public String councilorId;
 
-    @Column(name = "full_name", nullable = false)
+    @Column(name = "nome_completo", nullable = false)
     public String fullName;
 
-    @Column(name = "political_party", length = 100)
+    @Column(name = "partido_politico", length = 100)
     public String politicalParty;
 
-    @Column(name = "create_time")
+    @Column(name = "data_criacao")
     public OffsetDateTime createTime;
 
-    @Column(name = "update_time")
+    @Column(name = "data_atualizacao")
     public OffsetDateTime updateTime;
 
     public Councilor() {

@@ -35,10 +35,10 @@ public class SecretariaMunicipal {
     @Column(name = "ativo", nullable = false)
     public boolean ativo = true;
 
-    @Column(name = "create_time")
+    @Column(name = "data_criacao")
     public OffsetDateTime createTime;
 
-    @Column(name = "update_time")
+    @Column(name = "data_atualizacao")
     public OffsetDateTime updateTime;
 
     public SecretariaMunicipal() {

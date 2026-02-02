@@ -1,5 +1,6 @@
 package org.acme.entity;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -14,7 +15,10 @@ public class News {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
 
+    @Column(name = "titulo")
     public String title;
+
+    @Column(name = "conteudo", columnDefinition = "TEXT")
     public String content;
 
     public News() {
