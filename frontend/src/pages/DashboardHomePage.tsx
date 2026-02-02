@@ -17,27 +17,6 @@ const DashboardHomePage: React.FC = () => {
       <div className="bg-white p-6 rounded-lg shadow">
         <h2 className="text-lg font-semibold mb-2">Bem-vindo</h2>
         <p className="text-gray-600 mb-4">Selecione uma opção no menu à esquerda.</p>
-
-        <div className="flex flex-wrap gap-3">
-          <Link
-            to="/dashboard/emendas"
-            className="inline-flex items-center px-4 py-2 rounded bg-purple-600 text-white text-sm font-medium hover:bg-purple-700"
-          >
-            Ir para Emendas
-          </Link>
-          <Link
-            to="/dashboard/instituicoes"
-            className="inline-flex items-center px-4 py-2 rounded bg-gray-900 text-white text-sm font-medium hover:bg-black"
-          >
-            Gerenciar Instituições
-          </Link>
-          <Link
-            to="/dashboard/parlamentares"
-            className="inline-flex items-center px-4 py-2 rounded bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
-          >
-            Gerenciar Parlamentares
-          </Link>
-        </div>
       </div>
     </div>
   );

@@ -69,6 +69,7 @@ function App() {
                 <Route index element={<DashboardHomePage />} />
                 <Route path="emendas" element={<DashboardEmendasPage />} />
                 <Route path="instituicoes" element={<InstitutionsPage />} />
+                <Route path="cadastro-dados-institucionais" element={<CadastroDadosInstitucionaisPage />} />
                 <Route path="parlamentares" element={<CouncilorsPage />} />
                 <Route path="usuarios" element={<UsersPage />} />
               </Route>
@@ -137,14 +138,6 @@ function App() {
                    element={
                      <ProtectedRoute>
                        <InstitutionsPage />
-                     </ProtectedRoute>
-                   }
-                 />
-                 <Route
-                   path="painel/cadastro-dados-institucionais"
-                   element={
-                     <ProtectedRoute>
-                       <CadastroDadosInstitucionaisPage />
                      </ProtectedRoute>
                    }
                  />

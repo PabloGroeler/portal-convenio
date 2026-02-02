@@ -567,20 +567,6 @@ const EmendasPage: React.FC = () => {
             >
               + Nova Emenda
             </button>
-
-            <Link
-              to="/painel/institutions"
-              className="inline-flex items-center px-4 py-2 rounded bg-purple-600 text-white text-sm font-medium hover:bg-purple-700"
-            >
-              Gerenciar Instituições
-            </Link>
-
-            <Link
-              to="/painel/councilors"
-              className="inline-flex items-center px-4 py-2 rounded bg-emerald-600 text-white text-sm font-medium hover:bg-emerald-700"
-            >
-              Gerenciar Parlamentares
-            </Link>
           </div>
 
            <div className="bg-white rounded shadow p-6">

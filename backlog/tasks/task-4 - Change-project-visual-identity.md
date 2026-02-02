@@ -4,10 +4,10 @@ title: Change project visual identity
 status: Done
 assignee: []
 created_date: '2026-01-15 15:29'
-updated_date: '2026-01-16 17:48'
+updated_date: '2026-02-02 17:50'
 labels: []
 dependencies: []
-ordinal: 1000
+ordinal: 2000
 ---
 
 ## Description

@@ -40,21 +40,18 @@ const Navbar = () => {
                 Painel
               </Link>
             )}
-            <Link to="/news" className="hover:text-blue-200">
-              Notícias
-            </Link>
-            <Link to="/emendas" className="hover:text-blue-200">
-              Emendas
-            </Link>
-            <Link to="/manuals" className="hover:text-blue-200">
-              Manuais
-            </Link>
-            <Link to="/downloads" className="hover:text-blue-200">
-              Downloads
-            </Link>
-            <Link to="/legislation" className="hover:text-blue-200">
-              Legislação
-            </Link>
+{/*             <Link to="/news" className="hover:text-blue-200">
+//               Notícias
+//             </Link>
+//             <Link to="/manuals" className="hover:text-blue-200">
+//               Manuais
+//             </Link>
+//             <Link to="/downloads" className="hover:text-blue-200">
+//               Downloads
+//             </Link>
+//             <Link to="/legislation" className="hover:text-blue-200">
+//               Legislação
+//             </Link>*/}
             <Link to="/contact" className="hover:text-blue-200">
               Contato
             </Link>

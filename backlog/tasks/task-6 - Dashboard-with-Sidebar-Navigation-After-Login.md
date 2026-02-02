@@ -4,10 +4,10 @@ title: Dashboard with Sidebar Navigation After Login
 status: Done
 assignee: []
 created_date: '2026-01-30 14:38'
-updated_date: '2026-01-30 15:08'
+updated_date: '2026-02-02 17:50'
 labels: []
 dependencies: []
-ordinal: 4000
+ordinal: 5000
 ---
 
 ## Description
