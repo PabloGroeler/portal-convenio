@@ -861,20 +861,38 @@ const EmendasPage: React.FC = () => {
                          </label>
                          {(isCreateMode || isEditMode) ? (
                            <input
-                             type="number"
-                             value={editForm.numeroEmenda || ''}
-                             onChange={(e) => handleFormChange('numeroEmenda', e.target.value ? parseInt(e.target.value) : undefined)}
-                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Ex: 1"
-                             min="1"
-                             required
-                           />
-                         ) : (
+                            type="text"
+                            value={editForm.officialCode || ''}
+                            onChange={(e) => handleFormChange('officialCode', e.target.value)}
+                            type="number"
+                            value={editForm.numeroEmenda || ''}
+                            onChange={(e) => handleFormChange('numeroEmenda', e.target.value ? parseInt(e.target.value) : undefined)}
+                            className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                            placeholder="Ex: 004-132-2025"
+                            min="1"
+                            required
+                          />
+                        )    : (
                            <span className="font-mono text-slate-700 font-medium">{editForm.numeroEmenda || '—'}</span>
                          )}
                          <p className="text-xs text-slate-400 mt-1">Deve ser maior que zero e único por exercício</p>
                        </div>
                        <div>
+                        <span className="text-xs text-slate-500 uppercase block">Valor</span>
+                        {isCreateMode ? (
+                          <input
+                            type="text"
+                            value={editForm.value}
+                            onChange={(e) => handleFormChange('value', e.target.value)}
+                            onBlur={handleValorBlur}
+                            className="mt-1 w-full border rounded px-3 py-2 text-sm"
+                            placeholder="R$ 0,00"
+                          />
+                        ) : (
+                          <span className="font-mono text-slate-700 font-medium">{editForm.value}</span>
+                        )}
+                      </div>
+                        <div>
                          <label className="text-xs text-slate-500 uppercase block">
                            Exercício (Ano) <span className="text-red-500">*</span>
                          </label>
