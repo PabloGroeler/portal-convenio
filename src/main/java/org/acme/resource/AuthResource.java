@@ -28,14 +28,14 @@ public class AuthResource {
     @POST
     @Path("/login")
     public Response login(LoginRequest loginRequest) {
-        log.info("Login request for user: {}", loginRequest.username());
+        log.info("Login request for user: {}", loginRequest.nomeUsuario());
         try {
-            String token = authService.login(loginRequest.username(), loginRequest.password());
+            String token = authService.login(loginRequest.nomeUsuario(), loginRequest.senha());
             if (token == null) {
                 throw new Exception("Invalid credentials");
             }
-            User user = User.findByEmail(loginRequest.username());
-            UserDTO userDTO = new UserDTO(user.id, user.username, user.email);
+            User user = User.findByEmail(loginRequest.nomeUsuario());
+            UserDTO userDTO = new UserDTO(user.id, user.nomeUsuario, user.email);
             return Response.ok(new LoginResponse(true, token, userDTO)).build();
         } catch (Exception e) {
             return Response.status(Response.Status.UNAUTHORIZED)

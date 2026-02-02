@@ -96,7 +96,7 @@ public class EmendasResource {
             emenda.statusCicloVida = statusCicloVidaEmendaService.normalize(emenda.statusCicloVida);
 
             // JIRA 4: validate tipo de emenda (mapped in 'classification')
-            tipoEmendaService.validateCodigoAtivoOrThrow(emenda.classification);
+            tipoEmendaService.validateCodigoAtivoOrThrow(emenda.classificacao);
 
             // JIRA 6: validate esfera
             esferaEmendaService.validateOrThrow(emenda.esfera);
@@ -128,7 +128,7 @@ public class EmendasResource {
             emenda.statusCicloVida = statusCicloVidaEmendaService.normalize(emenda.statusCicloVida);
 
             // JIRA 4: validate tipo de emenda (mapped in 'classification')
-            tipoEmendaService.validateCodigoAtivoOrThrow(emenda.classification);
+            tipoEmendaService.validateCodigoAtivoOrThrow(emenda.classificacao);
 
             // JIRA 6: validate esfera
             esferaEmendaService.validateOrThrow(emenda.esfera);

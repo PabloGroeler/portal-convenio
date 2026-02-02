@@ -4,9 +4,13 @@ title: Ajuste nas validações na criação de emendas
 status: Done
 assignee: []
 created_date: '2026-01-31 18:55'
-completed_date: '2026-01-31'
-labels: [validation, backend, frontend]
+updated_date: '2026-01-31 19:42'
+labels:
+  - validation
+  - backend
+  - frontend
 dependencies: []
+ordinal: 6000
 ---
 
 ## Description

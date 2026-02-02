@@ -2,32 +2,33 @@ import api from './api';
 
 export interface EmendaDTO {
   id?: string;
-  numeroEmenda?: number; // Task-10
-  exercicio?: number; // Task-10
-  councilorId?: string;
+  numeroEmenda?: number;
+  exercicio?: number;
+  idParlamentar?: string;
   councilorName?: string; // From Councilor entity
   councilorPoliticalParty?: string; // From Councilor entity
-  officialCode?: string;
-  date?: string;
-  value?: number;
-  classification?: string;
+  codigoOficial?: string;
+  data?: string;
+  valor?: number;
+  classificacao?: string;
   esfera?: string;
   existeConvenio?: boolean;
   numeroConvenio?: string;
   anoConvenio?: number;
-  category?: string;
+  categoria?: string;
   /** Legacy field (keep for backward compatibility). */
-  status?: string;
+  situacao?: string;
   /** Canonical status used by the UI (lifecycle). */
   statusCicloVida?: string;
-  institutionId?: string;
+  statusFederal?: string;
+  idInstituicao?: string;
   institutionName?: string; // From Institution entity
-  signedLink?: string;
-  attachments?: string[];
-  description?: string;
-  objectDetail?: string;
-  previsaoConclusao?: string; // Task-10
-  justificativa?: string; // Task-10
+  linkAssinado?: string;
+  anexos?: string[];
+  descricao?: string;
+  objetoDetalhado?: string;
+  previsaoConclusao?: string;
+  justificativa?: string;
 }
 
 export interface EmendaAcaoDTO {

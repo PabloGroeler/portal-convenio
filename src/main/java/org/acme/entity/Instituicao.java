@@ -21,7 +21,7 @@ import java.util.UUID;
     @Index(name = "idx_instituicoes_cnpj", columnList = "cnpj"),
     @Index(name = "idx_instituicoes_email", columnList = "email_institucional", unique = true)
 })
-public class Institution {
+public class Instituicao {
 
     @Id
     @Column(name = "institution_id", nullable = false, unique = true, length = 100)
@@ -114,13 +114,13 @@ public class Institution {
 
     // ===== Auditoria =====
 
-    @Column(name = "create_time")
-    public OffsetDateTime createTime;
+    @Column(name = "data_criacao")
+    public OffsetDateTime dataCriacao;
 
-    @Column(name = "update_time")
-    public OffsetDateTime updateTime;
+    @Column(name = "data_atualizacao")
+    public OffsetDateTime dataAtualizacao;
 
-    public Institution() {
+    public Instituicao() {
     }
 
     @PrePersist

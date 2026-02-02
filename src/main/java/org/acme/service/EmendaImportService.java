@@ -36,19 +36,19 @@ public class EmendaImportService {
             if (incoming == null) continue;
 
             // Required fields for our current idempotency strategy
-            if (incoming.officialCode == null || incoming.officialCode.isBlank()) {
+            if (incoming.codigoOficial == null || incoming.codigoOficial.isBlank()) {
                 summary.skipped++;
                 summary.warnings.add("Skipped: missing officialCode");
                 continue;
             }
 
-            if (incoming.institutionId == null || incoming.institutionId.isBlank()) {
+            if (incoming.idInstituicao == null || incoming.idInstituicao.isBlank()) {
                 summary.skipped++;
-                summary.warnings.add("Skipped: missing institutionId for officialCode=" + incoming.officialCode);
+                summary.warnings.add("Skipped: missing institutionId for officialCode=" + incoming.codigoOficial);
                 continue;
             }
 
-            Emenda existing = emendaRepository.findByOfficialCodeAndInstitutionId(incoming.officialCode, incoming.institutionId);
+            Emenda existing = emendaRepository.findByOfficialCodeAndInstitutionId(incoming.codigoOficial, incoming.idInstituicao);
             if (existing == null) {
                 emendaService.create(incoming, usuario != null ? usuario : "sistema");
                 summary.created++;

@@ -9,25 +9,25 @@ import type { EmendaHistoricoDTO } from '../services/emendaService';
 
 interface Emenda {
   id: string;
-  councilorId?: string;
+  idParlamentar?: string;
   councilorName?: string;
-  officialCode?: string;
-  date?: string;
-  value: string;
-  classification?: string;
+  codigoOficial?: string;
+  data?: string;
+  valor: string;
+  classificacao?: string;
   esfera?: string;
   existeConvenio?: boolean;
   numeroConvenio?: string;
   anoConvenio?: number;
-  category?: string;
-  status: string;
-  institutionId?: string;
+  categoria?: string;
+  situacao: string;
+  idInstituicao?: string;
   institutionName?: string;
   institutionEmail?: string;
-  signedLink?: string;
-  attachments?: string[];
-  description?: string;
-  objectDetail?: string;
+  linkAssinado?: string;
+  anexos?: string[];
+  descricao?: string;
+  objetoDetalhado?: string;
 }
 
 const EmendasPage: React.FC = () => {
@@ -52,25 +52,25 @@ const EmendasPage: React.FC = () => {
   // Current emenda being created/edited/viewed in the modal
   const [editForm, setEditForm] = useState<Emenda>({
     id: '',
-    councilorId: '',
-    officialCode: '',
-    date: new Date().toISOString().split('T')[0],
-    value: 'R$ 0,00',
-    classification: '',
+    idParlamentar: '',
+    codigoOficial: '',
+    data: new Date().toISOString().split('T')[0],
+    valor: 'R$ 0,00',
+    classificacao: '',
     esfera: 'Municipal',
     existeConvenio: false,
     numeroConvenio: '',
     anoConvenio: undefined,
-    category: '',
-    status: 'Recebido',
-    institutionId: '',
-    signedLink: '',
-    attachments: [],
-    description: '',
-    objectDetail: '',
+    categoria: '',
+    situacao: 'Recebido',
+    idInstituicao: '',
+    linkAssinado: '',
+    anexos: [],
+    descricao: '',
+    objetoDetalhado: '',
   });
 
-  // Dropdown data for councilor/institution selectors
+  // Dropdown data for parlamentar/instituicao selectors
   const [institutions, setInstitutions] = useState<InstitutionDTO[]>([]);
   const [councilors, setCouncilors] = useState<CouncilorDTO[]>([]);
   const [tiposEmenda, setTiposEmenda] = useState<TipoEmendaDTO[]>([]);
@@ -90,29 +90,29 @@ const EmendasPage: React.FC = () => {
         console.log('[EmendasPage] Received data:', data);
         // Map API data to frontend Emenda interface
         const mappedEmendas: Emenda[] = data.map((e) => {
-          const status = (e.status || 'Recebido') as string;
+          const status = (e.situacao || 'Recebido') as string;
           const safeStatus = typeof status === 'string' && status.trim() ? status : 'Recebido';
           return ({
             id: e.id || '',
-            councilorId: e.councilorId,
+            idParlamentar: e.idParlamentar,
             councilorName: e.councilorName,
             councilorPoliticalParty: e.councilorPoliticalParty,
-            officialCode: e.officialCode,
-            date: e.date,
-            value: e.value ? `R$ ${e.value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
-            classification: e.classification,
+            codigoOficial: e.codigoOficial,
+            data: e.data,
+            valor: e.valor ? `R$ ${e.valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : 'R$ 0,00',
+            classificacao: e.classificacao,
             esfera: (e as any).esfera,
             existeConvenio: (e as any).existeConvenio,
             numeroConvenio: (e as any).numeroConvenio,
             anoConvenio: (e as any).anoConvenio,
-            category: e.category,
-            status: safeStatus,
-            institutionId: e.institutionId,
+            categoria: e.categoria,
+            situacao: safeStatus,
+            idInstituicao: e.idInstituicao,
             institutionName: e.institutionName,
-            signedLink: e.signedLink,
-            attachments: Array.isArray(e.attachments) ? e.attachments : [],
-            description: e.description,
-            objectDetail: e.objectDetail,
+            linkAssinado: e.linkAssinado,
+            anexos: Array.isArray(e.anexos) ? e.anexos : [],
+            descricao: e.descricao,
+            objetoDetalhado: e.objetoDetalhado,
           });
         });
         console.log('[EmendasPage] Mapped emendas:', mappedEmendas);
@@ -291,46 +291,46 @@ const EmendasPage: React.FC = () => {
   };
 
   const handleValorBlur = () => {
-    if (editForm.value) {
-      const formatted = formatCurrency(editForm.value);
-      setEditForm((prev) => ({ ...prev, value: formatted }));
+    if (editForm.valor) {
+      const formatted = formatCurrency(editForm.valor);
+      setEditForm((prev) => ({ ...prev, valor: formatted }));
     }
   };
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      // JIRA 3: tipo de emenda is mandatory (using existing 'classification' field for now).
-      if (!(editForm.classification ?? '').trim()) {
+      // JIRA 3: tipo de emenda is mandatory (using existing 'classificacao' field for now).
+      if (!(editForm.classificacao ?? '').trim()) {
         alert('Selecione o tipo de emenda.');
         return;
       }
 
       // Parse value string to number (remove R$ and formatting)
       let valueNum = 0;
-      if (editForm.value) {
-        const cleanedValue = editForm.value.replace(/[R$\s.]/g, '').replace(',', '.');
+      if (editForm.valor) {
+        const cleanedValue = editForm.valor.replace(/[R$\s.]/g, '').replace(',', '.');
         valueNum = parseFloat(cleanedValue) || 0;
       }
 
       const emendaDTO = {
-        councilorId: editForm.councilorId,
-        officialCode: editForm.officialCode,
-        date: editForm.date,
-        value: valueNum,
+        idParlamentar: editForm.idParlamentar,
+        codigoOficial: editForm.codigoOficial,
+        data: editForm.data,
+        valor: valueNum,
         // NOTE: mapped as codigo (e.g. EMENDA_PIX) until backend adds a dedicated field (JIRA 4/5).
-        classification: editForm.classification,
+        classificacao: editForm.classificacao,
         esfera: editForm.esfera,
         existeConvenio: Boolean(editForm.existeConvenio),
         numeroConvenio: editForm.existeConvenio ? (editForm.numeroConvenio || '').trim() : null,
         anoConvenio: editForm.existeConvenio ? (editForm.anoConvenio ?? null) : null,
-        category: editForm.category,
-        status: editForm.status,
-        institutionId: editForm.institutionId,
-        signedLink: editForm.signedLink,
-        attachments: (editForm.attachments || []).filter((a) => (a ?? '').trim().length > 0),
-        description: editForm.description,
-        objectDetail: editForm.objectDetail,
+        categoria: editForm.categoria,
+        situacao: editForm.situacao,
+        idInstituicao: editForm.idInstituicao,
+        linkAssinado: editForm.linkAssinado,
+        anexos: (editForm.anexos || []).filter((a) => (a ?? '').trim().length > 0),
+        descricao: editForm.descricao,
+        objetoDetalhado: editForm.objetoDetalhado,
       };
 
       let result;

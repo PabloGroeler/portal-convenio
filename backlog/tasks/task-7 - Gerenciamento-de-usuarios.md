@@ -1,13 +1,13 @@
 ---
 id: task-7
 title: Gerenciamento de usuarios
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-01-30 15:07'
-updated_date: '2026-01-30 15:19'
+updated_date: '2026-01-31 19:42'
 labels: []
 dependencies: []
-ordinal: 1000
+ordinal: 5000
 ---
 
 ## Description

@@ -31,23 +31,23 @@ public class TipoEmenda {
     @Column(name = "ordem", nullable = false)
     public int ordem = 0;
 
-    @Column(name = "create_time")
-    public OffsetDateTime createTime;
+    @Column(name = "data_criacao")
+    public OffsetDateTime dataCriacao;
 
-    @Column(name = "update_time")
-    public OffsetDateTime updateTime;
+    @Column(name = "data_atualizacao")
+    public OffsetDateTime dataAtualizacao;
 
     @PrePersist
     public void onCreate() {
-        if (createTime == null) {
-            createTime = OffsetDateTime.now();
+        if (dataCriacao == null) {
+            dataCriacao = OffsetDateTime.now();
         }
-        updateTime = OffsetDateTime.now();
+        dataAtualizacao = OffsetDateTime.now();
     }
 
     @PreUpdate
     public void onUpdate() {
-        updateTime = OffsetDateTime.now();
+        dataAtualizacao = OffsetDateTime.now();
     }
 }
 

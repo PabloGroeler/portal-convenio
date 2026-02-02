@@ -5,8 +5,8 @@ import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.acme.entity.Emenda;
 import org.acme.entity.EmendaHistorico;
-import org.acme.entity.Institution;
-import org.acme.entity.Councilor;
+import org.acme.entity.Instituicao;
+import org.acme.entity.Parlamentar;
 import org.acme.repository.EmendaRepository;
 import org.acme.repository.EmendaHistoricoRepository;
 import org.acme.dto.EmendaAcaoDTO;
@@ -51,10 +51,10 @@ public class EmendaService {
     @Transactional
     public List<Emenda> listAllInitialized() {
         List<Emenda> emendas = emendaRepository.listAll();
-        // Force initialization of attachments while the session is open
+        // Force initialization of anexos while the session is open
         for (Emenda e : emendas) {
-            if (e.attachments != null) {
-                int ignored = e.attachments.size();
+            if (e.anexos != null) {
+                int ignored = e.anexos.size();
             }
         }
         return emendas;
@@ -63,9 +63,9 @@ public class EmendaService {
     public Emenda findById(String id) {
         if (id == null) return null;
         Emenda e = emendaRepository.findById(id);
-        if (e != null && e.attachments != null) {
-            // Ensure attachments are initialized for serialization
-            int ignored = e.attachments.size();
+        if (e != null && e.anexos != null) {
+            // Ensure anexos are initialized for serialization
+            int ignored = e.anexos.size();
         }
         return e;
     }
@@ -96,12 +96,12 @@ public class EmendaService {
         Institution institution = null;
         Councilor councilor = null;
 
-        if (emenda.institutionId != null && !emenda.institutionId.isBlank()) {
-            institution = institutionService.findByInstitutionId(emenda.institutionId);
+        if (emenda.idInstituicao != null && !emenda.idInstituicao.isBlank()) {
+            institution = institutionService.findByInstitutionId(emenda.idInstituicao);
         }
 
-        if (emenda.councilorId != null && !emenda.councilorId.isBlank()) {
-            councilor = councilorService.findByCouncilorId(emenda.councilorId);
+        if (emenda.idParlamentar != null && !emenda.idParlamentar.isBlank()) {
+            councilor = councilorService.findByCouncilorId(emenda.idParlamentar);
         }
 
         return new EmendaDetailDTO(emenda, institution, councilor);
@@ -109,21 +109,21 @@ public class EmendaService {
 
     @Transactional
     public Emenda create(Emenda emenda, String usuario) {
-        if (emenda.status == null) {
-            emenda.status = null;
+        if (emenda.situacao == null) {
+            emenda.situacao = null;
         } else {
-            switch (emenda.status.trim()) {
+            switch (emenda.situacao.trim()) {
                 case "Aprovada pelo Gestor":
-                    emenda.status = "Concluído";
+                    emenda.situacao = "Concluído";
                     break;
                 case "Em andamento":
-                    emenda.status = "Recebido";
+                    emenda.situacao = "Recebido";
                     break;
                 case "Devolvida para Retificação":
-                    emenda.status = "Devolvido";
+                    emenda.situacao = "Devolvido";
                     break;
                 default:
-                    emenda.status = "Recebido";
+                    emenda.situacao = "Recebido";
             }
         }
 
@@ -132,20 +132,20 @@ public class EmendaService {
         // JIRA 5: apply business rules per tipo de emenda
         emendaRulesEngine.validateOrThrow(emenda);
 
-        emenda.createTime = OffsetDateTime.now();
-        emenda.updateTime = OffsetDateTime.now();
+        emenda.dataCriacao = OffsetDateTime.now();
+        emenda.dataAtualizacao = OffsetDateTime.now();
 
-        if (emenda.status == null || emenda.status.isBlank()) {
-            emenda.status = "Recebido";
+        if (emenda.situacao == null || emenda.situacao.isBlank()) {
+            emenda.situacao = "Recebido";
         }
 
-        statusCicloVidaEmendaService.validateOrThrow(emenda.status);
-        emenda.status = statusCicloVidaEmendaService.normalize(emenda.status);
+        statusCicloVidaEmendaService.validateOrThrow(emenda.situacao);
+        emenda.situacao = statusCicloVidaEmendaService.normalize(emenda.situacao);
 
-        boolean hasDetail = (emenda.objectDetail != null && !emenda.objectDetail.isBlank());
+        boolean hasDetail = (emenda.objetoDetalhado != null && !emenda.objetoDetalhado.isBlank());
 
-        if (emenda.date == null) {
-            emenda.date = java.time.LocalDate.now();
+        if (emenda.data == null) {
+            emenda.data = java.time.LocalDate.now();
         }
 
         emendaRepository.persist(emenda);
@@ -187,55 +187,60 @@ public class EmendaService {
         Emenda existing = emendaRepository.findById(id);
         if (existing == null) return null;
 
-        String statusAnterior = existing.status;
+        String statusAnterior = existing.situacao;
 
-        boolean wasEmpty = (existing.objectDetail == null || existing.objectDetail.isBlank());
-        boolean nowHasValue = (updated.objectDetail != null && !updated.objectDetail.isBlank());
+        boolean wasEmpty = (existing.objetoDetalhado == null || existing.objetoDetalhado.isBlank());
+        boolean nowHasValue = (updated.objetoDetalhado != null && !updated.objetoDetalhado.isBlank());
         boolean detailAdded = wasEmpty && nowHasValue;
 
-        existing.councilorId = updated.councilorId;
-        existing.officialCode = updated.officialCode;
-        existing.date = updated.date;
-        existing.value = updated.value;
-        existing.classification = updated.classification;
+        // Task-10 fields
+        existing.numeroEmenda = updated.numeroEmenda;
+        existing.exercicio = updated.exercicio;
+        existing.idParlamentar = updated.idParlamentar;
+        existing.codigoOficial = updated.codigoOficial;
+        existing.data = updated.data;
+        existing.valor = updated.valor;
+        existing.classificacao = updated.classificacao;
         existing.esfera = updated.esfera;
         existing.existeConvenio = updated.existeConvenio;
         existing.numeroConvenio = updated.numeroConvenio;
         existing.anoConvenio = updated.anoConvenio;
-        existing.category = updated.category;
-        existing.status = updated.status;
+        existing.categoria = updated.categoria;
+        existing.situacao = updated.situacao;
         existing.statusCicloVida = updated.statusCicloVida;
-        existing.federalStatus = updated.federalStatus;
-        existing.institutionId = updated.institutionId;
-        existing.signedLink = updated.signedLink;
-        // Replace attachments list (null-safe)
-        existing.attachments.clear();
-        if (updated.attachments != null) {
-            existing.attachments.addAll(updated.attachments.stream()
+        existing.statusFederal = updated.statusFederal;
+        existing.idInstituicao = updated.idInstituicao;
+        existing.linkAssinado = updated.linkAssinado;
+        // Replace anexos list (null-safe)
+        existing.anexos.clear();
+        if (updated.anexos != null) {
+            existing.anexos.addAll(updated.anexos.stream()
                     .filter(a -> a != null && !a.isBlank())
                     .toList());
         }
-        existing.description = updated.description;
-        existing.objectDetail = updated.objectDetail;
-        existing.updateTime = OffsetDateTime.now();
+        existing.descricao = updated.descricao;
+        existing.objetoDetalhado = updated.objetoDetalhado;
+        existing.previsaoConclusao = updated.previsaoConclusao;
+        existing.justificativa = updated.justificativa;
+        existing.dataAtualizacao = OffsetDateTime.now();
 
         // Register generic update in history
         historicoRepository.persist(new EmendaHistorico(
             existing,
             "ATUALIZADA",
             statusAnterior,
-            existing.status,
+            existing.situacao,
             "Dados da emenda atualizados",
             usuario
         ));
 
-        // If objectDetail was just filled, update the pending detailing entry to "enviado"
+        // If objetoDetalhado was just filled, update the pending detailing entry to "enviado"
         if (detailAdded) {
             EmendaHistorico pendente = historicoRepository.findLatestDetalhamentoPendente(id).orElse(null);
             if (pendente != null) {
                 pendente.acao = "DETALHAMENTO_ENVIADO";
                 pendente.statusAnterior = statusAnterior;
-                pendente.statusNovo = existing.status;
+                pendente.statusNovo = existing.situacao;
                 pendente.observacao = "Formulário de detalhamento enviado";
                 pendente.usuario = (usuario != null ? usuario : "sistema");
                 pendente.dataHora = OffsetDateTime.now();
@@ -245,7 +250,7 @@ public class EmendaService {
                     existing,
                     "DETALHAMENTO_ENVIADO",
                     statusAnterior,
-                    existing.status,
+                    existing.situacao,
                     "Formulário de detalhamento enviado",
                     usuario != null ? usuario : "sistema"
                 ));
@@ -260,17 +265,17 @@ public class EmendaService {
         Emenda emenda = emendaRepository.findById(id);
         if (emenda == null) return null;
 
-        // Attachments is an @ElementCollection and may be lazily loaded.
+        // Anexos is an @ElementCollection and may be lazily loaded.
         // Ensure it's initialized inside the transaction so DTO mapping/JSON serialization won't fail.
-        if (emenda.attachments != null) {
-            int ignored = emenda.attachments.size();
+        if (emenda.anexos != null) {
+            int ignored = emenda.anexos.size();
         }
 
         if (acao == null || acao.acao == null || acao.acao.isBlank()) {
             throw new IllegalArgumentException("Ação é obrigatória");
         }
 
-        String statusAnterior = emenda.status;
+        String statusAnterior = emenda.situacao;
         String novoStatus;
         String acaoRegistrada;
 
@@ -300,9 +305,9 @@ public class EmendaService {
                 throw new IllegalArgumentException("Ação inválida: " + acao.acao);
         }
 
-        emenda.status = novoStatus;
+        emenda.situacao = novoStatus;
         // Keep lifecycle field aligned if present
-        emenda.updateTime = OffsetDateTime.now();
+        emenda.dataAtualizacao = OffsetDateTime.now();
 
         // Register action in history
         EmendaHistorico historico = new EmendaHistorico(
@@ -315,9 +320,9 @@ public class EmendaService {
         );
         historicoRepository.persist(historico);
 
-        // Keep attachments initialized after the change as well.
-        if (emenda.attachments != null) {
-            int ignored = emenda.attachments.size();
+        // Keep anexos initialized after the change as well.
+        if (emenda.anexos != null) {
+            int ignored = emenda.anexos.size();
         }
 
         return emenda;

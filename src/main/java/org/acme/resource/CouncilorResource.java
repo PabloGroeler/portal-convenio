@@ -4,7 +4,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.acme.entity.Councilor;
+import org.acme.entity.Parlamentar;
 import org.acme.service.CouncilorService;
 
 import java.util.List;
@@ -18,48 +18,48 @@ public class CouncilorResource {
     CouncilorService councilorService;
 
     @GET
-    public List<Councilor> list() {
+    public List<Parlamentar> list() {
         return councilorService.listAll();
     }
 
     @GET
     @Path("/{id}")
     public Response getById(@PathParam("id") String id) {
-        Councilor councilor = councilorService.findById(id);
-        if (councilor == null) {
+        Parlamentar parlamentar = councilorService.findById(id);
+        if (parlamentar == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(councilor).build();
+        return Response.ok(parlamentar).build();
     }
 
     @GET
     @Path("/by-councilor-id/{councilorId}")
     public Response getByCouncilorId(@PathParam("councilorId") String councilorId) {
-        Councilor councilor = councilorService.findByCouncilorId(councilorId);
-        if (councilor == null) {
+        Parlamentar parlamentar = councilorService.findByCouncilorId(councilorId);
+        if (parlamentar == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(councilor).build();
+        return Response.ok(parlamentar).build();
     }
 
     @POST
-    public Response create(Councilor councilor) {
+    public Response create(Parlamentar parlamentar) {
         // Check if councilorId already exists
-        Councilor existing = councilorService.findByCouncilorId(councilor.councilorId);
+        Parlamentar existing = councilorService.findByCouncilorId(parlamentar.idParlamentar);
         if (existing != null) {
             return Response.status(Response.Status.CONFLICT)
                     .entity("{\"error\": \"Councilor ID already exists\"}")
                     .build();
         }
 
-        Councilor created = councilorService.create(councilor);
+        Parlamentar created = councilorService.create(parlamentar);
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
 
     @PUT
     @Path("/{id}")
-    public Response update(@PathParam("id") String id, Councilor councilor) {
-        Councilor updated = councilorService.update(id, councilor);
+    public Response update(@PathParam("id") String id, Parlamentar parlamentar) {
+        Parlamentar updated = councilorService.update(id, parlamentar);
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }

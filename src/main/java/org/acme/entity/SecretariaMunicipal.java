@@ -35,11 +35,11 @@ public class SecretariaMunicipal {
     @Column(name = "ativo", nullable = false)
     public boolean ativo = true;
 
-    @Column(name = "create_time")
-    public OffsetDateTime createTime;
+    @Column(name = "data_criacao")
+    public OffsetDateTime dataCriacao;
 
-    @Column(name = "update_time")
-    public OffsetDateTime updateTime;
+    @Column(name = "data_atualizacao")
+    public OffsetDateTime dataAtualizacao;
 
     public SecretariaMunicipal() {
     }
@@ -49,10 +49,10 @@ public class SecretariaMunicipal {
         if (this.secretariaId == null || this.secretariaId.isBlank()) {
             this.secretariaId = UUID.randomUUID().toString();
         }
-        if (this.createTime == null) {
-            this.createTime = OffsetDateTime.now();
+        if (this.dataCriacao == null) {
+            this.dataCriacao = OffsetDateTime.now();
         }
-        this.updateTime = OffsetDateTime.now();
+        this.dataAtualizacao = OffsetDateTime.now();
     }
 }
 

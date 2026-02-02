@@ -4,7 +4,7 @@
 
 When using `@ManyToOne(fetch = FetchType.LAZY)` in REST APIs:
 - The relationship is not loaded initially
-- It's only loaded when accessed (e.g., `emenda.institution.getName()`)
+- It's only loaded when accessed (e.g., `emenda.instituicao.getName()`)
 - **Problem**: By the time the REST endpoint returns JSON, the database session is closed
 - **Result**: `LazyInitializationException` when Jackson tries to serialize the relationship
 
@@ -46,7 +46,7 @@ public class EmendaDetailDTO {
 
 #### EmendaService.java - New Methods
 ```java
-// Get all emendas with institution and councilor names
+// Get all emendas with instituicao and parlamentar names
 public List<EmendaDetailDTO> listAllWithDetails() {
     List<Emenda> emendas = emendaRepository.listAll();
     return emendas.stream()
@@ -63,23 +63,23 @@ public EmendaDetailDTO findByIdWithDetails(String id) {
 
 // Private method to fetch and join related data
 private EmendaDetailDTO enrichEmendaWithDetails(Emenda emenda) {
-    Institution institution = null;
-    Councilor councilor = null;
+    Institution instituicao = null;
+    Councilor parlamentar = null;
 
     if (emenda.institutionId != null) {
-        institution = institutionService.findByInstitutionId(emenda.institutionId);
+        instituicao = institutionService.findByInstitutionId(emenda.institutionId);
     }
     if (emenda.councilorId != null) {
-        councilor = councilorService.findByCouncilorId(emenda.councilorId);
+        parlamentar = councilorService.findByCouncilorId(emenda.councilorId);
     }
 
-    return new EmendaDetailDTO(emenda, institution, councilor);
+    return new EmendaDetailDTO(emenda, instituicao, parlamentar);
 }
 ```
 
 #### New REST Endpoints
 - `GET /api/emendas` - Returns basic Emenda entities
-- `GET /api/emendas/with-details` - Returns EmendaDetailDTO with institution and councilor names ✅
+- `GET /api/emendas/with-details` - Returns EmendaDetailDTO with instituicao and parlamentar names ✅
 - `GET /api/emendas/{id}` - Returns basic Emenda entity
 - `GET /api/emendas/{id}/with-details` - Returns single EmendaDetailDTO with details ✅
 
@@ -113,8 +113,8 @@ getByIdWithDetails: async (id: string): Promise<EmendaDTO> => {
 
 #### EmendasPage Updates
 - Now uses `emendaService.listWithDetails()` to fetch emendas
-- Displays institution name and councilor name in emenda cards
-- No need to make separate API calls to fetch institution/councilor data
+- Displays instituicao name and parlamentar name in emenda cards
+- No need to make separate API calls to fetch instituicao/parlamentar data
 
 ## Benefits:
 
@@ -130,7 +130,7 @@ getByIdWithDetails: async (id: string): Promise<EmendaDTO> => {
 ### When to use each endpoint:
 
 1. **`GET /api/emendas`** - Use when you only need emenda data (faster)
-2. **`GET /api/emendas/with-details`** - Use when you need to display institution/councilor names (frontend lists)
+2. **`GET /api/emendas/with-details`** - Use when you need to display instituicao/parlamentar names (frontend lists)
 3. **`GET /api/emendas/{id}`** - Use when editing (don't need names)
 4. **`GET /api/emendas/{id}/with-details`** - Use when viewing details (need all info)
 
@@ -147,12 +147,12 @@ Emenda cards now show:
 
 ## Performance:
 
-The current implementation does N+1 queries (one for emendas, then one for each institution/councilor).
+The current implementation does N+1 queries (one for emendas, then one for each instituicao/parlamentar).
 This is acceptable for small datasets. For large datasets, you can optimize with:
 
 1. **Batch fetching**: Collect all IDs and fetch in batches
 2. **Native SQL joins**: Create custom queries with JOINs
-3. **Caching**: Cache institution/councilor data
+3. **Caching**: Cache instituicao/parlamentar data
 
 ## Recommendation:
 

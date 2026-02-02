@@ -8,8 +8,8 @@ import jakarta.transaction.Transactional;
 import org.acme.dto.external.ExternalCouncilorDTO;
 import org.acme.dto.external.ExternalInstitutionDTO;
 import org.acme.dto.external.ExternalPublicDataDTO;
-import org.acme.entity.Councilor;
-import org.acme.entity.Institution;
+import org.acme.entity.Instituicao;
+import org.acme.entity.Parlamentar;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,20 +47,20 @@ public class PublicDataImportService {
                     continue;
                 }
 
-                Councilor existing = councilorService.findByCouncilorId(c.councilorId);
+                Parlamentar existing = councilorService.findByCouncilorId(c.councilorId);
                 if (existing == null) {
-                    Councilor entity = new Councilor();
-                    entity.councilorId = c.councilorId;
-                    entity.fullName = c.fullName != null ? c.fullName : "";
-                    entity.politicalParty = c.politicalParty;
+                    Parlamentar entity = new Parlamentar();
+                    entity.idParlamentar = c.councilorId;
+                    entity.nomeCompleto = c.fullName != null ? c.fullName : "";
+                    entity.partidoPolitico = c.politicalParty;
                     councilorService.create(entity);
                     summary.councilorsCreated++;
                 } else {
-                    Councilor updated = new Councilor();
-                    updated.councilorId = c.councilorId;
-                    updated.fullName = c.fullName != null ? c.fullName : existing.fullName;
-                    updated.politicalParty = c.politicalParty;
-                    councilorService.updateStringId(existing.councilorId, updated);
+                    Parlamentar updated = new Parlamentar();
+                    updated.idParlamentar = c.councilorId;
+                    updated.nomeCompleto = c.fullName != null ? c.fullName : existing.nomeCompleto;
+                    updated.partidoPolitico = c.politicalParty;
+                    councilorService.updateStringId(existing.idParlamentar, updated);
                     summary.councilorsUpdated++;
                 }
             }
@@ -74,9 +74,9 @@ public class PublicDataImportService {
                     continue;
                 }
 
-                Institution existing = institutionService.findByInstitutionId(i.institutionId);
+                Instituicao existing = institutionService.findByInstitutionId(i.institutionId);
                 if (existing == null) {
-                    Institution entity = new Institution();
+                    Instituicao entity = new Instituicao();
                     entity.institutionId = i.institutionId;
                     // Map external 'name' into Razão Social as best-effort.
                     entity.razaoSocial = i.name != null ? i.name : "";
@@ -98,7 +98,7 @@ public class PublicDataImportService {
                     institutionService.create(entity);
                     summary.institutionsCreated++;
                 } else {
-                    Institution updated = new Institution();
+                    Instituicao updated = new Instituicao();
                     updated.institutionId = i.institutionId;
                     updated.razaoSocial = i.name != null ? i.name : existing.razaoSocial;
                     institutionService.updateStringId(existing.institutionId, updated);

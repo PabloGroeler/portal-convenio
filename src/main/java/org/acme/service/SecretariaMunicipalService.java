@@ -26,10 +26,10 @@ public class SecretariaMunicipalService {
 
     @Transactional
     public SecretariaMunicipal create(SecretariaMunicipal s) {
-        if (s.createTime == null) {
-            s.createTime = OffsetDateTime.now();
+        if (s.dataCriacao == null) {
+            s.dataCriacao = OffsetDateTime.now();
         }
-        s.updateTime = OffsetDateTime.now();
+        s.dataAtualizacao = OffsetDateTime.now();
         repository.persist(s);
         return s;
     }
@@ -43,7 +43,7 @@ public class SecretariaMunicipalService {
         existing.sigla = input.sigla;
         existing.email = input.email;
         existing.telefone = input.telefone;
-        existing.updateTime = OffsetDateTime.now();
+        existing.dataAtualizacao = OffsetDateTime.now();
 
         return existing;
     }
@@ -53,7 +53,7 @@ public class SecretariaMunicipalService {
         SecretariaMunicipal existing = repository.findById(id);
         if (existing == null) return null;
         existing.ativo = ativo;
-        existing.updateTime = OffsetDateTime.now();
+        existing.dataAtualizacao = OffsetDateTime.now();
         return existing;
     }
 }

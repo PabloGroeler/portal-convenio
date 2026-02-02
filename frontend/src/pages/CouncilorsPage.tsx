@@ -8,8 +8,8 @@ const CouncilorsPage: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [formData, setFormData] = useState<Partial<CouncilorDTO>>({
-    councilorId: '',
-    fullName: '',
+    idParlamentar: '',
+    nomeCompleto: '',
   });
   const [error, setError] = useState('');
 
@@ -31,19 +31,19 @@ const CouncilorsPage: React.FC = () => {
   const openCreateModal = () => {
     setEditingId(null);
     setFormData({
-      councilorId: '',
-      fullName: '',
+      idParlamentar: '',
+      nomeCompleto: '',
     });
     setError('');
     setShowModal(true);
   };
 
-  const openEditModal = (councilor: CouncilorDTO) => {
-    setEditingId(councilor.councilorId);
+  const openEditModal = (parlamentar: CouncilorDTO) => {
+    setEditingId(parlamentar.idParlamentar);
     setFormData({
-      councilorId: councilor.councilorId,
-      fullName: councilor.fullName,
-      politicalParty: councilor.politicalParty,
+      idParlamentar: parlamentar.idParlamentar,
+      nomeCompleto: parlamentar.nomeCompleto,
+      partidoPolitico: parlamentar.partidoPolitico,
     });
     setError('');
     setShowModal(true);
@@ -96,14 +96,14 @@ const CouncilorsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {councilors.map((councilor) => (
-                <tr key={councilor.councilorId}>
+              {councilors.map((parlamentar) => (
+                <tr key={parlamentar.idParlamentar}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {councilor.fullName}
+                    {parlamentar.nomeCompleto}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      onClick={() => openEditModal(councilor)}
+                      onClick={() => openEditModal(parlamentar)}
                       className="text-blue-600 hover:text-blue-900 mr-4"
                     >
                       Editar
@@ -138,8 +138,8 @@ const CouncilorsPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  value={formData.councilorId}
-                  onChange={(e) => setFormData({ ...formData, councilorId: e.target.value })}
+                  value={formData.idParlamentar}
+                  onChange={(e) => setFormData({ ...formData, idParlamentar: e.target.value })}
                   className="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Ex: PAR001"
                 />
@@ -152,8 +152,8 @@ const CouncilorsPage: React.FC = () => {
                 <input
                   type="text"
                   required
-                  value={formData.fullName}
-                  onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
+                  value={formData.nomeCompleto}
+                  onChange={(e) => setFormData({ ...formData, nomeCompleto: e.target.value })}
                   className="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Nome completo do parlamentar"
                 />
@@ -165,8 +165,8 @@ const CouncilorsPage: React.FC = () => {
                 </label>
                 <input
                   type="text"
-                  value={formData.politicalParty}
-                  onChange={(e) => setFormData({ ...formData, politicalParty: e.target.value })}
+                  value={formData.partidoPolitico}
+                  onChange={(e) => setFormData({ ...formData, partidoPolitico: e.target.value })}
                   className="w-full px-3 py-2 border rounded focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Ex: PT, PSDB, MDB, etc."
                 />

@@ -33,7 +33,7 @@ Successfully created a complete registration system for Institutions and Council
 - `InstitutionResource.java` - `/api/institutions` endpoints
   - GET `/api/institutions` - List all
   - GET `/api/institutions/{id}` - Get by ID
-  - GET `/api/institutions/by-institution-id/{institutionId}` - Get by institution ID
+  - GET `/api/institutions/by-instituicao-id/{institutionId}` - Get by instituicao ID
   - POST `/api/institutions` - Create (with duplicate check)
   - PUT `/api/institutions/{id}` - Update
   - DELETE `/api/institutions/{id}` - Delete
@@ -41,7 +41,7 @@ Successfully created a complete registration system for Institutions and Council
 - `CouncilorResource.java` - `/api/councilors` endpoints
   - GET `/api/councilors` - List all
   - GET `/api/councilors/{id}` - Get by ID
-  - GET `/api/councilors/by-councilor-id/{councilorId}` - Get by councilor ID
+  - GET `/api/councilors/by-parlamentar-id/{councilorId}` - Get by parlamentar ID
   - POST `/api/councilors` - Create (with duplicate check)
   - PUT `/api/councilors/{id}` - Update
   - DELETE `/api/councilors/{id}` - Delete

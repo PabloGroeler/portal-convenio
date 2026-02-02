@@ -1,9 +1,9 @@
 import api from './api';
 
 export interface CouncilorDTO {
-  councilorId: string;
-  fullName: string;
-  politicalParty?: string;
+  idParlamentar: string;
+  nomeCompleto: string;
+  partidoPolitico?: string;
 }
 
 const councilorService = {
@@ -12,23 +12,23 @@ const councilorService = {
     return response.data;
   },
 
-  getByCouncilorId: async (councilorId: string): Promise<CouncilorDTO> => {
-    const response = await api.get(`/councilors/by-councilor-id/${encodeURIComponent(councilorId)}`);
+  getByCouncilorId: async (idParlamentar: string): Promise<CouncilorDTO> => {
+    const response = await api.get(`/councilors/by-parlamentar-id/${encodeURIComponent(idParlamentar)}`);
     return response.data;
   },
 
-  create: async (councilor: Partial<CouncilorDTO>): Promise<CouncilorDTO> => {
-    const response = await api.post('/councilors', councilor);
+  create: async (parlamentar: Partial<CouncilorDTO>): Promise<CouncilorDTO> => {
+    const response = await api.post('/councilors', parlamentar);
     return response.data;
   },
 
-  update: async (councilorId: string, councilor: Partial<CouncilorDTO>): Promise<CouncilorDTO> => {
-    const response = await api.put(`/councilors/${encodeURIComponent(councilorId)}`, councilor);
+  update: async (idParlamentar: string, parlamentar: Partial<CouncilorDTO>): Promise<CouncilorDTO> => {
+    const response = await api.put(`/councilors/${encodeURIComponent(idParlamentar)}`, parlamentar);
     return response.data;
   },
 
-  delete: async (councilorId: string): Promise<void> => {
-    await api.delete(`/councilors/${encodeURIComponent(councilorId)}`);
+  delete: async (idParlamentar: string): Promise<void> => {
+    await api.delete(`/councilors/${encodeURIComponent(idParlamentar)}`);
   },
 };
 

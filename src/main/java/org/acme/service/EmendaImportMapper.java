@@ -13,18 +13,18 @@ public class EmendaImportMapper {
         if (src == null) return null;
 
         Emenda e = new Emenda();
-        e.councilorId = blankToNull(src.councilorId);
-        e.officialCode = blankToNull(src.officialCode);
-        e.date = parseDateOrYear(src.date, src.year);
-        e.value = parseBigDecimal(valueToString(src.value));
-        e.classification = blankToNull(src.classification);
-        e.category = blankToNull(src.category);
-        e.status = normalizeStatus(src);
-        e.federalStatus = blankToNull(src.federalStatus);
-        e.institutionId = blankToNull(src.institutionId);
-        e.signedLink = blankToNull(src.signedLink);
-        e.description = blankToNull(src.description);
-        e.objectDetail = blankToNull(src.objectDetail);
+        e.idParlamentar = blankToNull(src.councilorId);
+        e.codigoOficial = blankToNull(src.officialCode);
+        e.data = parseDateOrYear(src.date, src.year);
+        e.valor = parseBigDecimal(valueToString(src.value));
+        e.classificacao = blankToNull(src.classification);
+        e.categoria = blankToNull(src.category);
+        e.situacao = normalizeStatus(src);
+        e.statusFederal = blankToNull(src.federalStatus);
+        e.idInstituicao = blankToNull(src.institutionId);
+        e.linkAssinado = blankToNull(src.signedLink);
+        e.descricao = blankToNull(src.description);
+        e.objetoDetalhado = blankToNull(src.objectDetail);
 
         // JIRA 7: convênio (optional in external dataset)
         if (src.existeConvenio != null) {

@@ -4,7 +4,7 @@ import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import org.acme.entity.Institution;
+import org.acme.entity.Instituicao;
 import org.acme.repository.InstitutionRepository;
 import org.acme.service.InstitutionService;
 
@@ -32,60 +32,60 @@ public class InstitutionResource {
     }
 
     @GET
-    public List<Institution> list() {
+    public List<Instituicao> list() {
         return institutionService.listAll();
     }
 
     @GET
     @Path("/{id}")
     public Response getById(@PathParam("id") String id) {
-        Institution institution = institutionService.findById(id);
-        if (institution == null) {
+        Instituicao instituicao = institutionService.findById(id);
+        if (instituicao == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(institution).build();
+        return Response.ok(instituicao).build();
     }
 
     @GET
     @Path("/by-institution-id/{institutionId}")
     public Response getByInstitutionId(@PathParam("institutionId") String institutionId) {
-        Institution institution = institutionService.findByInstitutionId(institutionId);
-        if (institution == null) {
+        Instituicao instituicao = institutionService.findByInstitutionId(institutionId);
+        if (instituicao == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
-        return Response.ok(institution).build();
+        return Response.ok(instituicao).build();
     }
 
     @POST
-    public Response create(Institution institution) {
-        if (institution == null) {
+    public Response create(Instituicao instituicao) {
+        if (instituicao == null) {
             return badRequest("Payload inválido");
         }
 
-        institution.cnpj = onlyDigits(institution.cnpj);
-        institution.cep = onlyDigits(institution.cep);
+        instituicao.cnpj = onlyDigits(instituicao.cnpj);
+        instituicao.cep = onlyDigits(instituicao.cep);
 
         // Required fields validations (basic)
-        if (institution.razaoSocial == null || institution.razaoSocial.isBlank()) return badRequest("Razão Social é obrigatória");
-        if (institution.razaoSocial.length() > 200) return badRequest("Razão Social deve ter no máximo 200 caracteres");
-        if (institution.nomeFantasia != null && institution.nomeFantasia.length() > 200) return badRequest("Nome Fantasia deve ter no máximo 200 caracteres");
-        if (institution.cnpj == null || institution.cnpj.length() != 14) return badRequest("CNPJ inválido");
-        if (institution.inscricaoMunicipal == null || institution.inscricaoMunicipal.isBlank()) return badRequest("Inscrição Municipal é obrigatória");
-        if (institution.inscricaoMunicipal.length() > 20) return badRequest("Inscrição Municipal deve ter no máximo 20 caracteres");
-        if (institution.inscricaoEstadual != null && institution.inscricaoEstadual.length() > 20) return badRequest("Inscrição Estadual deve ter no máximo 20 caracteres");
+        if (instituicao.razaoSocial == null || instituicao.razaoSocial.isBlank()) return badRequest("Razão Social é obrigatória");
+        if (instituicao.razaoSocial.length() > 200) return badRequest("Razão Social deve ter no máximo 200 caracteres");
+        if (instituicao.nomeFantasia != null && instituicao.nomeFantasia.length() > 200) return badRequest("Nome Fantasia deve ter no máximo 200 caracteres");
+        if (instituicao.cnpj == null || instituicao.cnpj.length() != 14) return badRequest("CNPJ inválido");
+        if (instituicao.inscricaoMunicipal == null || instituicao.inscricaoMunicipal.isBlank()) return badRequest("Inscrição Municipal é obrigatória");
+        if (instituicao.inscricaoMunicipal.length() > 20) return badRequest("Inscrição Municipal deve ter no máximo 20 caracteres");
+        if (instituicao.inscricaoEstadual != null && instituicao.inscricaoEstadual.length() > 20) return badRequest("Inscrição Estadual deve ter no máximo 20 caracteres");
 
-        if (institution.telefone == null || institution.telefone.isBlank()) return badRequest("Telefone é obrigatório");
-        if (institution.emailInstitucional == null || institution.emailInstitucional.isBlank()) return badRequest("E-mail institucional é obrigatório");
-        if (institution.cep == null || institution.cep.length() != 8) return badRequest("CEP inválido");
-        if (institution.logradouro == null || institution.logradouro.isBlank()) return badRequest("Logradouro é obrigatório");
-        if (institution.numero == null || institution.numero.isBlank()) return badRequest("Número é obrigatório");
-        if (institution.bairro == null || institution.bairro.isBlank()) return badRequest("Bairro é obrigatório");
-        if (institution.cidade == null || institution.cidade.isBlank()) return badRequest("Cidade é obrigatória");
-        if (institution.uf == null || institution.uf.isBlank()) return badRequest("UF é obrigatória");
-        if (institution.numeroRegistroConselhoMunicipal == null || institution.numeroRegistroConselhoMunicipal.isBlank()) return badRequest("Número de Registro no Conselho Municipal é obrigatório");
+        if (instituicao.telefone == null || instituicao.telefone.isBlank()) return badRequest("Telefone é obrigatório");
+        if (instituicao.emailInstitucional == null || instituicao.emailInstitucional.isBlank()) return badRequest("E-mail institucional é obrigatório");
+        if (instituicao.cep == null || instituicao.cep.length() != 8) return badRequest("CEP inválido");
+        if (instituicao.logradouro == null || instituicao.logradouro.isBlank()) return badRequest("Logradouro é obrigatório");
+        if (instituicao.numero == null || instituicao.numero.isBlank()) return badRequest("Número é obrigatório");
+        if (instituicao.bairro == null || instituicao.bairro.isBlank()) return badRequest("Bairro é obrigatório");
+        if (instituicao.cidade == null || instituicao.cidade.isBlank()) return badRequest("Cidade é obrigatória");
+        if (instituicao.uf == null || instituicao.uf.isBlank()) return badRequest("UF é obrigatória");
+        if (instituicao.numeroRegistroConselhoMunicipal == null || instituicao.numeroRegistroConselhoMunicipal.isBlank()) return badRequest("Número de Registro no Conselho Municipal é obrigatório");
 
         // Uniqueness checks
-        Institution emailExisting = institutionRepository.find("emailInstitucional", institution.emailInstitucional).firstResult();
+        Instituicao emailExisting = institutionRepository.find("emailInstitucional", instituicao.emailInstitucional).firstResult();
         if (emailExisting != null) {
             return Response.status(Response.Status.CONFLICT)
                     .entity("{\"error\": \"E-mail institucional já cadastrado\"}")
@@ -93,8 +93,8 @@ public class InstitutionResource {
         }
 
         // Check if institutionId already exists
-        if (institution.institutionId != null && !institution.institutionId.isBlank()) {
-            Institution existing = institutionService.findByInstitutionId(institution.institutionId);
+        if (instituicao.institutionId != null && !instituicao.institutionId.isBlank()) {
+            Instituicao existing = institutionService.findByInstitutionId(instituicao.institutionId);
             if (existing != null) {
                 return Response.status(Response.Status.CONFLICT)
                         .entity("{\"error\": \"ID da instituição já existe\"}")
@@ -102,14 +102,14 @@ public class InstitutionResource {
             }
         }
 
-        Institution created = institutionService.create(institution);
+        Instituicao created = institutionService.create(instituicao);
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
 
     @PUT
     @Path("/{id}")
-    public Response update(@PathParam("id") String id, Institution institution) {
-        Institution updated = institutionService.update(id, institution);
+    public Response update(@PathParam("id") String id, Instituicao instituicao) {
+        Instituicao updated = institutionService.update(id, instituicao);
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }

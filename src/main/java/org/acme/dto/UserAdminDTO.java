@@ -12,9 +12,9 @@ public record UserAdminDTO(
         String telefone,
         String cargoFuncao,
         String status,
-        String role,
-        OffsetDateTime createTime,
-        OffsetDateTime updateTime
+        String perfil,
+        OffsetDateTime dataCriacao,
+        OffsetDateTime dataAtualizacao
 ) {
     public static UserAdminDTO fromEntity(User u) {
         return new UserAdminDTO(
@@ -25,9 +25,9 @@ public record UserAdminDTO(
                 u.telefone,
                 u.cargoFuncao,
                 u.status != null ? u.status.name() : null,
-                u.role != null ? u.role.name() : null,
-                u.createTime,
-                u.updateTime
+                u.perfil != null ? u.perfil.name() : null,
+                u.dataCriacao,
+                u.dataAtualizacao
         );
     }
 }

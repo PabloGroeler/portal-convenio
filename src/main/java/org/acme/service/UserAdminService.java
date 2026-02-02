@@ -76,19 +76,19 @@ public class UserAdminService {
         u.cargoFuncao = blankToNull(req.cargoFuncao);
 
         u.status = parseStatus(req.status, User.UserStatus.ATIVO);
-        u.role = parseRole(req.role, User.UserRole.OPERADOR);
+        u.perfil = parseRole(req.role, User.UserRole.OPERADOR);
 
-        // Keep username for auth compatibility. Use email as username by default.
-        u.username = (req.email != null && !req.email.isBlank()) ? req.email.trim().toLowerCase(Locale.ROOT) : cpf;
-        if (User.findByUsername(u.username) != null) {
+        // Keep nomeUsuario for auth compatibility. Use email as nomeUsuario by default.
+        u.nomeUsuario = (req.email != null && !req.email.isBlank()) ? req.email.trim().toLowerCase(Locale.ROOT) : cpf;
+        if (User.findByUsername(u.nomeUsuario) != null) {
             // fallback to cpf
-            u.username = cpf;
+            u.nomeUsuario = cpf;
         }
-        if (User.findByUsername(u.username) != null) {
+        if (User.findByUsername(u.nomeUsuario) != null) {
             throw new IllegalArgumentException("Username já cadastrado");
         }
 
-        u.password = BCrypt.hashpw(req.password, BCrypt.gensalt());
+        u.senha = BCrypt.hashpw(req.password, BCrypt.gensalt());
         userRepository.persist(u);
         return UserAdminDTO.fromEntity(u);
     }
@@ -121,10 +121,10 @@ public class UserAdminService {
         if (req.cargoFuncao != null) u.cargoFuncao = blankToNull(req.cargoFuncao);
 
         if (req.status != null) u.status = parseStatus(req.status, u.status);
-        if (req.role != null) u.role = parseRole(req.role, u.role);
+        if (req.role != null) u.perfil = parseRole(req.role, u.perfil);
 
         if (req.password != null && !req.password.isBlank()) {
-            u.password = BCrypt.hashpw(req.password, BCrypt.gensalt());
+            u.senha = BCrypt.hashpw(req.password, BCrypt.gensalt());
         }
 
         return UserAdminDTO.fromEntity(u);

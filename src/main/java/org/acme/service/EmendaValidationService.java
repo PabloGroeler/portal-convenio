@@ -22,19 +22,13 @@ public class EmendaValidationService {
      */
     public void validateOrThrow(Emenda emenda, boolean isUpdate) {
         // Autor/Emenda: Parlamentar must be selected
-        if (emenda.councilorId == null || emenda.councilorId.isBlank()) {
+        if (emenda.idParlamentar == null || emenda.idParlamentar.isBlank()) {
             throw new BadRequestException("Autor/Emenda (Parlamentar) é obrigatório");
         }
-
-        // Número de Emenda: must be > 0
-//        if (emenda.numeroEmenda == null || emenda.numeroEmenda <= 0) {
-//            throw new BadRequestException("Número de Emenda deve ser maior que zero");
-//        }
 
         // Exercício: must be present
         if (emenda.exercicio == null || emenda.exercicio <= 0) {
             emenda.exercicio = 2026;
-//            throw new BadRequestException("Exercício (ano) é obrigatório");
         }
 
         if (!isUpdate) {
@@ -61,23 +55,18 @@ public class EmendaValidationService {
         }
 
         // Valor da Emenda: must be > 0
-        if (emenda.value == null || emenda.value.compareTo(BigDecimal.ZERO) <= 0) {
+        if (emenda.valor == null || emenda.valor.compareTo(BigDecimal.ZERO) <= 0) {
             throw new BadRequestException("Valor da Emenda deve ser maior que R$ 0,00");
         }
 
-        // Objeto da Emenda (description): max 250 chars
-//        if (emenda.description != null && emenda.description.length() > 250) {
-//            throw new BadRequestException("Objeto da Emenda deve ter no máximo 250 caracteres");
-//        }
-
         // Situação da Emenda: must be one of the allowed values
-        if (emenda.status == null || emenda.status.isBlank()) {
+        if (emenda.situacao == null || emenda.situacao.isBlank()) {
             throw new BadRequestException("Situação da Emenda é obrigatória");
         }
         String[] allowedStatus = {"Recebido", "Iniciado", "Em execução", "Concluído", "Devolvido"};
         boolean validStatus = false;
         for (String s : allowedStatus) {
-            if (s.equalsIgnoreCase(emenda.status.trim())) {
+            if (s.equalsIgnoreCase(emenda.situacao.trim())) {
                 validStatus = true;
                 break;
             }
@@ -88,8 +77,6 @@ public class EmendaValidationService {
             );
         }
 
-        // Previsão de conclusão: optional but if present, must be a valid date
-        // (already validated by LocalDate type)
 
         // Justificativa: min 20, max 250 chars
         if (emenda.justificativa != null) {

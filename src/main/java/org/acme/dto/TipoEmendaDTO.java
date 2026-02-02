@@ -14,8 +14,8 @@ public class TipoEmendaDTO {
     public String nome;
     public boolean ativo;
     public int ordem;
-    public OffsetDateTime createTime;
-    public OffsetDateTime updateTime;
+    public OffsetDateTime dataCriacao;
+    public OffsetDateTime dataAtualizacao;
 
     public static TipoEmendaDTO fromEntity(TipoEmenda e) {
         if (e == null) return null;
@@ -25,8 +25,8 @@ public class TipoEmendaDTO {
         dto.nome = e.nome;
         dto.ativo = e.ativo;
         dto.ordem = e.ordem;
-        dto.createTime = e.createTime;
-        dto.updateTime = e.updateTime;
+        dto.dataCriacao = e.dataCriacao;
+        dto.dataAtualizacao = e.dataAtualizacao;
         return dto;
     }
 }

@@ -25,13 +25,13 @@ public class Startup {
             User admin = new User();
             admin.nomeCompleto = "Administrador";
             admin.cpf = "00000000000";
-            admin.username = "admin";
+            admin.nomeUsuario = "admin";
             admin.email = "admin@local.test";
             admin.telefone = null;
             admin.cargoFuncao = "Administrador";
             admin.status = User.UserStatus.ATIVO;
-            admin.role = User.UserRole.ADMIN;
-            admin.password = BCrypt.hashpw("123", BCrypt.gensalt());
+            admin.perfil = User.UserRole.ADMIN;
+            admin.senha = BCrypt.hashpw("123", BCrypt.gensalt());
             admin.persist();
             System.out.println("Created admin user with email: admin@local.test");
         }

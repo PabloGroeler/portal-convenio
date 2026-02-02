@@ -37,8 +37,8 @@ export interface InstitutionDTO {
   quantidadeBeneficiarios?: number;
 
   // Auditoria
-  createTime?: string;
-  updateTime?: string;
+  dataCriacao?: string;
+  dataAtualizacao?: string;
 }
 
 const institutionService = {
@@ -49,23 +49,23 @@ const institutionService = {
 
   getById: async (id: string): Promise<InstitutionDTO> => {
     // Backend uses institutionId as the identifier (@Id).
-    const response = await api.get(`/institutions/by-institution-id/${encodeURIComponent(id)}`);
+    const response = await api.get(`/institutions/by-instituicao-id/${encodeURIComponent(id)}`);
     return response.data;
   },
 
   getByInstitutionId: async (institutionId: string): Promise<InstitutionDTO> => {
-    const response = await api.get(`/institutions/by-institution-id/${institutionId}`);
+    const response = await api.get(`/institutions/by-instituicao-id/${institutionId}`);
     return response.data;
   },
 
-  create: async (institution: Partial<InstitutionDTO>): Promise<InstitutionDTO> => {
-    const response = await api.post('/institutions', institution);
+  create: async (instituicao: Partial<InstitutionDTO>): Promise<InstitutionDTO> => {
+    const response = await api.post('/institutions', instituicao);
     return response.data;
   },
 
-  update: async (id: string, institution: Partial<InstitutionDTO>): Promise<InstitutionDTO> => {
+  update: async (id: string, instituicao: Partial<InstitutionDTO>): Promise<InstitutionDTO> => {
     // Backend uses institutionId as the identifier (@Id).
-    const response = await api.put(`/institutions/${encodeURIComponent(id)}`, institution);
+    const response = await api.put(`/institutions/${encodeURIComponent(id)}`, instituicao);
     return response.data;
   },
 

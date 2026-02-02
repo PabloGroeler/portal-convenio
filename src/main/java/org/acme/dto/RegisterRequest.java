@@ -8,7 +8,7 @@ public class RegisterRequest {
 
     @NotBlank
     @Size(min = 3, max = 50)
-    public String username;
+    public String nomeUsuario;
 
     @NotBlank
     @Email
@@ -16,5 +16,5 @@ public class RegisterRequest {
 
     @NotBlank
     @Size(min = 6)
-    public String password;
+    public String senha;
 }

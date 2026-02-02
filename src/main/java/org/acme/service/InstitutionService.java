@@ -3,7 +3,7 @@ package org.acme.service;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
-import org.acme.entity.Institution;
+import org.acme.entity.Instituicao;
 import org.acme.repository.InstitutionRepository;
 
 import java.time.OffsetDateTime;
@@ -15,51 +15,51 @@ public class InstitutionService {
     @Inject
     InstitutionRepository institutionRepository;
 
-    public List<Institution> listAll() {
+    public List<Instituicao> listAll() {
         return institutionRepository.listAllOrdered();
     }
 
-    public Institution findById(String id) {
+    public Instituicao findById(String id) {
         if (id == null || id.isBlank()) return null;
         return institutionRepository.findById(id);
     }
 
-    public Institution findByInstitutionId(String institutionId) {
+    public Instituicao findByInstitutionId(String institutionId) {
         return institutionRepository.findByInstitutionId(institutionId);
     }
 
     @Transactional
-    public Institution create(Institution institution) {
-        institution.createTime = OffsetDateTime.now();
-        institution.updateTime = OffsetDateTime.now();
-        institutionRepository.persist(institution);
+    public Instituicao create(Instituicao instituicao) {
+        instituicao.dataCriacao = OffsetDateTime.now();
+        instituicao.dataAtualizacao = OffsetDateTime.now();
+        institutionRepository.persist(instituicao);
         institutionRepository.flush();
-        return institution;
+        return instituicao;
     }
 
     @Transactional
-    public Institution update(String id, Institution updated) {
-        Institution existing = institutionRepository.findById(id);
+    public Instituicao update(String id, Instituicao updated) {
+        Instituicao existing = institutionRepository.findById(id);
         if (existing == null) return null;
 
         applyUpdates(existing, updated);
-        existing.updateTime = OffsetDateTime.now();
+        existing.dataAtualizacao = OffsetDateTime.now();
 
         return existing;
     }
 
     @Transactional
-    public Institution updateStringId(String institutionId, Institution updated) {
+    public Instituicao updateStringId(String institutionId, Instituicao updated) {
         if (institutionId == null || institutionId.isBlank()) return null;
-        Institution existing = institutionRepository.findByInstitutionId(institutionId);
+        Instituicao existing = institutionRepository.findByInstitutionId(institutionId);
         if (existing == null) return null;
 
         applyUpdates(existing, updated);
-        existing.updateTime = OffsetDateTime.now();
+        existing.dataAtualizacao = OffsetDateTime.now();
         return existing;
     }
 
-    private void applyUpdates(Institution existing, Institution updated) {
+    private void applyUpdates(Instituicao existing, Instituicao updated) {
         // Important: do NOT overwrite the primary key unless explicitly required.
         if (updated.institutionId != null && !updated.institutionId.isBlank()) {
             existing.institutionId = updated.institutionId;
@@ -96,7 +96,7 @@ public class InstitutionService {
 
     @Transactional
     public boolean delete(String id) {
-        Institution existing = institutionRepository.findById(id);
+        Instituicao existing = institutionRepository.findById(id);
         if (existing == null) return false;
         institutionRepository.delete(existing);
         return true;

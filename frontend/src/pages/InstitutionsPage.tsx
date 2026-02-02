@@ -24,9 +24,9 @@ const InstitutionsPage: React.FC = () => {
     }
   };
 
-  const handleEdit = (institution: InstitutionDTO) => {
+  const handleEdit = (instituicao: InstitutionDTO) => {
     // Backend uses institutionId as the entity identifier.
-    navigate(`/painel/cadastro-dados-institucionais?id=${encodeURIComponent(institution.institutionId)}`);
+    navigate(`/painel/cadastro-dados-institucionais?id=${encodeURIComponent(instituicao.institutionId)}`);
   };
 
   const filteredInstitutions = institutions.filter((inst) => {
@@ -78,14 +78,14 @@ const InstitutionsPage: React.FC = () => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-              {filteredInstitutions.map((institution) => (
-                <tr key={institution.institutionId}>
+              {filteredInstitutions.map((instituicao) => (
+                <tr key={instituicao.institutionId}>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {institution.razaoSocial}
+                    {instituicao.razaoSocial}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <button
-                      onClick={() => handleEdit(institution)}
+                      onClick={() => handleEdit(instituicao)}
                       className="text-blue-600 hover:text-blue-900 mr-4"
                     >
                       Editar

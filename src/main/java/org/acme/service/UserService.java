@@ -15,17 +15,17 @@ public class UserService {
         if (request == null) {
             throw new RuntimeException("Request body is required");
         }
-        if (request.username == null || request.username.isBlank()) {
+        if (request.nomeUsuario == null || request.nomeUsuario.isBlank()) {
             throw new RuntimeException("Username is required");
         }
         if (request.email == null || request.email.isBlank()) {
             throw new RuntimeException("Email is required");
         }
-        if (request.password == null || request.password.isBlank()) {
+        if (request.senha == null || request.senha.isBlank()) {
             throw new RuntimeException("Password is required");
         }
 
-        if (User.findByUsername(request.username) != null) {
+        if (User.findByUsername(request.nomeUsuario) != null) {
             throw new RuntimeException("Username already exists");
         }
         if (User.findByEmail(request.email) != null) {
@@ -33,11 +33,11 @@ public class UserService {
         }
 
         User user = new User();
-        user.username = request.username;
+        user.nomeUsuario = request.nomeUsuario;
         user.email = request.email;
-        user.password = BCrypt.hashpw(request.password, BCrypt.gensalt());
+        user.senha = BCrypt.hashpw(request.senha, BCrypt.gensalt());
         user.persist();
 
-        return new UserDTO(user.id, user.username, user.email);
+        return new UserDTO(user.id, user.nomeUsuario, user.email);
     }
 }

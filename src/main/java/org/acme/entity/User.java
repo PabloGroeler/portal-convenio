@@ -60,46 +60,46 @@ public class User extends PanacheEntity {
     public UserStatus status = UserStatus.ATIVO;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "role", nullable = false, length = 30)
-    public UserRole role = UserRole.OPERADOR;
+    @Column(name = "perfil", nullable = false, length = 30)
+    public UserRole perfil = UserRole.OPERADOR;
 
     @NotBlank
     @Size(min = 3, max = 50)
-    @Column(name = "username", unique = true, nullable = false, length = 50)
-    public String username;
+    @Column(name = "nome_usuario", unique = true, nullable = false, length = 50)
+    public String nomeUsuario;
 
     @NotBlank
     @Size(min = 6)
-    @Column(name = "password", nullable = false)
-    public String password;
+    @Column(name = "senha", nullable = false)
+    public String senha;
 
-    @Column(name = "create_time", nullable = false)
-    public OffsetDateTime createTime;
+    @Column(name = "data_criacao", nullable = false)
+    public OffsetDateTime dataCriacao;
 
-    @Column(name = "update_time", nullable = false)
-    public OffsetDateTime updateTime;
+    @Column(name = "data_atualizacao", nullable = false)
+    public OffsetDateTime dataAtualizacao;
 
     @PrePersist
     public void onCreate() {
-        if (createTime == null) {
-            createTime = OffsetDateTime.now();
+        if (dataCriacao == null) {
+            dataCriacao = OffsetDateTime.now();
         }
-        updateTime = OffsetDateTime.now();
+        dataAtualizacao = OffsetDateTime.now();
         if (status == null) {
             status = UserStatus.ATIVO;
         }
-        if (role == null) {
-            role = UserRole.OPERADOR;
+        if (perfil == null) {
+            perfil = UserRole.OPERADOR;
         }
     }
 
     @PreUpdate
     public void onUpdate() {
-        updateTime = OffsetDateTime.now();
+        dataAtualizacao = OffsetDateTime.now();
     }
 
     public static User findByUsername(String username) {
-        return find("username", username).firstResult();
+        return find("nomeUsuario", username).firstResult();
     }
 
     public static User findByEmail(String email) {
