@@ -24,6 +24,7 @@ import DashboardLayout from './components/DashboardLayout';
 import DashboardHomePage from './pages/DashboardHomePage';
 import DashboardEmendasPage from './pages/DashboardEmendasPage';
 import UsersPage from './pages/UsersPage';
+import ProfilePage from './pages/ProfilePage';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -72,6 +73,7 @@ function App() {
                 <Route path="cadastro-dados-institucionais" element={<CadastroDadosInstitucionaisPage />} />
                 <Route path="parlamentares" element={<CouncilorsPage />} />
                 <Route path="usuarios" element={<UsersPage />} />
+                <Route path="profile" element={<ProfilePage />} />
               </Route>
 
               {/* Full-screen pages (no header/footer) */}

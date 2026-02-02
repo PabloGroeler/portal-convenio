@@ -6,12 +6,6 @@ const DashboardHomePage: React.FC = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <Link
-          to="/"
-          className="inline-flex items-center gap-2 px-4 py-2 bg-white text-blue-800 rounded shadow hover:bg-gray-100"
-        >
-          Voltar para Home
-        </Link>
       </div>
 
       <div className="bg-white p-6 rounded-lg shadow">

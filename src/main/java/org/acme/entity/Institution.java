@@ -50,7 +50,7 @@ public class Institution {
     /**
      * Áreas de atuação (múltipla escolha)
      */
-    @ElementCollection
+    @ElementCollection(fetch = jakarta.persistence.FetchType.EAGER)
     @CollectionTable(name = "instituicoes_areas_atuacao", joinColumns = @JoinColumn(name = "institution_id"))
     @Column(name = "area", length = 100)
     public List<String> areasAtuacao = new ArrayList<>();

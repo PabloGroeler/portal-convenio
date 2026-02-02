@@ -74,7 +74,5 @@ const institutionService = {
   },
 };
 
-export type { InstitutionDTO };
-export { institutionService };
 export default institutionService;
 
