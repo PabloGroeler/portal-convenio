@@ -300,37 +300,114 @@ const EmendasPage: React.FC = () => {
   const handleSave = async () => {
     setSaving(true);
     try {
-      // JIRA 3: tipo de emenda is mandatory (using existing 'classification' field for now).
-      if (!(editForm.classification ?? '').trim()) {
-        alert('Selecione o tipo de emenda.');
+
+      if (!editForm.councilorId || editForm.councilorId.trim() === '') {
+        alert('Autor/Emenda (Parlamentar) é obrigatório');
+        setSaving(false);
         return;
       }
 
-      // Parse value string to number (remove R$ and formatting)
-      let valueNum = 0;
-      if (editForm.value) {
-        const cleanedValue = editForm.value.replace(/[R$\s.]/g, '').replace(',', '.');
-        valueNum = parseFloat(cleanedValue) || 0;
+      // 2. Número de Emenda deve ser > 0
+      if (!editForm.numeroEmenda || editForm.numeroEmenda <= 0) {
+        alert('Número de Emenda deve ser maior que zero');
+        setSaving(false);
+        return;
       }
+
+      // 3. Exercício (ano) é obrigatório
+      if (!editForm.exercicio || editForm.exercicio <= 0) {
+        alert('Exercício (ano) é obrigatório');
+        setSaving(false);
+        return;
+      }
+
+      // 4. Valor da Emenda deve ser > R$ 0,00
+      let valorNum = 0;
+      if (editForm.value) {
+        if (typeof editForm.value === 'string') {
+          const cleanedValue = editForm.value.replace(/[R$\s.]/g, '').replace(',', '.');
+          valorNum = parseFloat(cleanedValue) || 0;
+        } else {
+          valorNum = editForm.value;
+        }
+      }
+
+      if (valorNum <= 0) {
+        alert('Valor da Emenda deve ser maior que R$ 0,00');
+        setSaving(false);
+        return;
+      }
+
+      // 5. Situação da Emenda é obrigatória
+      if (!editForm.status || editForm.status.trim() === '') {
+        alert('Situação da Emenda é obrigatória');
+        setSaving(false);
+        return;
+      }
+
+      // 6. Situação da Emenda deve ser válida
+      const allowedStatus = ['Recebido', 'Iniciado', 'Em execução', 'Concluído', 'Devolvido'];
+      if (!allowedStatus.includes(editForm.status)) {
+        alert('Situação da Emenda deve ser: Recebido, Iniciado, Em execução, Concluído ou Devolvido');
+        setSaving(false);
+        return;
+      }
+
+      // 7. Justificativa: min 20, max 250 caracteres (se preenchida)
+      if (editForm.justificativa) {
+        if (editForm.justificativa.length < 20) {
+          alert('Justificativa deve ter no mínimo 20 caracteres');
+          setSaving(false);
+          return;
+        }
+        if (editForm.justificativa.length > 250) {
+          alert('Justificativa deve ter no máximo 250 caracteres');
+          setSaving(false);
+          return;
+        }
+      }
+
+      // 8. Tipo de emenda é obrigatório
+      if (!(editForm.classification ?? '').trim()) {
+        alert('Selecione o tipo de emenda.');
+        setSaving(false);
+        return;
+      }
+
+      // 9. Instituição é obrigatória
+      if (!editForm.institutionId || editForm.institutionId.trim() === '') {
+        alert('Instituição é obrigatória');
+        setSaving(false);
+        return;
+      }
+
+      // ========================================
+      // PREPARAR DTO PARA ENVIAR AO BACKEND
+      // ========================================
+      // IMPORTANTE: Os nomes dos campos devem corresponder aos campos da entidade Emenda.java
 
       const emendaDTO = {
         councilorId: editForm.councilorId,
         officialCode: editForm.officialCode,
+        numeroEmenda: editForm.numeroEmenda,
+        exercicio: editForm.exercicio,
         date: editForm.date,
-        value: valueNum,
-        // NOTE: mapped as codigo (e.g. EMENDA_PIX) until backend adds a dedicated field (JIRA 4/5).
-        classification: editForm.classification,
+        value: valorNum,
+        classification: editForm.classification,  // ✅ Tipo de emenda
         esfera: editForm.esfera,
         existeConvenio: Boolean(editForm.existeConvenio),
         numeroConvenio: editForm.existeConvenio ? (editForm.numeroConvenio || '').trim() : null,
         anoConvenio: editForm.existeConvenio ? (editForm.anoConvenio ?? null) : null,
         category: editForm.category,
         status: editForm.status,
+        statusCicloVida: editForm.status,  // ✅ Status do ciclo de vida
         institutionId: editForm.institutionId,
         signedLink: editForm.signedLink,
         attachments: (editForm.attachments || []).filter((a) => (a ?? '').trim().length > 0),
         description: editForm.description,
         objectDetail: editForm.objectDetail,
+        justificativa: editForm.justificativa,
+        previsaoConclusao: editForm.previsaoConclusao,
       };
 
       let result;
@@ -1200,13 +1277,16 @@ const EmendasPage: React.FC = () => {
                          )}
                        </div>
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">Instituição</span>
+                         <span className="text-xs text-slate-500 uppercase block">
+                           Instituição <span className="text-red-500">*</span>
+                         </span>
                          {(isCreateMode || isEditMode) ? (
                            <div className="mt-1 space-y-2">
                              <select
                                value={editForm.institutionId || ''}
                                onChange={(e) => handleFormChange('institutionId', e.target.value)}
                                className="w-full border rounded px-3 py-2 text-sm bg-white"
+                               required
                              >
                                <option value="">Selecione uma instituição</option>
                                {institutions
