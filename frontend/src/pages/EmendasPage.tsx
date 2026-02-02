@@ -482,9 +482,32 @@ const EmendasPage: React.FC = () => {
       }
 
       closeModal();
-    } catch (err) {
+    } catch (err: any) {
       console.error('[EmendasPage] Error saving emenda:', err);
-      alert('Erro ao salvar emenda');
+
+      // Extrair mensagem de erro do backend
+      let errorMessage = 'Erro ao salvar emenda';
+
+      if (err?.response?.data?.error) {
+        // Mensagem de erro estruturada do backend
+        errorMessage = err.response.data.error;
+      } else if (err?.response?.data?.message) {
+        errorMessage = err.response.data.message;
+      } else if (err?.response?.data) {
+        // Se data é uma string simples
+        try {
+          const parsed = typeof err.response.data === 'string'
+            ? JSON.parse(err.response.data)
+            : err.response.data;
+          errorMessage = parsed.error || parsed.message || errorMessage;
+        } catch {
+          errorMessage = err.response.data;
+        }
+      } else if (err?.message) {
+        errorMessage = err.message;
+      }
+
+      alert(errorMessage);
     } finally {
       setSaving(false);
     }
@@ -572,7 +595,27 @@ const EmendasPage: React.FC = () => {
         }
         closeModal();
       } else {
-        alert(`Erro ao executar ação: ${err?.response?.data?.error || err.message || 'Erro desconhecido'}`);
+        // Extrair mensagem de erro do backend
+        let errorMessage = 'Erro ao executar ação';
+
+        if (err?.response?.data?.error) {
+          errorMessage = err.response.data.error;
+        } else if (err?.response?.data?.message) {
+          errorMessage = err.response.data.message;
+        } else if (err?.response?.data) {
+          try {
+            const parsed = typeof err.response.data === 'string'
+              ? JSON.parse(err.response.data)
+              : err.response.data;
+            errorMessage = parsed.error || parsed.message || errorMessage;
+          } catch {
+            errorMessage = err.response.data;
+          }
+        } else if (err?.message) {
+          errorMessage = err.message;
+        }
+
+        alert(errorMessage);
       }
     } finally {
       setExecutingAction(false);

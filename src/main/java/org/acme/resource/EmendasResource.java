@@ -109,9 +109,20 @@ public class EmendasResource {
             // JIRA 5: validate business rules per tipo (executed in service)
             Emenda created = emendaService.create(emenda, getCurrentUser());
             return Response.status(Response.Status.CREATED).entity(EmendaDetailDTO.fromEmenda(created)).build();
-        } catch (IllegalArgumentException e) {
+        } catch (jakarta.ws.rs.BadRequestException e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Requisição inválida";
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .entity("{\"error\": \"" + errorMsg.replace("\"", "\\\"") + "\"}")
+                    .build();
+        } catch (IllegalArgumentException e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Argumento inválido";
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + errorMsg.replace("\"", "\\\"") + "\"}")
+                    .build();
+        } catch (Exception e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Erro ao criar emenda";
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\": \"" + errorMsg.replace("\"", "\\\"") + "\"}")
                     .build();
         }
     }
@@ -144,9 +155,20 @@ public class EmendasResource {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
             return Response.ok(EmendaDetailDTO.fromEmenda(updated)).build();
-        } catch (IllegalArgumentException e) {
+        } catch (jakarta.ws.rs.BadRequestException e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Requisição inválida";
             return Response.status(Response.Status.BAD_REQUEST)
-                    .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .entity("{\"error\": \"" + errorMsg.replace("\"", "\\\"") + "\"}")
+                    .build();
+        } catch (IllegalArgumentException e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Argumento inválido";
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\": \"" + errorMsg.replace("\"", "\\\"") + "\"}")
+                    .build();
+        } catch (Exception e) {
+            String errorMsg = e.getMessage() != null ? e.getMessage() : "Erro ao atualizar emenda";
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\": \"" + errorMsg.replace("\"", "\\\"") + "\"}")
                     .build();
         }
     }
