@@ -51,13 +51,13 @@ echo.
 echo ============================================
 echo Checking if database was created...
 echo ============================================
-docker exec portal-emendas-postgres psql -U app -d app-emendas -c "\l"
+docker exec portal-emendas-postgres psql -U app -d app_emendas -c "\l"
 
 echo.
 echo ============================================
 echo Checking Flyway migrations...
 echo ============================================
-docker exec portal-emendas-postgres psql -U app -d app-emendas -c "SELECT version, description, installed_on, success FROM flyway_schema_history ORDER BY installed_rank;"
+docker exec portal-emendas-postgres psql -U app -d app_emendas -c "SELECT version, description, installed_on, success FROM flyway_schema_history ORDER BY installed_rank;"
 
 echo.
 echo ============================================

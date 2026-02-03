@@ -28,16 +28,35 @@ public class AuthResource {
     @POST
     @Path("/login")
     public Response login(LoginRequest loginRequest) {
-        log.info("Login request for user: {}", loginRequest.username());
+        log.info("Login request for document: {}", loginRequest.username());
         try {
-            String token = authService.login(loginRequest.username(), loginRequest.password());
+            // username now contains CPF or CNPJ (digits only)
+            String document = loginRequest.username();
+
+            // Authenticate with the document
+            String token = authService.login(document, loginRequest.password());
             if (token == null) {
                 throw new Exception("Invalid credentials");
             }
-            User user = User.findByEmail(loginRequest.username());
+
+            // Find user by CPF or CNPJ
+            User user = null;
+            if (document.length() == 11) {
+                // CPF (11 digits)
+                user = User.find("cpf", document).firstResult();
+            } else if (document.length() == 14) {
+                // CNPJ (14 digits)
+                user = User.find("cnpj", document).firstResult();
+            }
+
+            if (user == null) {
+                throw new Exception("User not found");
+            }
+
             UserDTO userDTO = new UserDTO(user.id, user.username, user.email);
             return Response.ok(new LoginResponse(true, token, userDTO)).build();
         } catch (Exception e) {
+            log.error("Login failed: {}", e.getMessage());
             return Response.status(Response.Status.UNAUTHORIZED)
                     .entity("{\"error\":\"Invalid credentials\"}")
                     .build();

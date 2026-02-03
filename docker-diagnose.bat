@@ -26,7 +26,7 @@ echo.
 
 echo [5] Check if PostgreSQL is accepting connections:
 echo ============================================
-docker exec portal-emendas-postgres pg_isready -U app -d app-emendas
+docker exec portal-emendas-postgres pg_isready -U app -d app_emendas
 echo.
 
 echo [6] List all databases:
@@ -34,16 +34,16 @@ echo ============================================
 docker exec portal-emendas-postgres psql -U app -d postgres -c "\l"
 echo.
 
-echo [7] Check if app-emendas database exists:
+echo [7] Check if app_emendas database exists:
 echo ============================================
-docker exec portal-emendas-postgres psql -U app -d postgres -c "SELECT datname FROM pg_database WHERE datname='app-emendas';"
+docker exec portal-emendas-postgres psql -U app -d postgres -c "SELECT datname FROM pg_database WHERE datname='app_emendas';"
 echo.
 
 echo [8] If database exists, check tables:
 echo ============================================
-docker exec portal-emendas-postgres psql -U app -d app-emendas -c "\dt" 2>nul
+docker exec portal-emendas-postgres psql -U app -d app_emendas -c "\dt" 2>nul
 if errorlevel 1 (
-    echo Database 'app-emendas' does not exist yet or cannot connect.
+    echo Database 'app_emendas' does not exist yet or cannot connect.
 ) else (
     echo Tables listed above.
 )
@@ -51,7 +51,7 @@ echo.
 
 echo [9] If database exists, check Flyway migrations:
 echo ============================================
-docker exec portal-emendas-postgres psql -U app -d app-emendas -c "SELECT * FROM flyway_schema_history ORDER BY installed_rank;" 2>nul
+docker exec portal-emendas-postgres psql -U app -d app_emendas -c "SELECT * FROM flyway_schema_history ORDER BY installed_rank;" 2>nul
 if errorlevel 1 (
     echo Flyway schema history not found - migrations may not have run yet.
 )

@@ -1,12 +1,13 @@
 import api from './api';
 
-export type UserStatus = 'ATIVO' | 'INATIVO' | 'BLOQUEADO';
+export type UserStatus = 'ATIVO' | 'INATIVO' | 'BLOQUEADO' | 'PENDENTE';
 export type UserRole = 'ADMIN' | 'OPERADOR' | 'GESTOR' | 'JURIDICO';
 
 export interface UserAdminDTO {
   id: number;
   nomeCompleto: string;
-  cpf: string;
+  cpf?: string | null;
+  cnpj?: string | null;
   email: string;
   telefone?: string | null;
   cargoFuncao?: string | null;
@@ -18,7 +19,8 @@ export interface UserAdminDTO {
 
 export interface UserAdminCreateRequest {
   nomeCompleto: string;
-  cpf: string;
+  cpf?: string;
+  cnpj?: string;
   email: string;
   telefone?: string;
   cargoFuncao?: string;
@@ -30,6 +32,7 @@ export interface UserAdminCreateRequest {
 export interface UserAdminUpdateRequest {
   nomeCompleto?: string;
   cpf?: string;
+  cnpj?: string;
   email?: string;
   telefone?: string;
   cargoFuncao?: string;

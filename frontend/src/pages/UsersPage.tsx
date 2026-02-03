@@ -12,6 +12,23 @@ const formatCpf = (cpf: string) => {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 };
 
+const maskDocument = (doc: string) => {
+  const digits = (doc ?? '').replace(/\D/g, '');
+
+  // CPF (11 dígitos): 123.***.***-09
+  if (digits.length === 11) {
+    return `${digits.slice(0, 3)}.***.***-${digits.slice(9)}`;
+  }
+
+  // CNPJ (14 dígitos): 12.***.***/**09-90
+  if (digits.length === 14) {
+    return `${digits.slice(0, 2)}.***.***/**${digits.slice(10, 12)}-${digits.slice(12)}`;
+  }
+
+  // Documento inválido ou vazio
+  return '***';
+};
+
 const statusBadge = (status: string) => {
   switch (status) {
     case 'ATIVO':
@@ -20,6 +37,8 @@ const statusBadge = (status: string) => {
       return 'bg-gray-100 text-gray-700 border-gray-200';
     case 'BLOQUEADO':
       return 'bg-red-100 text-red-800 border-red-200';
+    case 'PENDENTE':
+      return 'bg-yellow-100 text-yellow-800 border-yellow-200';
     default:
       return 'bg-gray-100 text-gray-700 border-gray-200';
   }
@@ -59,10 +78,12 @@ const UsersPage: React.FC = () => {
     if (!q) return users;
     return users.filter((u) => {
       const cpf = (u.cpf ?? '').toLowerCase();
+      const cnpj = (u.cnpj ?? '').toLowerCase();
       return (
         (u.nomeCompleto ?? '').toLowerCase().includes(q) ||
         (u.email ?? '').toLowerCase().includes(q) ||
         cpf.includes(q) ||
+        cnpj.includes(q) ||
         formatCpf(cpf).toLowerCase().includes(q)
       );
     });
@@ -119,7 +140,7 @@ const UsersPage: React.FC = () => {
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nome, e-mail ou CPF..."
+            placeholder="Buscar por nome, e-mail ou documento..."
             className="w-full md:max-w-md border rounded px-3 py-2 text-sm"
           />
           <button
@@ -150,7 +171,7 @@ const UsersPage: React.FC = () => {
                 <tr>
                   <th className="text-left font-semibold text-gray-700 px-4 py-3">Nome</th>
                   <th className="text-left font-semibold text-gray-700 px-4 py-3">E-mail</th>
-                  <th className="text-left font-semibold text-gray-700 px-4 py-3">CPF</th>
+                  <th className="text-left font-semibold text-gray-700 px-4 py-3">Documento</th>
                   <th className="text-left font-semibold text-gray-700 px-4 py-3">Perfil</th>
                   <th className="text-left font-semibold text-gray-700 px-4 py-3">Status</th>
                   <th className="text-right font-semibold text-gray-700 px-4 py-3">Ações</th>
@@ -164,7 +185,7 @@ const UsersPage: React.FC = () => {
                       {u.cargoFuncao && <div className="text-xs text-gray-500">{u.cargoFuncao}</div>}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{u.email}</td>
-                    <td className="px-4 py-3 font-mono text-gray-700">{formatCpf(u.cpf)}</td>
+                    <td className="px-4 py-3 font-mono text-gray-700">{maskDocument(u.cpf || u.cnpj || '')}</td>
                     <td className="px-4 py-3 text-gray-700">
                       {u.role === 'ADMIN'
                         ? 'Admin'

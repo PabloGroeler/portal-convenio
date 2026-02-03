@@ -15,16 +15,26 @@ public class AuthService {
     @Inject
     UserRepository userRepository;
 
-    public String login(String usernameOrEmail, String password) {
-        if (usernameOrEmail == null || password == null) return null;
-        User user = User.findByUsername(usernameOrEmail);
-        if (user == null) {
-            user = User.findByEmail(usernameOrEmail);
+    public String login(String document, String password) {
+        if (document == null || password == null) return null;
+
+        User user = null;
+
+        // Try to find by CPF (11 digits)
+        if (document.length() == 11) {
+            user = User.find("cpf", document).firstResult();
         }
+        // Try to find by CNPJ (14 digits)
+        else if (document.length() == 14) {
+            user = User.find("cnpj", document).firstResult();
+        }
+
         if (user == null) return null;
 
-        // Blocked users cannot authenticate
-        if (user.status == User.UserStatus.BLOQUEADO) return null;
+        // Blocked or pending users cannot authenticate
+        if (user.status == User.UserStatus.BLOQUEADO || user.status == User.UserStatus.PENDENTE) {
+            return null;
+        }
 
         if (!BCrypt.checkpw(password, user.password)) return null;
         // Generate JWT

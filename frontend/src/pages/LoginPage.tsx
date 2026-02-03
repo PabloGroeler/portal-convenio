@@ -4,13 +4,34 @@ import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 
 const LoginPage = () => {
-  const [email, setEmail] = useState('');
+  const [document, setDocument] = useState(''); // CPF or CNPJ
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const successMessage = (location.state as any)?.message as string | undefined;
+
+  // Format document (CPF or CNPJ) as user types
+  const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
+
+    if (value.length <= 11) {
+      // Format as CPF: 000.000.000-00
+      setDocument(value
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d{1,2})$/, '$1-$2'));
+    } else {
+      // Format as CNPJ: 00.000.000/0000-00
+      setDocument(value
+        .slice(0, 14)
+        .replace(/(\d{2})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1.$2')
+        .replace(/(\d{3})(\d)/, '$1/$2')
+        .replace(/(\d{4})(\d{1,2})$/, '$1-$2'));
+    }
+  };
 
   // Clear the navigation state after reading the success message so it doesn't persist
   useEffect(() => {
@@ -29,8 +50,11 @@ const LoginPage = () => {
     e.preventDefault();
     setError('');
 
+    // Remove formatting from document
+    const cleanDocument = document.replace(/\D/g, '');
+
     try {
-      const success = await login(email, password);
+      const success = await login(cleanDocument, password);
       if (success) {
         // Task-6: redirect to the dashboard layout after login
         navigate('/dashboard');
@@ -50,13 +74,17 @@ const LoginPage = () => {
       {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700">E-mail</label>
+          <label htmlFor="document" className="block text-sm font-medium text-gray-700">
+            CPF ou CNPJ
+          </label>
           <input
-            type="email"
-            id="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            type="text"
+            id="document"
+            value={document}
+            onChange={handleDocumentChange}
+            placeholder="000.000.000-00 ou 00.000.000/0000-00"
+            maxLength={18}
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
             required
           />
         </div>
@@ -67,7 +95,7 @@ const LoginPage = () => {
             id="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+            className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
             required
           />
         </div>

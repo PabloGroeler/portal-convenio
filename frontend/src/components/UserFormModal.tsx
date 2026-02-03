@@ -16,7 +16,11 @@ type Props = {
   onUpdate: (id: number, payload: UserAdminUpdateRequest) => Promise<void>;
 };
 
-const normalizeCpf = (cpf: string) => cpf.replace(/\D/g, '').slice(0, 11);
+const normalizeDocument = (doc: string) => {
+  const digits = doc.replace(/\D/g, '');
+  // CPF: 11 dígitos, CNPJ: 14 dígitos
+  return digits.slice(0, 14);
+};
 
 const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, onUpdate }) => {
   const [saving, setSaving] = useState(false);
@@ -26,7 +30,7 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
     if (mode === 'edit' && user) {
       return {
         nomeCompleto: user.nomeCompleto ?? '',
-        cpf: user.cpf ?? '',
+        document: user.cpf ?? user.cnpj ?? '',
         email: user.email ?? '',
         telefone: user.telefone ?? '',
         cargoFuncao: user.cargoFuncao ?? '',
@@ -38,7 +42,7 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
 
     return {
       nomeCompleto: '',
-      cpf: '',
+      document: '',
       email: '',
       telefone: '',
       cargoFuncao: '',
@@ -64,32 +68,54 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
 
     if (!form.nomeCompleto.trim()) return setError('Nome completo é obrigatório');
     if (!form.email.trim()) return setError('E-mail é obrigatório');
-    if (normalizeCpf(form.cpf).length !== 11) return setError('CPF deve conter 11 dígitos');
+
+    const docDigits = normalizeDocument(form.document);
+    if (docDigits.length !== 11 && docDigits.length !== 14) {
+      return setError('Documento deve conter 11 dígitos (CPF) ou 14 dígitos (CNPJ)');
+    }
 
     try {
       setSaving(true);
       if (mode === 'create') {
         if (!form.password.trim()) return setError('Senha é obrigatória');
-        await onCreate({
+
+        const payload: UserAdminCreateRequest = {
           nomeCompleto: form.nomeCompleto.trim(),
-          cpf: normalizeCpf(form.cpf),
           email: form.email.trim(),
           telefone: (form.telefone || '').trim() || undefined,
           cargoFuncao: (form.cargoFuncao || '').trim() || undefined,
           status: form.status,
           role: form.role,
           password: form.password,
-        });
+        };
+
+        // Set CPF or CNPJ based on length
+        if (docDigits.length === 11) {
+          payload.cpf = docDigits;
+        } else {
+          payload.cnpj = docDigits;
+        }
+
+        await onCreate(payload);
       } else if (mode === 'edit' && user) {
         const payload: UserAdminUpdateRequest = {
           nomeCompleto: form.nomeCompleto.trim(),
-          cpf: normalizeCpf(form.cpf),
           email: form.email.trim(),
           telefone: (form.telefone || '').trim() || undefined,
           cargoFuncao: (form.cargoFuncao || '').trim() || undefined,
           status: form.status,
           role: form.role,
         };
+
+        // Set CPF or CNPJ based on length
+        if (docDigits.length === 11) {
+          payload.cpf = docDigits;
+          payload.cnpj = undefined;
+        } else {
+          payload.cnpj = docDigits;
+          payload.cpf = undefined;
+        }
+
         if (form.password.trim()) payload.password = form.password;
         await onUpdate(user.id, payload);
       }
@@ -138,12 +164,12 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">CPF</label>
+              <label className="block text-sm font-medium text-gray-700">Documento (CPF ou CNPJ)</label>
               <input
-                value={form.cpf}
-                onChange={(e) => setForm((p) => ({ ...p, cpf: e.target.value }))}
+                value={form.document}
+                onChange={(e) => setForm((p) => ({ ...p, document: e.target.value }))}
                 className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                placeholder="000.000.000-00"
+                placeholder="000.000.000-00 ou 00.000.000/0000-00"
               />
             </div>
 
@@ -180,6 +206,7 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
                 onChange={(e) => setForm((p) => ({ ...p, status: e.target.value as UserStatus }))}
                 className="mt-1 w-full border rounded px-3 py-2 text-sm bg-white"
               >
+                <option value="PENDENTE">Pendente</option>
                 <option value="ATIVO">Ativo</option>
                 <option value="INATIVO">Inativo</option>
                 <option value="BLOQUEADO">Bloqueado</option>

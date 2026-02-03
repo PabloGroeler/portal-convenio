@@ -13,10 +13,11 @@ interface LoginResponse {
   user: User;
 }
 
-export const login = async (credentials: { email: string; password: string }): Promise<LoginResponse> => {
+export const login = async (credentials: { document: string; password: string }): Promise<LoginResponse> => {
   try {
-    // Backend expects { username, password }
-    const payload = { username: credentials.email, password: credentials.password };
+    // Backend expects { username: document, password }
+    // Document can be CPF (11 digits) or CNPJ (14 digits) without formatting
+    const payload = { username: credentials.document, password: credentials.password };
     const { data } = await api.post<LoginResponse>('/auth/login', payload);
     return data;
   } catch (err) {
