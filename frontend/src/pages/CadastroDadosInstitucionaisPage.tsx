@@ -261,11 +261,11 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
         await institutionService.update(editId as string, payload);
         setSuccess('Cadastro atualizado com sucesso.');
         // After a successful update, go back to list so user can see the result.
-        setTimeout(() => navigate('/painel/institutions'), 500);
+        setTimeout(() => navigate('/dashboard/instituicoes'), 500);
       } else {
         await institutionService.create(payload);
         setSuccess('Cadastro realizado com sucesso.');
-        setTimeout(() => navigate('/painel/institutions'), 500);
+        setTimeout(() => navigate('/dashboard/instituicoes'), 500);
       }
     } catch (err: any) {
       console.error('[CadastroDadosInstitucionais] submit error', err);
@@ -639,7 +639,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={() => navigate('/painel/institutions')}
+            onClick={() => navigate('/dashboard/instituicoes')}
             className="px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
           >
             Cancelar

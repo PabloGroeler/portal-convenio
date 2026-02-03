@@ -136,7 +136,7 @@ function App() {
                    }
                  />
                  <Route
-                   path="painel/institutions"
+                   path="dashboard/instituicoes"
                    element={
                      <ProtectedRoute>
                        <InstitutionsPage />
