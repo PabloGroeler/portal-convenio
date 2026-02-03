@@ -1,6 +1,7 @@
 package org.acme.service;
 
 import jakarta.enterprise.context.ApplicationScoped;
+import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import org.acme.dto.RegisterRequest;
 import org.acme.dto.UserDTO;
@@ -9,6 +10,9 @@ import org.mindrot.jbcrypt.BCrypt;
 
 @ApplicationScoped
 public class UserService {
+
+    @Inject
+    EmailService emailService;
 
     @Transactional
     public UserDTO register(RegisterRequest request) {
@@ -28,9 +32,12 @@ public class UserService {
         // Validate password strength
         validatePasswordStrength(request.password);
 
+        // Check for duplicate username
         if (User.findByUsername(request.username) != null) {
             throw new RuntimeException("Username already exists");
         }
+
+        // Check for duplicate email - REQUIREMENT: Não permitir cadastro com e-mail duplicado
         if (User.findByEmail(request.email) != null) {
             throw new RuntimeException("Email already in use");
         }
@@ -40,16 +47,49 @@ public class UserService {
         user.email = request.email;
         user.password = BCrypt.hashpw(request.password, BCrypt.gensalt());
 
-        // Fill required fields with default values for registration
-        // nomeCompleto can be same as username initially, user can update later
-        user.nomeCompleto = request.username;
+        // REQUIREMENT: Adicionar opção para informar CPF ou CNPJ
+        user.nomeCompleto = request.nomeCompleto != null ? request.nomeCompleto : request.username;
 
-        // CPF is nullable - user can complete profile later
-        user.cpf = null;
+        // User can provide either CPF (pessoa física) or CNPJ (pessoa jurídica), but not both
+        if (request.cpf != null && !request.cpf.isBlank() && request.cnpj != null && !request.cnpj.isBlank()) {
+            throw new RuntimeException("Informe apenas CPF ou CNPJ, não ambos");
+        }
 
-        // Default values (status, role, timestamps) are set in @PrePersist
+        // Set CPF if provided (11 digits without formatting)
+        if (request.cpf != null && !request.cpf.isBlank()) {
+            String cpfDigits = request.cpf.replaceAll("\\D", "");
+            if (cpfDigits.length() != 11) {
+                throw new RuntimeException("CPF deve conter 11 dígitos");
+            }
+            // Check for duplicate CPF
+            if (User.find("cpf", cpfDigits).firstResult() != null) {
+                throw new RuntimeException("CPF já cadastrado");
+            }
+            user.cpf = cpfDigits;
+        }
+
+        // Set CNPJ if provided (14 digits without formatting)
+        if (request.cnpj != null && !request.cnpj.isBlank()) {
+            String cnpjDigits = request.cnpj.replaceAll("\\D", "");
+            if (cnpjDigits.length() != 14) {
+                throw new RuntimeException("CNPJ deve conter 14 dígitos");
+            }
+            // Check for duplicate CNPJ
+            if (User.find("cnpj", cnpjDigits).firstResult() != null) {
+                throw new RuntimeException("CNPJ já cadastrado");
+            }
+            user.cnpj = cnpjDigits;
+        }
+
+        // REQUIREMENT: Usuário deve iniciar com status PENDENTE
+        user.status = User.UserStatus.PENDENTE;
+        user.role = User.UserRole.OPERADOR; // Default role
+
         user.persist();
-        user.flush(); // Force flush to generate ID
+        user.flush();
+
+        // REQUIREMENT: Após registro, enviar email
+        emailService.sendWelcomeEmail(user.email, user.nomeCompleto);
 
         return new UserDTO(user.id, user.username, user.email);
     }

@@ -23,7 +23,8 @@ public class User extends PanacheEntity {
     public enum UserStatus {
         ATIVO,
         INATIVO,
-        BLOQUEADO
+        BLOQUEADO,
+        PENDENTE  // Usuário aguardando aprovação do administrador
     }
 
     public enum UserRole {
@@ -41,8 +42,13 @@ public class User extends PanacheEntity {
     // Store only digits. Validation + formatting handled in service/resource.
     // Nullable during registration - user can complete profile later
     @Pattern(regexp = "\\d{11}", message = "CPF deve conter 11 dígitos")
-    @Column(name = "cpf", length = 11, unique = true)
+    @Column(name = "cpf", length = 11)
     public String cpf;
+
+    // CNPJ for legal entities (14 digits without formatting)
+    @Pattern(regexp = "\\d{14}", message = "CNPJ deve conter 14 dígitos")
+    @Column(name = "cnpj", length = 14)
+    public String cnpj;
 
     @NotBlank
     @Email

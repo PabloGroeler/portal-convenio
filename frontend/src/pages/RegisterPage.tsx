@@ -9,7 +9,9 @@ const RegisterPage = () => {
     name: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
+    personType: 'PF', // PF = Pessoa Física, PJ = Pessoa Jurídica
+    cpfCnpj: ''
   });
   const [error, setError] = useState('');
   const [passwordFocused, setPasswordFocused] = useState(false);
@@ -26,17 +28,130 @@ const RegisterPage = () => {
 
   const isPasswordValid = Object.values(passwordRequirements).every(req => req);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // CPF/CNPJ validation
+  const validateCPF = (cpf: string): boolean => {
+    cpf = cpf.replace(/[^\d]/g, '');
+    if (cpf.length !== 11) return false;
+    if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+    let sum = 0;
+    for (let i = 0; i < 9; i++) {
+      sum += parseInt(cpf.charAt(i)) * (10 - i);
+    }
+    let rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cpf.charAt(9))) return false;
+
+    sum = 0;
+    for (let i = 0; i < 10; i++) {
+      sum += parseInt(cpf.charAt(i)) * (11 - i);
+    }
+    rev = 11 - (sum % 11);
+    if (rev === 10 || rev === 11) rev = 0;
+    if (rev !== parseInt(cpf.charAt(10))) return false;
+
+    return true;
+  };
+
+  const validateCNPJ = (cnpj: string): boolean => {
+    cnpj = cnpj.replace(/[^\d]/g, '');
+    if (cnpj.length !== 14) return false;
+    if (/^(\d)\1{13}$/.test(cnpj)) return false;
+
+    let size = cnpj.length - 2;
+    let numbers = cnpj.substring(0, size);
+    const digits = cnpj.substring(size);
+    let sum = 0;
+    let pos = size - 7;
+
+    for (let i = size; i >= 1; i--) {
+      sum += parseInt(numbers.charAt(size - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+
+    let result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(digits.charAt(0))) return false;
+
+    size = size + 1;
+    numbers = cnpj.substring(0, size);
+    sum = 0;
+    pos = size - 7;
+
+    for (let i = size; i >= 1; i--) {
+      sum += parseInt(numbers.charAt(size - i)) * pos--;
+      if (pos < 2) pos = 9;
+    }
+
+    result = sum % 11 < 2 ? 0 : 11 - (sum % 11);
+    if (result !== parseInt(digits.charAt(1))) return false;
+
+    return true;
+  };
+
+  const formatCPF = (value: string): string => {
+    const numbers = value.replace(/[^\d]/g, '');
+    if (numbers.length <= 3) return numbers;
+    if (numbers.length <= 6) return `${numbers.slice(0, 3)}.${numbers.slice(3)}`;
+    if (numbers.length <= 9) return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6)}`;
+    return `${numbers.slice(0, 3)}.${numbers.slice(3, 6)}.${numbers.slice(6, 9)}-${numbers.slice(9, 11)}`;
+  };
+
+  const formatCNPJ = (value: string): string => {
+    const numbers = value.replace(/[^\d]/g, '');
+    if (numbers.length <= 2) return numbers;
+    if (numbers.length <= 5) return `${numbers.slice(0, 2)}.${numbers.slice(2)}`;
+    if (numbers.length <= 8) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5)}`;
+    if (numbers.length <= 12) return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8)}`;
+    return `${numbers.slice(0, 2)}.${numbers.slice(2, 5)}.${numbers.slice(5, 8)}/${numbers.slice(8, 12)}-${numbers.slice(12, 14)}`;
+  };
+
+  const isCpfCnpjValid = (): boolean => {
+    const cleaned = formData.cpfCnpj.replace(/[^\d]/g, '');
+    if (formData.personType === 'PF') {
+      return validateCPF(cleaned);
+    } else {
+      return validateCNPJ(cleaned);
+    }
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+
+    if (name === 'cpfCnpj') {
+      const formatted = formData.personType === 'PF' ? formatCPF(value) : formatCNPJ(value);
+      setFormData(prev => ({
+        ...prev,
+        [name]: formatted
+      }));
+    } else if (name === 'personType') {
+      // Clear CPF/CNPJ when changing person type
+      setFormData(prev => ({
+        ...prev,
+        [name]: value,
+        cpfCnpj: ''
+      }));
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validate CPF/CNPJ
+    if (!formData.cpfCnpj) {
+      setError(`Por favor, informe o ${formData.personType === 'PF' ? 'CPF' : 'CNPJ'}`);
+      return;
+    }
+
+    if (!isCpfCnpjValid()) {
+      setError(`${formData.personType === 'PF' ? 'CPF' : 'CNPJ'} inválido`);
+      return;
+    }
 
     // Validate password requirements
     if (!isPasswordValid) {
@@ -50,17 +165,21 @@ const RegisterPage = () => {
     }
 
     try {
+      const cleanedDocument = formData.cpfCnpj.replace(/[^\d]/g, '');
       const payload = {
         username: formData.name,
         email: formData.email,
         password: formData.password,
+        cpf: formData.personType === 'PF' ? cleanedDocument : null,
+        cnpj: formData.personType === 'PJ' ? cleanedDocument : null,
+        nomeCompleto: formData.name
       };
       await userService.register(payload);
       // Redirect to login after successful registration
-      navigate('/login', { state: { message: 'Cadastro realizado com sucesso! Faça login.' } });
+      navigate('/login', { state: { message: 'Cadastro realizado com sucesso! Você receberá um e-mail de confirmação. Aguarde aprovação do administrador para fazer login.' } });
     } catch (err: any) {
       console.error('Register error:', err);
-      const msg = err?.response?.data || err?.message || 'Erro ao realizar cadastro. Tente novamente.';
+      const msg = err?.response?.data?.error || err?.response?.data || err?.message || 'Erro ao realizar cadastro. Tente novamente.';
       setError(String(msg));
     }
   };
@@ -94,7 +213,7 @@ const RegisterPage = () => {
           </div>
         )}
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="rounded-md shadow-sm -space-y-px">
+          <div className="rounded-md shadow-sm space-y-3">
             <div>
               <label htmlFor="name" className="sr-only">Nome completo</label>
               <input
@@ -104,10 +223,44 @@ const RegisterPage = () => {
                 required
                 value={formData.name}
                 onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="Nome completo"
               />
             </div>
+
+            <div>
+              <label htmlFor="personType" className="block text-sm font-medium text-gray-700 mb-1">
+                Tipo de Pessoa
+              </label>
+              <select
+                id="personType"
+                name="personType"
+                value={formData.personType}
+                onChange={handleChange}
+                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+              >
+                <option value="PF">Pessoa Física (CPF)</option>
+                <option value="PJ">Pessoa Jurídica (CNPJ)</option>
+              </select>
+            </div>
+
+            <div>
+              <label htmlFor="cpfCnpj" className="sr-only">
+                {formData.personType === 'PF' ? 'CPF' : 'CNPJ'}
+              </label>
+              <input
+                id="cpfCnpj"
+                name="cpfCnpj"
+                type="text"
+                required
+                value={formData.cpfCnpj}
+                onChange={handleChange}
+                maxLength={formData.personType === 'PF' ? 14 : 18}
+                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                placeholder={formData.personType === 'PF' ? 'CPF (000.000.000-00)' : 'CNPJ (00.000.000/0000-00)'}
+              />
+            </div>
+
             <div>
               <label htmlFor="email-address" className="sr-only">E-mail</label>
               <input
@@ -118,7 +271,7 @@ const RegisterPage = () => {
                 required
                 value={formData.email}
                 onChange={handleChange}
-                className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
+                className="appearance-none rounded relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 focus:outline-none focus:ring-blue-500 focus:border-blue-500 focus:z-10 sm:text-sm"
                 placeholder="E-mail"
               />
             </div>
