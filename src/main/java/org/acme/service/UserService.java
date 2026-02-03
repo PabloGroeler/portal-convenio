@@ -25,6 +25,9 @@ public class UserService {
             throw new RuntimeException("Password is required");
         }
 
+        // Validate password strength
+        validatePasswordStrength(request.password);
+
         if (User.findByUsername(request.username) != null) {
             throw new RuntimeException("Username already exists");
         }
@@ -36,8 +39,36 @@ public class UserService {
         user.username = request.username;
         user.email = request.email;
         user.password = BCrypt.hashpw(request.password, BCrypt.gensalt());
+
+        // Fill required fields with default values for registration
+        // nomeCompleto can be same as username initially, user can update later
+        user.nomeCompleto = request.username;
+
+        // CPF is nullable - user can complete profile later
+        user.cpf = null;
+
+        // Default values (status, role, timestamps) are set in @PrePersist
         user.persist();
+        user.flush(); // Force flush to generate ID
 
         return new UserDTO(user.id, user.username, user.email);
+    }
+
+    private void validatePasswordStrength(String password) {
+        if (password.length() < 8) {
+            throw new RuntimeException("Senha deve ter no mínimo 8 caracteres");
+        }
+        if (!password.matches(".*[A-Z].*")) {
+            throw new RuntimeException("Senha deve conter pelo menos uma letra maiúscula");
+        }
+        if (!password.matches(".*[a-z].*")) {
+            throw new RuntimeException("Senha deve conter pelo menos uma letra minúscula");
+        }
+        if (!password.matches(".*[0-9].*")) {
+            throw new RuntimeException("Senha deve conter pelo menos um número");
+        }
+        if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
+            throw new RuntimeException("Senha deve conter pelo menos um caractere especial");
+        }
     }
 }

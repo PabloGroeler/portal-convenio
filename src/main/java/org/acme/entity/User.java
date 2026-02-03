@@ -39,9 +39,9 @@ public class User extends PanacheEntity {
     public String nomeCompleto;
 
     // Store only digits. Validation + formatting handled in service/resource.
-    @NotBlank
+    // Nullable during registration - user can complete profile later
     @Pattern(regexp = "\\d{11}", message = "CPF deve conter 11 dígitos")
-    @Column(name = "cpf", nullable = false, length = 11, unique = true)
+    @Column(name = "cpf", length = 11, unique = true)
     public String cpf;
 
     @NotBlank
