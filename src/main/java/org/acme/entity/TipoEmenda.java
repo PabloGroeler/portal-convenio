@@ -1,9 +1,8 @@
 package org.acme.entity;
 
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -13,13 +12,10 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "tipos_emenda")
-public class TipoEmenda {
+public class TipoEmenda extends PanacheEntityBase {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    public Long id;
-
-    @Column(name = "codigo", length = 80, nullable = false, unique = true)
+    @Column(name = "codigo", length = 100, nullable = false)
     public String codigo;
 
     @Column(name = "nome", length = 200, nullable = false)
@@ -28,8 +24,8 @@ public class TipoEmenda {
     @Column(name = "ativo", nullable = false)
     public boolean ativo = true;
 
-    @Column(name = "ordem", nullable = false)
-    public int ordem = 0;
+    @Column(name = "ordem")
+    public Integer ordem;
 
     @Column(name = "create_time")
     public OffsetDateTime createTime;
@@ -48,6 +44,10 @@ public class TipoEmenda {
     @PreUpdate
     public void onUpdate() {
         updateTime = OffsetDateTime.now();
+    }
+
+    public static TipoEmenda findByCodigo(String codigo) {
+        return find("codigo", codigo).firstResult();
     }
 }
 

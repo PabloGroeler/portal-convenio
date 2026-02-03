@@ -9,18 +9,16 @@ import java.time.OffsetDateTime;
  */
 public class TipoEmendaDTO {
 
-    public Long id;
     public String codigo;
     public String nome;
     public boolean ativo;
-    public int ordem;
+    public Integer ordem;
     public OffsetDateTime createTime;
     public OffsetDateTime updateTime;
 
     public static TipoEmendaDTO fromEntity(TipoEmenda e) {
         if (e == null) return null;
         TipoEmendaDTO dto = new TipoEmendaDTO();
-        dto.id = e.id;
         dto.codigo = e.codigo;
         dto.nome = e.nome;
         dto.ativo = e.ativo;

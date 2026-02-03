@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.SequenceGenerator;
 import jakarta.persistence.Table;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.JoinColumn;
@@ -16,7 +17,8 @@ import java.time.OffsetDateTime;
 public class EmendaHistorico {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "emendas_historico_seq")
+    @SequenceGenerator(name = "emendas_historico_seq", sequenceName = "emendas_historico_seq", allocationSize = 1)
     public Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
