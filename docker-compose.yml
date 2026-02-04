@@ -1,47 +1,26 @@
 version: '3.8'
 
 services:
-  # PostgreSQL service
-  postgres:
-    image: postgres:16
-    container_name: portal-emendas-postgres
-    ports:
-      - "5433:5432"
-    environment:
-      POSTGRES_DB: app-emendas
-      POSTGRES_USER: app
-      POSTGRES_PASSWORD: app
-      PGDATA: /var/lib/postgresql/data/pgdata
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init-db.sql:/docker-entrypoint-initdb.d/init-db.sql
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U app -d app-emendas"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-    restart: unless-stopped
-
   # Backend service
   app:
     container_name: portal-emendas-backend
     build:
       context: .
       dockerfile: src/main/docker/Dockerfile.jvm
-    depends_on:
-      postgres:
-        condition: service_healthy
     ports:
       - "8080:8080"
     restart: unless-stopped
     environment:
       QUARKUS_DATASOURCE_DB_KIND: postgresql
-      QUARKUS_DATASOURCE_USERNAME: app
-      QUARKUS_DATASOURCE_PASSWORD: app
+      QUARKUS_DATASOURCE_USERNAME: postgres
+      QUARKUS_DATASOURCE_PASSWORD: postgres
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/app_emendas
       # Disable Hibernate auto-generation - Flyway manages schema
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: none
-      # Flyway configuration
+      QUARKUS_HIBERNATE_ORM_LOG_SQL: "true"
+      QUARKUS_HIBERNATE_ORM_DIALECT: org.hibernate.dialect.PostgreSQLDialect
+
+      # Flyway Configuration - Will run migrations automatically
       QUARKUS_FLYWAY_MIGRATE_AT_START: "true"
       QUARKUS_FLYWAY_BASELINE_ON_MIGRATE: "true"
       QUARKUS_FLYWAY_BASELINE_VERSION: "0"
@@ -74,6 +53,3 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: sh -c "npm run dev -- --config vite.config.docker.ts"
-
-volumes:
-  postgres_data:
