@@ -41,19 +41,19 @@ const DashboardPage = () => {
             <h3 className="text-lg font-semibold mb-4">Cadastros</h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               <Link
-                to="/painel/institutions"
+                to="/dashboard"
                 className="px-4 py-3 border rounded-lg hover:bg-gray-50 text-center font-medium"
               >
                 Instituições
               </Link>
               <Link
-                to="/painel/councilors"
+                to="/dashboard"
                 className="px-4 py-3 border rounded-lg hover:bg-gray-50 text-center font-medium"
               >
                 Parlamentares
               </Link>
               <Link
-                to="/painel/convenios"
+                to="/dashboard"
                 className="px-4 py-3 border rounded-lg hover:bg-gray-50 text-center font-medium"
               >
                 Convênios

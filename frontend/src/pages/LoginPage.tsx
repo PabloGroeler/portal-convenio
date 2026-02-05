@@ -12,6 +12,10 @@ const LoginPage = () => {
   const location = useLocation();
   const successMessage = (location.state as any)?.message as string | undefined;
 
+  // Verificar se foi redirecionado por token expirado
+  const isExpired = new URLSearchParams(location.search).get('expired') === 'true';
+  const expiredMessage = isExpired ? 'Sua sessão expirou. Por favor, faça login novamente.' : null;
+
   // Format document (CPF or CNPJ) as user types
   const handleDocumentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, ''); // Remove non-digits
@@ -70,6 +74,16 @@ const LoginPage = () => {
   return (
     <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-lg shadow-md">
       <h1 className="text-2xl font-bold mb-6">Login</h1>
+      {expiredMessage && (
+        <div className="mb-4 p-3 bg-yellow-100 text-yellow-800 rounded border border-yellow-300">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+            </svg>
+            {expiredMessage}
+          </div>
+        </div>
+      )}
       {successMessage && <div className="mb-4 p-2 bg-emerald-100 text-emerald-700 rounded">{successMessage}</div>}
       {error && <div className="mb-4 p-2 bg-red-100 text-red-700 rounded">{error}</div>}
       <form onSubmit={handleSubmit} className="space-y-4">

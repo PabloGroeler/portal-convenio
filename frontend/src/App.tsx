@@ -29,34 +29,12 @@ import ProfilePage from './pages/ProfilePage';
 // Create a client
 const queryClient = new QueryClient();
 
-// Create a wrapper component that has access to useNavigate
-const AuthWrapper = ({ children }: { children: React.ReactNode }) => {
-  const navigate = useNavigate();
-  const { login, logout } = useAuth();
-
-  const handleLogin = async (email: string, password: string) => {
-    const success = await login(email, password);
-    if (success) {
-      navigate('/dashboard');
-    }
-    return success;
-  };
-
-  const handleLogout = () => {
-    logout();
-    navigate('/');
-  };
-
-  return <>{children}</>;
-};
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <Router>
         <AuthProvider>
-          <AuthWrapper>
-            <Routes>
+          <Routes>
               {/* Dashboard SPA layout (task-6) */}
               <Route
                 path="/dashboard"
@@ -136,14 +114,6 @@ function App() {
                    }
                  />
                  <Route
-                   path="painel/institutions"
-                   element={
-                     <ProtectedRoute>
-                       <InstitutionsPage />
-                     </ProtectedRoute>
-                   }
-                 />
-                 <Route
                    path="painel/councilors"
                    element={
                      <ProtectedRoute>
@@ -153,7 +123,6 @@ function App() {
                  />
                </Route>
              </Routes>
-           </AuthWrapper>
          </AuthProvider>
        </Router>
      </QueryClientProvider>

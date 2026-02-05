@@ -91,7 +91,13 @@ public class UserService {
         // REQUIREMENT: Após registro, enviar email
         emailService.sendWelcomeEmail(user.email, user.nomeCompleto);
 
-        return new UserDTO(user.id, user.username, user.email);
+        return new UserDTO(
+            user.id,
+            user.username,
+            user.email,
+            user.nomeCompleto,
+            java.util.Collections.emptyList() // Novo usuário sem instituições
+        );
     }
 
     private void validatePasswordStrength(String password) {

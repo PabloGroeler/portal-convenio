@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import institutionService from '../services/institutionService';
 import type { InstitutionDTO } from '../services/institutionService';
+import { getCurrentUserData } from '../services/userService';
+import { useAuth } from '../context/AuthContext';
 import { lookupCep } from '../services/cepService';
 import {
   formatCep,
@@ -32,6 +34,7 @@ type FormState = Partial<InstitutionDTO>;
 const CadastroDadosInstitucionaisPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const { refreshUser } = useAuth();
   const editId = searchParams.get('id');
 
   const [loadingExisting, setLoadingExisting] = useState(false);
@@ -260,12 +263,20 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       if (isEdit) {
         await institutionService.update(editId as string, payload);
         setSuccess('Cadastro atualizado com sucesso.');
-        // After a successful update, go back to list so user can see the result.
-        setTimeout(() => navigate('/painel/institutions'), 500);
+        setTimeout(() => navigate('/dashboard/instituicoes'), 500);
       } else {
         await institutionService.create(payload);
-        setSuccess('Cadastro realizado com sucesso.');
-        setTimeout(() => navigate('/painel/institutions'), 500);
+        setSuccess('Cadastro realizado com sucesso e vinculado ao seu usuário.');
+
+        // Buscar dados atualizados do usuário
+        try {
+          await getCurrentUserData();
+          refreshUser();
+        } catch (err) {
+          console.error('Erro ao atualizar dados do usuário:', err);
+        }
+
+        setTimeout(() => navigate('/dashboard'), 1000);
       }
     } catch (err: any) {
       console.error('[CadastroDadosInstitucionais] submit error', err);
@@ -639,7 +650,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
         <div className="flex justify-end gap-3">
           <button
             type="button"
-            onClick={() => navigate('/painel/institutions')}
+            onClick={() => navigate('/dashboard')}
             className="px-5 py-2 border border-gray-300 text-gray-700 rounded hover:bg-gray-50"
           >
             Cancelar

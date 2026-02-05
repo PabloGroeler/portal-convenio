@@ -31,4 +31,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
+// Interceptor de resposta para tratar token expirado
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Se retornar 401 (Unauthorized), limpar sessão e redirecionar para login
+    if (error.response && error.response.status === 401) {
+      const errorData = error.response.data;
+
+      // Verificar se é token expirado
+      if (errorData?.expired || errorData?.error?.includes('expirado') || errorData?.error?.includes('expired')) {
+        console.warn('⚠️ Token expirado! Fazendo logout automático...');
+
+        // Limpar localStorage
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+
+        // Redirecionar para login com mensagem
+        const currentPath = window.location.pathname;
+        if (currentPath !== '/login') {
+          window.location.href = '/login?expired=true';
+        }
+      }
+    }
+
+    return Promise.reject(error);
+  }
+);
+
 export default api;

@@ -9,12 +9,16 @@ import jakarta.ws.rs.Produces;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
+import org.acme.entity.UsuarioInstituicao;
 import org.acme.service.AuthService;
 import org.acme.dto.LoginRequest;
 import org.acme.dto.LoginResponse;
 import org.acme.dto.SuccessResponse;
 import org.acme.dto.UserDTO;
 import org.acme.entity.User;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Path("/api/auth")
 @Produces(MediaType.APPLICATION_JSON)
@@ -53,7 +57,19 @@ public class AuthResource {
                 throw new Exception("User not found");
             }
 
-            UserDTO userDTO = new UserDTO(user.id, user.username, user.email);
+            // Buscar instituições vinculadas
+            List<String> instituicoes = UsuarioInstituicao.findByUsuario(user.id)
+                .stream()
+                .map(vi -> vi.instituicaoId)
+                .collect(Collectors.toList());
+
+            UserDTO userDTO = new UserDTO(
+                user.id,
+                user.username,
+                user.email,
+                user.nomeCompleto,
+                instituicoes
+            );
             return Response.ok(new LoginResponse(true, token, userDTO)).build();
         } catch (Exception e) {
             log.error("Login failed: {}", e.getMessage());

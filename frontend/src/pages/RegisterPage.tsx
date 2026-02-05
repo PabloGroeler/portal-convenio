@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import userService from '../services/userService';
+import { register } from '../services/userService';
 
 const RegisterPage = () => {
   const [formData, setFormData] = useState({
@@ -174,7 +174,7 @@ const RegisterPage = () => {
         cnpj: formData.personType === 'PJ' ? cleanedDocument : null,
         nomeCompleto: formData.name
       };
-      await userService.register(payload);
+      await register(payload);
       // Redirect to login after successful registration
       navigate('/login', { state: { message: 'Cadastro realizado com sucesso! Você receberá um e-mail de confirmação. Aguarde aprovação do administrador para fazer login.' } });
     } catch (err: any) {
