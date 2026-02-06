@@ -25,6 +25,7 @@ import DashboardHomePage from './pages/DashboardHomePage';
 import DashboardEmendasPage from './pages/DashboardEmendasPage';
 import UsersPage from './pages/UsersPage';
 import ProfilePage from './pages/ProfilePage';
+import DiretoriaPage from './pages/DiretoriaPage';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -49,6 +50,7 @@ function App() {
                 <Route path="emendas" element={<DashboardEmendasPage />} />
                 <Route path="instituicoes" element={<InstitutionsPage />} />
                 <Route path="cadastro-dados-institucionais" element={<CadastroDadosInstitucionaisPage />} />
+                <Route path="diretoria" element={<DiretoriaPage />} />
                 <Route path="parlamentares" element={<CouncilorsPage />} />
                 <Route path="usuarios" element={<UsersPage />} />
                 <Route path="profile" element={<ProfilePage />} />
