@@ -4,10 +4,10 @@ title: Campo “Situação da Emenda” em Emendas
 status: Done
 assignee: []
 created_date: '2026-01-30 18:25'
-updated_date: '2026-02-02 17:50'
+updated_date: '2026-02-06 19:14'
 labels: []
 dependencies: []
-ordinal: 8000
+ordinal: 9000
 ---
 
 ## Description

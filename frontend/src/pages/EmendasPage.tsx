@@ -927,16 +927,12 @@ const EmendasPage: React.FC = () => {
                             type="text"
                             value={editForm.officialCode || ''}
                             onChange={(e) => handleFormChange('officialCode', e.target.value)}
-                            type="number"
-                            value={editForm.numeroEmenda || ''}
-                            onChange={(e) => handleFormChange('numeroEmenda', e.target.value ? parseInt(e.target.value) : undefined)}
                             className="mt-1 w-full border rounded px-3 py-2 text-sm"
                             placeholder="Ex: 004-132-2025"
-                            min="1"
                             required
                           />
                         )    : (
-                           <span className="font-mono text-slate-700 font-medium">{editForm.numeroEmenda || '—'}</span>
+                           <span className="font-mono text-slate-700 font-medium">{editForm.officialCode || '—'}</span>
                          )}
                          <p className="text-xs text-slate-400 mt-1">Deve ser maior que zero e único por exercício</p>
                        </div>

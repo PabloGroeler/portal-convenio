@@ -6,13 +6,19 @@ import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
 import lombok.extern.slf4j.Slf4j;
+import org.acme.dto.AlterarStatusDTO;
+import org.acme.dto.StatusCalculadoDTO;
 import org.acme.entity.Institution;
+import org.acme.entity.StatusHistorico;
+import org.acme.entity.StatusOSC;
 import org.acme.entity.User;
 import org.acme.entity.UsuarioInstituicao;
 import org.acme.repository.InstitutionRepository;
 import org.acme.service.InstitutionService;
+import org.acme.service.StatusOSCService;
 
 import java.util.List;
+import java.util.Map;
 
 @Path("/api/institutions")
 @Produces(MediaType.APPLICATION_JSON)
@@ -25,6 +31,9 @@ public class InstitutionResource {
 
     @Inject
     InstitutionRepository institutionRepository;
+
+    @Inject
+    StatusOSCService statusOSCService;
 
     private Response badRequest(String msg) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -206,5 +215,94 @@ public class InstitutionResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
         return Response.noContent().build();
+    }
+
+    // ===== RF-02.3 - Endpoints de Status da OSC =====
+
+    /**
+     * Alterar status manualmente
+     */
+    @POST
+    @Path("/{id}/status")
+    @Transactional
+    public Response alterarStatus(@PathParam("id") String id, AlterarStatusDTO dto) {
+        try {
+            log.info("Alterando status da instituição {} para {}", id, dto.getNovoStatus());
+            Institution instituicao = statusOSCService.alterarStatus(id, dto);
+            return Response.ok(instituicao).build();
+        } catch (IllegalArgumentException e) {
+            log.warn("Erro ao alterar status: {}", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST)
+                .entity(Map.of("error", e.getMessage()))
+                .build();
+        }
+    }
+
+    /**
+     * Calcular status automático sem persistir
+     */
+    @GET
+    @Path("/{id}/calcular-status")
+    public Response calcularStatus(@PathParam("id") String id) {
+        Institution instituicao = institutionRepository.findById(id);
+        if (instituicao == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(Map.of("error", "Instituição não encontrada"))
+                .build();
+        }
+
+        StatusOSC statusAtual = instituicao.statusOSC != null ? instituicao.statusOSC : StatusOSC.EM_CADASTRO;
+        StatusOSC statusCalculado = statusOSCService.calcularStatusAutomatico(instituicao);
+        boolean mudou = statusAtual != statusCalculado;
+
+        log.debug("Status calculado para {}: atual={}, calculado={}, mudou={}",
+                  id, statusAtual, statusCalculado, mudou);
+
+        return Response.ok(new StatusCalculadoDTO(statusCalculado, mudou)).build();
+    }
+
+    /**
+     * Obter histórico de alterações de status
+     */
+    @GET
+    @Path("/{id}/historico-status")
+    public Response getHistoricoStatus(@PathParam("id") String id) {
+        Institution instituicao = institutionRepository.findById(id);
+        if (instituicao == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(Map.of("error", "Instituição não encontrada"))
+                .build();
+        }
+
+        List<StatusHistorico> historico = statusOSCService.buscarHistorico(id);
+        return Response.ok(historico).build();
+    }
+
+    /**
+     * Forçar recálculo e atualização automática do status
+     */
+    @POST
+    @Path("/{id}/atualizar-status")
+    @Transactional
+    public Response atualizarStatusAutomatico(@PathParam("id") String id) {
+        Institution instituicao = institutionRepository.findById(id);
+        if (instituicao == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(Map.of("error", "Instituição não encontrada"))
+                .build();
+        }
+
+        StatusOSC statusAnterior = instituicao.statusOSC != null ? instituicao.statusOSC : StatusOSC.EM_CADASTRO;
+        statusOSCService.atualizarStatusAutomatico(id);
+
+        // Recarregar para pegar o status atualizado
+        instituicao = institutionRepository.findById(id);
+        StatusOSC statusNovo = instituicao.statusOSC;
+
+        return Response.ok(Map.of(
+            "statusAnterior", statusAnterior,
+            "statusNovo", statusNovo,
+            "mudou", statusAnterior != statusNovo
+        )).build();
     }
 }

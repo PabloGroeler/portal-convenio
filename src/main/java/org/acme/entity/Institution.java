@@ -9,6 +9,8 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.ElementCollection;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.EnumType;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -111,6 +113,15 @@ public class Institution {
 
     @Column(name = "quantidade_beneficiarios")
     public Integer quantidadeBeneficiarios;
+
+    // ===== RF-02.3 - Status da OSC =====
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status_osc", length = 50)
+    public StatusOSC statusOSC = StatusOSC.EM_CADASTRO;
+
+    @Column(name = "justificativa_suspensao", columnDefinition = "TEXT")
+    public String justificativaSuspensao;
 
     // ===== Auditoria =====
 

@@ -1,4 +1,5 @@
 import api from './api';
+import { StatusOSC } from '../types/statusOSC.types';
 
 export interface InstitutionDTO {
   id?: string;
@@ -36,6 +37,10 @@ export interface InstitutionDTO {
   objetoSocial?: string;
   quantidadeBeneficiarios?: number;
 
+  // RF-02.3 - Status da OSC
+  statusOSC?: StatusOSC;
+  justificativaSuspensao?: string;
+
   // Auditoria
   createTime?: string;
   updateTime?: string;
@@ -71,6 +76,25 @@ const institutionService = {
 
   delete: async (id: string): Promise<void> => {
     await api.delete(`/institutions/${encodeURIComponent(id)}`);
+  },
+
+  // RF-02.3 - Gerenciamento de Status
+  alterarStatus: async (id: string, novoStatus: StatusOSC, justificativa?: string): Promise<InstitutionDTO> => {
+    const response = await api.post(`/institutions/${encodeURIComponent(id)}/status`, {
+      novoStatus,
+      justificativa,
+    });
+    return response.data;
+  },
+
+  calcularStatusAutomatico: async (id: string): Promise<{ statusCalculado: StatusOSC; mudou: boolean }> => {
+    const response = await api.get(`/institutions/${encodeURIComponent(id)}/calcular-status`);
+    return response.data;
+  },
+
+  getHistoricoStatus: async (id: string): Promise<any[]> => {
+    const response = await api.get(`/institutions/${encodeURIComponent(id)}/historico-status`);
+    return response.data;
   },
 };
 

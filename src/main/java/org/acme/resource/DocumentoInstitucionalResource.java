@@ -7,6 +7,7 @@ import jakarta.ws.rs.core.Response;
 import org.acme.dto.DocumentoInstitucionalDTO;
 import org.acme.entity.DocumentoInstitucional;
 import org.acme.service.DocumentoInstitucionalService;
+import org.acme.service.StatusOSCService;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
 
@@ -21,6 +22,9 @@ public class DocumentoInstitucionalResource {
 
     @Inject
     DocumentoInstitucionalService service;
+
+    @Inject
+    StatusOSCService statusOSCService;
 
     @GET
     @Path("/instituicao/{idInstituicao}")
@@ -57,6 +61,14 @@ public class DocumentoInstitucionalResource {
                     usuarioUpload
             );
 
+            // RF-02.3 - Atualizar status da OSC automaticamente após upload
+            try {
+                statusOSCService.atualizarStatusAutomatico(idInstituicao);
+            } catch (Exception e) {
+                // Log mas não falha o upload se der erro na atualização do status
+                System.err.println("Erro ao atualizar status da OSC: " + e.getMessage());
+            }
+
             return Response.ok(documento).build();
         } catch (Exception e) {
             e.printStackTrace();
@@ -70,7 +82,22 @@ public class DocumentoInstitucionalResource {
     @Path("/{id}")
     public Response deletar(@PathParam("id") String id) {
         try {
+            // Buscar documento antes de deletar para pegar o idInstituicao
+            DocumentoInstitucional documento = service.obterDocumento(id);
+            String idInstituicao = documento != null ? documento.getIdInstituicao() : null;
+
             service.deletar(id);
+
+            // RF-02.3 - Atualizar status da OSC automaticamente após deletar documento
+            if (idInstituicao != null) {
+                try {
+                    statusOSCService.atualizarStatusAutomatico(idInstituicao);
+                } catch (Exception e) {
+                    // Log mas não falha a exclusão se der erro na atualização do status
+                    System.err.println("Erro ao atualizar status da OSC: " + e.getMessage());
+                }
+            }
+
             return Response.ok().build();
         } catch (Exception e) {
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)

@@ -40,6 +40,13 @@ import {
   verificarDocumentoVencido,
   verificarDocumentoProximoVencimento,
 } from '../types/documentoInstitucional.types';
+import {
+  StatusOSC,
+  calcularStatusAutomatico,
+  STATUS_OSC_LABELS,
+  STATUS_OSC_COLORS,
+} from '../types/statusOSC.types';
+import { StatusOSCBadge, StatusOSCPanel } from '../components/StatusOSCComponents';
 
 const UFS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
@@ -126,6 +133,9 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   const [observacoesDoc, setObservacoesDoc] = useState('');
   const [editingDocumento, setEditingDocumento] = useState<DocInstitucional | null>(null);
   const [showModalDocumento, setShowModalDocumento] = useState(false);
+
+  // RF-02.3 - Status da OSC
+  const [statusOSC, setStatusOSC] = useState<StatusOSC>(StatusOSC.EM_CADASTRO);
 
   const [dirigenteFormData, setDirigenteFormData] = useState<Dirigente>({
     instituicaoId: editId || '',
@@ -545,11 +555,37 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       setLoadingDocumentos(true);
       const data = await documentoInstitucionalService.listar(editId);
       setDocumentosInstitucionais(data);
+
+      // RF-02.3 - Calcular status automático após carregar documentos
+      await calcularEAtualizarStatus(data);
     } catch (error) {
       console.error('Erro ao carregar documentos:', error);
       alert('Erro ao carregar documentos');
     } finally {
       setLoadingDocumentos(false);
+    }
+  };
+
+  // RF-02.3 - Função para calcular e atualizar status automaticamente
+  const calcularEAtualizarStatus = async (documentos: DocInstitucional[]) => {
+    const temDocumentos = documentos.length > 0;
+    const documentosObrigatoriosEnviados = DOCUMENTOS_OBRIGATORIOS.filter(tipo =>
+      documentos.some(d => d.tipoDocumento === tipo)
+    );
+    const todosObrigatoriosEnviados = documentosObrigatoriosEnviados.length === DOCUMENTOS_OBRIGATORIOS.length;
+
+    const novoStatus = calcularStatusAutomatico({
+      temDocumentos,
+      todosObrigatoriosEnviados,
+      statusAtual: statusOSC,
+    });
+
+    if (novoStatus !== statusOSC) {
+      console.log(`[StatusOSC] Mudança automática: ${statusOSC} → ${novoStatus}`);
+      setStatusOSC(novoStatus);
+
+      // TODO: Chamar backend para persistir mudança
+      // await institutionService.alterarStatus(editId, novoStatus, 'Atualização automática');
     }
   };
 
@@ -896,11 +932,69 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <header className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900">Cadastro de Dados Institucionais</h1>
-        <p className="text-gray-600 mt-1">
-          Preencha os dados cadastrais. Campos marcados com * são obrigatórios.
-        </p>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1">
+            <h1 className="text-3xl font-bold text-gray-900">Cadastro de Dados Institucionais</h1>
+            <p className="text-gray-600 mt-1">
+              Preencha os dados cadastrais. Campos marcados com * são obrigatórios.
+            </p>
+          </div>
+          {editId && (
+            <div className="flex-shrink-0">
+              <StatusOSCBadge status={statusOSC} size="lg" showDescription={false} />
+            </div>
+          )}
+        </div>
       </header>
+
+      {/* RF-02.3 - Card de Status da OSC */}
+      {editId && (
+        <div className="mb-6">
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-4 border border-blue-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                  <svg className="w-6 h-6 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900">Status do Cadastro</h3>
+                  <p className="text-sm text-gray-600">
+                    {statusOSC === StatusOSC.EM_CADASTRO && 'Cadastro iniciado - Aguardando documentos'}
+                    {statusOSC === StatusOSC.DOCUMENTOS_INCOMPLETOS && `${dashboard.obrigatoriosFaltando} documento(s) obrigatório(s) faltando`}
+                    {statusOSC === StatusOSC.EM_ANALISE && 'Todos os documentos enviados - Aguardando análise'}
+                    {statusOSC === StatusOSC.APROVADO && 'Cadastro aprovado e ativo'}
+                    {statusOSC === StatusOSC.REPROVADO && 'Cadastro reprovado - Necessita correções'}
+                    {statusOSC === StatusOSC.SUSPENSA && 'Cadastro temporariamente suspenso'}
+                    {statusOSC === StatusOSC.INATIVA && 'OSC desativada'}
+                  </p>
+                </div>
+              </div>
+              <StatusOSCBadge status={statusOSC} size="md" />
+            </div>
+
+            {/* Progresso de documentos obrigatórios */}
+            {(statusOSC === StatusOSC.EM_CADASTRO || statusOSC === StatusOSC.DOCUMENTOS_INCOMPLETOS) && (
+              <div className="mt-3 pt-3 border-t border-blue-200">
+                <div className="flex items-center justify-between text-sm mb-1">
+                  <span className="text-gray-700 font-medium">Documentos Obrigatórios</span>
+                  <span className="text-blue-600 font-semibold">{dashboard.percentualCompleto}%</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div
+                    className="bg-blue-600 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${dashboard.percentualCompleto}%` }}
+                  ></div>
+                </div>
+                <p className="text-xs text-gray-600 mt-1">
+                  {dashboard.obrigatoriosEnviados} de {DOCUMENTOS_OBRIGATORIOS.length} documentos enviados
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {loadingExisting && (
         <div className="mb-4 p-3 bg-blue-50 text-blue-700 rounded border border-blue-200">
