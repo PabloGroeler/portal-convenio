@@ -21,6 +21,25 @@ import {
   CARGO_OPTIONS,
   UF_OPTIONS
 } from '../types/dirigente.types';
+import documentoService from '../services/documentoService';
+import type { DocumentoInstitucional } from '../types/documento.types';
+import { TIPOS_DOCUMENTO, formatFileSize, getFileIcon } from '../types/documento.types';
+import documentoInstitucionalService from '../services/documentoInstitucionalService';
+import type { DocumentoInstitucional as DocInstitucional, TipoDocumentoInstitucional, StatusDocumento } from '../types/documentoInstitucional.types';
+import {
+  TIPOS_DOCUMENTO_LABELS,
+  STATUS_DOCUMENTO_LABELS,
+  STATUS_DOCUMENTO_COLORS,
+  DOCUMENTOS_OBRIGATORIOS,
+  DOCUMENTOS_INSTITUICAO,
+  FORMATOS_ACEITOS,
+  TAMANHO_MAXIMO_BYTES,
+  formatFileSize as formatFileSize2,
+  getFileIcon as getFileIcon2,
+  calcularDiasParaVencimento,
+  verificarDocumentoVencido,
+  verificarDocumentoProximoVencimento,
+} from '../types/documentoInstitucional.types';
 
 const UFS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
@@ -83,13 +102,30 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
 
   // Estados para abas e dirigentes
-  const [activeTab, setActiveTab] = useState<'instituicao' | 'dirigentes'>('instituicao');
+  const [activeTab, setActiveTab] = useState<'instituicao' | 'dirigentes' | 'documentos'>('instituicao');
   const [dirigentes, setDirigentes] = useState<Dirigente[]>([]);
   const [loadingDirigentes, setLoadingDirigentes] = useState(false);
   const [showDirigenteModal, setShowDirigenteModal] = useState(false);
   const [editingDirigente, setEditingDirigente] = useState<Dirigente | null>(null);
   const [apenasAtivos, setApenasAtivos] = useState(false);
   const [avisos, setAvisos] = useState<string[]>([]);
+
+  // Estados para validação de dirigente
+  const [dirigenteErrors, setDirigenteErrors] = useState<Record<string, string>>({});
+  const [loadingCepDirigente, setLoadingCepDirigente] = useState(false);
+
+  // Estados para documentos institucionais
+  const [documentosInstitucionais, setDocumentosInstitucionais] = useState<DocInstitucional[]>([]);
+  const [loadingDocumentos, setLoadingDocumentos] = useState(false);
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [tipoDocumentoSelecionado, setTipoDocumentoSelecionado] = useState<TipoDocumentoInstitucional | ''>('');
+  const [dataEmissao, setDataEmissao] = useState('');
+  const [dataValidade, setDataValidade] = useState('');
+  const [numeroDocumento, setNumeroDocumento] = useState('');
+  const [observacoesDoc, setObservacoesDoc] = useState('');
+  const [editingDocumento, setEditingDocumento] = useState<DocInstitucional | null>(null);
+  const [showModalDocumento, setShowModalDocumento] = useState(false);
 
   const [dirigenteFormData, setDirigenteFormData] = useState<Dirigente>({
     instituicaoId: editId || '',
@@ -252,6 +288,31 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   const handleSaveDirigente = async (e: React.FormEvent) => {
     e.preventDefault();
 
+    // Validar formulário
+    const errors = validateDirigenteForm();
+    if (Object.keys(errors).length > 0) {
+      setDirigenteErrors(errors);
+
+      // Criar lista de campos com erro
+      const camposComErro = Object.entries(errors).map(([campo, mensagem]) => {
+        const nomeCampo = getNomeCampo(campo);
+        return `• ${nomeCampo}: ${mensagem}`;
+      }).join('\n');
+
+      alert(`Por favor, corrija os seguintes erros:\n\n${camposComErro}`);
+
+      // Scroll para o primeiro campo com erro
+      setTimeout(() => {
+        const firstErrorField = document.querySelector('.border-red-500') as HTMLElement;
+        if (firstErrorField) {
+          firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          firstErrorField.focus();
+        }
+      }, 100);
+
+      return;
+    }
+
     try {
       if (editingDirigente) {
         await dirigenteService.atualizar(editingDirigente.id!, dirigenteFormData);
@@ -262,10 +323,187 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       }
 
       setShowDirigenteModal(false);
+      setDirigenteErrors({});
       loadDirigentes();
     } catch (error: any) {
       console.error('Erro ao salvar dirigente:', error);
       alert(error.response?.data?.error || 'Erro ao salvar dirigente');
+    }
+  };
+
+  // Validação do formulário de dirigente
+  const getNomeCampo = (campo: string): string => {
+    const nomes: Record<string, string> = {
+      nomeCompleto: 'Nome Completo',
+      cpf: 'CPF',
+      rg: 'RG',
+      orgaoExpedidor: 'Órgão Expedidor',
+      ufOrgaoExpedidor: 'UF do Órgão',
+      dataExpedicao: 'Data de Expedição',
+      dataNascimento: 'Data de Nascimento',
+      sexo: 'Sexo',
+      estadoCivil: 'Estado Civil',
+      cargo: 'Cargo',
+      dataInicioCargo: 'Data de Início do Cargo',
+      email: 'E-mail',
+      telefone: 'Telefone',
+      cep: 'CEP',
+      logradouro: 'Logradouro',
+      numero: 'Número',
+      bairro: 'Bairro',
+      cidade: 'Cidade',
+      uf: 'UF'
+    };
+    return nomes[campo] || campo;
+  };
+
+  const validateDirigenteForm = (): Record<string, string> => {
+    const errors: Record<string, string> = {};
+
+    // Nome completo
+    if (!dirigenteFormData.nomeCompleto || dirigenteFormData.nomeCompleto.trim().length < 3) {
+      errors.nomeCompleto = 'Nome completo deve ter no mínimo 3 caracteres';
+    }
+
+    // CPF
+    if (!dirigenteFormData.cpf || dirigenteFormData.cpf.replace(/\D/g, '').length !== 11) {
+      errors.cpf = 'CPF inválido (deve ter 11 dígitos)';
+    }
+
+    // RG
+    if (!dirigenteFormData.rg || dirigenteFormData.rg.trim().length < 5) {
+      errors.rg = 'RG inválido';
+    }
+
+    // Órgão expedidor
+    if (!dirigenteFormData.orgaoExpedidor || dirigenteFormData.orgaoExpedidor.trim().length < 2) {
+      errors.orgaoExpedidor = 'Órgão expedidor inválido';
+    }
+
+    // UF do órgão
+    if (!dirigenteFormData.ufOrgaoExpedidor) {
+      errors.ufOrgaoExpedidor = 'Selecione a UF';
+    }
+
+    // Data de expedição
+    if (!dirigenteFormData.dataExpedicao) {
+      errors.dataExpedicao = 'Data de expedição obrigatória';
+    } else if (new Date(dirigenteFormData.dataExpedicao) > new Date()) {
+      errors.dataExpedicao = 'Data não pode ser futura';
+    }
+
+    // Data de nascimento
+    if (!dirigenteFormData.dataNascimento) {
+      errors.dataNascimento = 'Data de nascimento obrigatória';
+    } else {
+      const idade = new Date().getFullYear() - new Date(dirigenteFormData.dataNascimento).getFullYear();
+      if (idade < 18) {
+        errors.dataNascimento = 'Dirigente deve ter no mínimo 18 anos';
+      }
+      if (idade > 120) {
+        errors.dataNascimento = 'Data de nascimento inválida';
+      }
+    }
+
+    // Sexo
+    if (!dirigenteFormData.sexo) {
+      errors.sexo = 'Selecione o sexo';
+    }
+
+    // Estado civil
+    if (!dirigenteFormData.estadoCivil) {
+      errors.estadoCivil = 'Selecione o estado civil';
+    }
+
+    // Cargo
+    if (!dirigenteFormData.cargo) {
+      errors.cargo = 'Selecione o cargo';
+    }
+
+    // Data início cargo
+    if (!dirigenteFormData.dataInicioCargo) {
+      errors.dataInicioCargo = 'Data de início obrigatória';
+    }
+
+    // Email
+    if (!dirigenteFormData.email || !isValidEmail(dirigenteFormData.email)) {
+      errors.email = 'Email inválido';
+    }
+
+    // Telefone
+    if (!dirigenteFormData.telefone || dirigenteFormData.telefone.replace(/\D/g, '').length < 10) {
+      errors.telefone = 'Telefone inválido (mínimo 10 dígitos)';
+    }
+
+    // CEP
+    if (!dirigenteFormData.cep || dirigenteFormData.cep.replace(/\D/g, '').length !== 8) {
+      errors.cep = 'CEP inválido (deve ter 8 dígitos)';
+    }
+
+    // Logradouro
+    if (!dirigenteFormData.logradouro || dirigenteFormData.logradouro.trim().length < 3) {
+      errors.logradouro = 'Logradouro inválido';
+    }
+
+    // Número
+    if (!dirigenteFormData.numero || dirigenteFormData.numero.trim().length === 0) {
+      errors.numero = 'Número obrigatório';
+    }
+
+    // Bairro
+    if (!dirigenteFormData.bairro || dirigenteFormData.bairro.trim().length < 2) {
+      errors.bairro = 'Bairro inválido';
+    }
+
+    // Cidade
+    if (!dirigenteFormData.cidade || dirigenteFormData.cidade.trim().length < 2) {
+      errors.cidade = 'Cidade inválida';
+    }
+
+    // UF
+    if (!dirigenteFormData.uf) {
+      errors.uf = 'Selecione a UF';
+    }
+
+    return errors;
+  };
+
+  // Buscar CEP para dirigente
+  const handleBuscarCepDirigente = async () => {
+    const cepLimpo = dirigenteFormData.cep.replace(/\D/g, '');
+
+    if (cepLimpo.length !== 8) {
+      alert('CEP inválido. Digite 8 dígitos.');
+      return;
+    }
+
+    try {
+      setLoadingCepDirigente(true);
+      const endereco = await lookupCep(cepLimpo);
+
+      setDirigenteFormData({
+        ...dirigenteFormData,
+        logradouro: endereco.logradouro || '',
+        bairro: endereco.bairro || '',
+        cidade: endereco.localidade || '',
+        uf: endereco.uf || ''
+      });
+
+      // Limpar erros de endereço
+      const newErrors = { ...dirigenteErrors };
+      delete newErrors.cep;
+      delete newErrors.logradouro;
+      delete newErrors.bairro;
+      delete newErrors.cidade;
+      delete newErrors.uf;
+      setDirigenteErrors(newErrors);
+
+      alert('Endereço preenchido com sucesso!');
+    } catch (error) {
+      console.error('Erro ao buscar CEP:', error);
+      alert('CEP não encontrado. Preencha manualmente.');
+    } finally {
+      setLoadingCepDirigente(false);
     }
   };
 
@@ -290,12 +528,228 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       .replace(/(\d{5})(\d)/, '$1-$2');
   };
 
-  // Carregar dirigentes quando mudar para aba de dirigentes
+  // Carregar dirigentes e documentos imediatamente (eager load) quando editId estiver disponível
   useEffect(() => {
-    if (activeTab === 'dirigentes' && editId) {
+    if (editId) {
       loadDirigentes();
+      loadDocumentos();
     }
-  }, [activeTab, editId, apenasAtivos]);
+  }, [editId, apenasAtivos]);
+
+
+  // Funções para gerenciamento de documentos institucionais
+  const loadDocumentos = async () => {
+    if (!editId) return;
+
+    try {
+      setLoadingDocumentos(true);
+      const data = await documentoInstitucionalService.listar(editId);
+      setDocumentosInstitucionais(data);
+    } catch (error) {
+      console.error('Erro ao carregar documentos:', error);
+      alert('Erro ao carregar documentos');
+    } finally {
+      setLoadingDocumentos(false);
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validar tamanho
+    if (file.size > TAMANHO_MAXIMO_BYTES) {
+      alert(`Arquivo muito grande! Tamanho máximo: ${TAMANHO_MAXIMO_BYTES / (1024 * 1024)}MB`);
+      e.target.value = '';
+      return;
+    }
+
+    // Validar formato
+    const ext = '.' + file.name.split('.').pop()?.toLowerCase();
+    if (!FORMATOS_ACEITOS.includes(ext)) {
+      alert(`Formato não aceito! Formatos permitidos: ${FORMATOS_ACEITOS.join(', ')}`);
+      e.target.value = '';
+      return;
+    }
+
+    setSelectedFile(file);
+  };
+
+  const handleUploadDocumento = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!selectedFile || !tipoDocumentoSelecionado || !editId) {
+      alert('Selecione o tipo de documento e o arquivo');
+      return;
+    }
+
+    try {
+      setUploadingFile(true);
+
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+      formData.append('idInstituicao', editId);
+      formData.append('tipoDocumento', tipoDocumentoSelecionado);
+
+      if (dataEmissao) formData.append('dataEmissao', dataEmissao);
+      if (dataValidade) formData.append('dataValidade', dataValidade);
+      if (numeroDocumento) formData.append('numeroDocumento', numeroDocumento);
+      if (observacoesDoc) formData.append('observacoes', observacoesDoc);
+
+      await documentoInstitucionalService.upload(formData);
+
+      alert('Documento enviado com sucesso!');
+
+      // Limpar formulário
+      setSelectedFile(null);
+      setTipoDocumentoSelecionado('');
+      setDataEmissao('');
+      setDataValidade('');
+      setNumeroDocumento('');
+      setObservacoesDoc('');
+
+      // Limpar input file
+      const fileInput = document.getElementById('file-input-inst') as HTMLInputElement;
+      if (fileInput) fileInput.value = '';
+
+      // Recarregar lista
+      await loadDocumentos();
+    } catch (error: any) {
+      console.error('Erro ao fazer upload:', error);
+      alert(error.response?.data?.error || 'Erro ao enviar documento');
+    } finally {
+      setUploadingFile(false);
+    }
+  };
+
+  const handleDownloadDocumento = async (id: string) => {
+    try {
+      const url = documentoInstitucionalService.downloadUrl(id);
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Erro ao baixar documento:', error);
+      alert('Erro ao baixar documento');
+    }
+  };
+
+  const handleDeleteDocumento = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este documento?')) return;
+
+    try {
+      await documentoInstitucionalService.deletar(id);
+      alert('Documento excluído com sucesso!');
+      await loadDocumentos();
+    } catch (error) {
+      console.error('Erro ao excluir documento:', error);
+      alert('Erro ao excluir documento');
+    }
+  };
+
+  const handleAprovarDocumento = async (id: string) => {
+    const observacoes = prompt('Observações (opcional):');
+    if (observacoes === null) return; // Cancelou
+
+    try {
+      await documentoInstitucionalService.aprovar(id, observacoes || undefined);
+      alert('Documento aprovado!');
+      await loadDocumentos();
+    } catch (error) {
+      console.error('Erro ao aprovar documento:', error);
+      alert('Erro ao aprovar documento');
+    }
+  };
+
+  const handleReprovarDocumento = async (id: string) => {
+    const motivo = prompt('Motivo da reprovação (obrigatório):');
+    if (!motivo) {
+      alert('É necessário informar o motivo da reprovação');
+      return;
+    }
+
+    try {
+      await documentoInstitucionalService.reprovar(id, motivo);
+      alert('Documento reprovado!');
+      await loadDocumentos();
+    } catch (error) {
+      console.error('Erro ao reprovar documento:', error);
+      alert('Erro ao reprovar documento');
+    }
+  };
+
+  const renderStatusBadge = (status: StatusDocumento) => {
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium border ${STATUS_DOCUMENTO_COLORS[status]}`}>
+        {STATUS_DOCUMENTO_LABELS[status]}
+      </span>
+    );
+  };
+
+  const renderAlertaVencimento = (dataValidade?: string) => {
+    if (!dataValidade) return null;
+
+    const dias = verificarDocumentoProximoVencimento(dataValidade);
+    if (dias !== null) {
+      return (
+        <span className="text-xs text-orange-600 font-medium flex items-center gap-1">
+          ⚠️ Vence em {dias} dia{dias !== 1 ? 's' : ''}
+        </span>
+      );
+    }
+
+    if (verificarDocumentoVencido(dataValidade)) {
+      return (
+        <span className="text-xs text-red-600 font-bold flex items-center gap-1">
+          ❌ Vencido
+        </span>
+      );
+    }
+
+    return null;
+  };
+
+  const documentosPorCategoria = useMemo(() => {
+    const obrigatorios = documentosInstitucionais.filter(doc =>
+      DOCUMENTOS_OBRIGATORIOS.includes(doc.tipoDocumento)
+    );
+    const opcionais = documentosInstitucionais.filter(doc =>
+      !DOCUMENTOS_OBRIGATORIOS.includes(doc.tipoDocumento)
+    );
+
+    return { obrigatorios, opcionais };
+  }, [documentosInstitucionais]);
+
+  const dashboard = useMemo(() => {
+    const total = documentosInstitucionais.length;
+    const aprovados = documentosInstitucionais.filter(d => d.statusDocumento === 'APROVADO').length;
+    const pendentes = documentosInstitucionais.filter(d =>
+      d.statusDocumento === 'PENDENTE_ENVIO' || d.statusDocumento === 'ENVIADO'
+    ).length;
+    const reprovados = documentosInstitucionais.filter(d => d.statusDocumento === 'REPROVADO').length;
+    const vencidos = documentosInstitucionais.filter(d =>
+      d.dataValidade && verificarDocumentoVencido(d.dataValidade)
+    ).length;
+    const proximosVencimento = documentosInstitucionais.filter(d =>
+      d.dataValidade && verificarDocumentoProximoVencimento(d.dataValidade) !== null
+    ).length;
+
+    const obrigatoriosEnviados = DOCUMENTOS_OBRIGATORIOS.filter(tipo =>
+      documentosInstitucionais.some(d => d.tipoDocumento === tipo)
+    ).length;
+    const obrigatoriosFaltando = DOCUMENTOS_OBRIGATORIOS.length - obrigatoriosEnviados;
+
+    return {
+      total,
+      aprovados,
+      pendentes,
+      reprovados,
+      vencidos,
+      proximosVencimento,
+      obrigatoriosEnviados,
+      obrigatoriosFaltando,
+      percentualCompleto: Math.round((obrigatoriosEnviados / DOCUMENTOS_OBRIGATORIOS.length) * 100),
+    };
+  }, [documentosInstitucionais]);
+
 
   const handleCepBlur = async () => {
     setError(null);
@@ -488,6 +942,17 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
               }`}
             >
               👥 Diretoria ({dirigentes.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab('documentos')}
+              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
+                activeTab === 'documentos'
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              📄 Documentos ({documentosInstitucionais.length})
             </button>
           </nav>
         </div>
@@ -850,7 +1315,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
               <p className="text-gray-600 mt-1">Gerenciamento dos dirigentes da instituição</p>
             </div>
             <button
-              onClick={() => handleOpenDirigenteModal()}
+              onClick={() => navigate(`/dashboard/cadastro-dirigente?instituicaoId=${editId}`)}
               className="px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700"
             >
               + Novo Dirigente
@@ -942,7 +1407,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
 
                   <div className="flex gap-2 mt-auto">
                     <button
-                      onClick={() => handleOpenDirigenteModal(dirigente)}
+                      onClick={() => navigate(`/dashboard/cadastro-dirigente?instituicaoId=${editId}&id=${dirigente.id}`)}
                       className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                     >
                       Editar
@@ -955,280 +1420,443 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal de Cadastro/Edição de Dirigente */}
-      {showDirigenteModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full my-8">
-            <form onSubmit={handleSaveDirigente}>
-              <div className="flex justify-between items-center p-6 border-b">
-                <h2 className="text-xl font-bold">
-                  {editingDirigente ? 'Editar Dirigente' : 'Novo Dirigente'}
-                </h2>
-                <button
-                  type="button"
-                  onClick={() => setShowDirigenteModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  ✕
-                </button>
+      {/* Aba 3: Documentos */}
+      {activeTab === 'documentos' && editId && (
+        <div className="space-y-6">
+          {/* Header com Dashboard */}
+          <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg p-6 border border-blue-200">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h2 className="text-2xl font-bold text-gray-900">Gestão de Documentos</h2>
+                <p className="text-gray-600 mt-1">Gerenciamento completo de documentos institucionais</p>
               </div>
+              <div className="text-right">
+                <div className="text-3xl font-bold text-blue-600">{dashboard.percentualCompleto}%</div>
+                <div className="text-xs text-gray-600">Documentos obrigatórios</div>
+              </div>
+            </div>
 
-              <div className="p-6 max-h-[60vh] overflow-y-auto space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="col-span-2">
-                    <label className="block text-sm font-medium mb-1">Nome Completo *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dirigenteFormData.nomeCompleto}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, nomeCompleto: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
+            {/* Cards de Dashboard */}
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+                <div className="text-2xl font-bold text-gray-900">{dashboard.total}</div>
+                <div className="text-xs text-gray-600">Total de Documentos</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-green-200">
+                <div className="text-2xl font-bold text-green-600">{dashboard.aprovados}</div>
+                <div className="text-xs text-gray-600">Aprovados</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-yellow-200">
+                <div className="text-2xl font-bold text-yellow-600">{dashboard.pendentes}</div>
+                <div className="text-xs text-gray-600">Pendentes</div>
+              </div>
+              <div className="bg-white rounded-lg p-3 shadow-sm border border-red-200">
+                <div className="text-2xl font-bold text-red-600">{dashboard.obrigatoriosFaltando}</div>
+                <div className="text-xs text-gray-600">Obrigatórios Faltando</div>
+              </div>
+            </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">CPF *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formatCPF(dirigenteFormData.cpf)}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, cpf: e.target.value.replace(/\D/g, '') })}
-                      className="w-full border rounded px-3 py-2"
-                      maxLength={14}
-                    />
-                  </div>
+            {/* Alertas */}
+            {dashboard.vencidos > 0 && (
+              <div className="mt-3 bg-red-50 border-l-4 border-red-500 p-3 rounded">
+                <p className="text-sm text-red-800 font-medium">
+                  ⚠️ {dashboard.vencidos} documento{dashboard.vencidos > 1 ? 's' : ''} vencido{dashboard.vencidos > 1 ? 's' : ''}
+                </p>
+              </div>
+            )}
+            {dashboard.proximosVencimento > 0 && (
+              <div className="mt-2 bg-orange-50 border-l-4 border-orange-500 p-3 rounded">
+                <p className="text-sm text-orange-800 font-medium">
+                  ⚠️ {dashboard.proximosVencimento} documento{dashboard.proximosVencimento > 1 ? 's próximos' : ' próximo'} ao vencimento (30 dias)
+                </p>
+              </div>
+            )}
+          </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">RG *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dirigenteFormData.rg}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, rg: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
+          {/* Formulário de Upload */}
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200">
+            <div className="p-6 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-900 flex items-center gap-2">
+                <svg className="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                </svg>
+                Upload de Novo Documento
+              </h3>
+            </div>
+            <form onSubmit={handleUploadDocumento} className="p-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Tipo de Documento * <span className="text-xs text-gray-500">(Selecione o tipo correto)</span>
+                  </label>
+                  <select
+                    required
+                    value={tipoDocumentoSelecionado}
+                    onChange={(e) => setTipoDocumentoSelecionado(e.target.value as TipoDocumentoInstitucional)}
+                    className="w-full border rounded px-3 py-2"
+                  >
+                    <option value="">Selecione o tipo de documento</option>
+                    <optgroup label="📄 Documentos Institucionais">
+                      {DOCUMENTOS_INSTITUICAO.slice(0, 7).map((tipo) => (
+                        <option key={tipo} value={tipo}>
+                          {TIPOS_DOCUMENTO_LABELS[tipo]}
+                          {DOCUMENTOS_OBRIGATORIOS.includes(tipo) ? ' (Obrigatório)' : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                    <optgroup label="✅ Certidões Negativas">
+                      {DOCUMENTOS_INSTITUICAO.slice(7).map((tipo) => (
+                        <option key={tipo} value={tipo}>
+                          {TIPOS_DOCUMENTO_LABELS[tipo]}
+                          {DOCUMENTOS_OBRIGATORIOS.includes(tipo) ? ' (Obrigatório)' : ''}
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Data de Nascimento *</label>
-                    <input
-                      type="date"
-                      required
-                      value={dirigenteFormData.dataNascimento}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, dataNascimento: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Arquivo * <span className="text-xs text-gray-500">(Máx: 5MB - PDF, JPG, PNG)</span>
+                  </label>
+                  <input
+                    id="file-input-inst"
+                    type="file"
+                    required
+                    onChange={handleFileSelect}
+                    className="w-full border rounded px-3 py-2"
+                    accept={FORMATOS_ACEITOS.join(',')}
+                  />
+                  {selectedFile && (
+                    <p className="text-xs text-green-600 mt-1 flex items-center gap-1">
+                      ✓ {selectedFile.name} ({formatFileSize2(selectedFile.size)})
+                    </p>
+                  )}
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Sexo *</label>
-                    <select
-                      required
-                      value={dirigenteFormData.sexo}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, sexo: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    >
-                      <option value="">Selecione</option>
-                      {SEXO_OPTIONS.map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Número do Documento <span className="text-xs text-gray-500">(se aplicável)</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={numeroDocumento}
+                    onChange={(e) => setNumeroDocumento(e.target.value)}
+                    className="w-full border rounded px-3 py-2"
+                    placeholder="Ex: 123456789"
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Estado Civil *</label>
-                    <select
-                      required
-                      value={dirigenteFormData.estadoCivil}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, estadoCivil: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    >
-                      <option value="">Selecione</option>
-                      {ESTADO_CIVIL_OPTIONS.map(e => <option key={e} value={e}>{e}</option>)}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Data de Emissão <span className="text-xs text-gray-500">(quando aplicável)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={dataEmissao}
+                    onChange={(e) => setDataEmissao(e.target.value)}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Cargo *</label>
-                    <select
-                      required
-                      value={dirigenteFormData.cargo}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, cargo: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    >
-                      <option value="">Selecione</option>
-                      {CARGO_OPTIONS.map(c => <option key={c} value={c}>{c}</option>)}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Data de Validade <span className="text-xs text-gray-500">(quando aplicável)</span>
+                  </label>
+                  <input
+                    type="date"
+                    value={dataValidade}
+                    onChange={(e) => setDataValidade(e.target.value)}
+                    className="w-full border rounded px-3 py-2"
+                  />
+                </div>
 
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Data Início *</label>
-                    <input
-                      type="date"
-                      required
-                      value={dirigenteFormData.dataInicioCargo}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, dataInicioCargo: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">E-mail *</label>
-                    <input
-                      type="email"
-                      required
-                      value={dirigenteFormData.email}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, email: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Telefone *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formatPhone(dirigenteFormData.telefone)}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, telefone: e.target.value.replace(/\D/g, '') })}
-                      className="w-full border rounded px-3 py-2"
-                      maxLength={15}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Órgão Expedidor *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dirigenteFormData.orgaoExpedidor}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, orgaoExpedidor: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">UF Órgão *</label>
-                    <select
-                      required
-                      value={dirigenteFormData.ufOrgaoExpedidor}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, ufOrgaoExpedidor: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    >
-                      <option value="">Selecione</option>
-                      {UF_OPTIONS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Data Expedição *</label>
-                    <input
-                      type="date"
-                      required
-                      value={dirigenteFormData.dataExpedicao}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, dataExpedicao: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Nacionalidade *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dirigenteFormData.nacionalidade}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, nacionalidade: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">CEP *</label>
-                    <input
-                      type="text"
-                      required
-                      value={formatCEPDirigente(dirigenteFormData.cep)}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, cep: e.target.value.replace(/\D/g, '') })}
-                      className="w-full border rounded px-3 py-2"
-                      maxLength={9}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Logradouro *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dirigenteFormData.logradouro}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, logradouro: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Número *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dirigenteFormData.numero}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, numero: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Bairro *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dirigenteFormData.bairro}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, bairro: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">Cidade *</label>
-                    <input
-                      type="text"
-                      required
-                      value={dirigenteFormData.cidade}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, cidade: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium mb-1">UF *</label>
-                    <select
-                      required
-                      value={dirigenteFormData.uf}
-                      onChange={(e) => setDirigenteFormData({ ...dirigenteFormData, uf: e.target.value })}
-                      className="w-full border rounded px-3 py-2"
-                    >
-                      <option value="">Selecione</option>
-                      {UF_OPTIONS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-                    </select>
-                  </div>
+                <div className="md:col-span-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Observações
+                  </label>
+                  <textarea
+                    value={observacoesDoc}
+                    onChange={(e) => setObservacoesDoc(e.target.value)}
+                    className="w-full border rounded px-3 py-2"
+                    rows={2}
+                    maxLength={500}
+                    placeholder="Observações adicionais sobre o documento (opcional)"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">{observacoesDoc.length}/500</p>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
-                <button
-                  type="button"
-                  onClick={() => setShowDirigenteModal(false)}
-                  className="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300"
-                >
-                  Cancelar
-                </button>
+              <div className="flex justify-end mt-6">
                 <button
                   type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                  disabled={uploadingFile || !selectedFile || !tipoDocumentoSelecionado}
+                  className="px-6 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 shadow-sm"
                 >
-                  {editingDirigente ? 'Atualizar' : 'Cadastrar'}
+                  {uploadingFile ? (
+                    <>
+                      <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Enviando...
+                    </>
+                  ) : (
+                    <>
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                      </svg>
+                      Enviar Documento
+                    </>
+                  )}
                 </button>
               </div>
             </form>
           </div>
+
+          {/* Lista de Documentos */}
+          <div className="bg-white rounded-lg shadow-lg border border-gray-200">
+            <div className="p-6 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-900">Documentos Anexados</h3>
+              <p className="text-sm text-gray-600 mt-1">
+                {documentosInstitucionais.length} documento{documentosInstitucionais.length !== 1 ? 's' : ''} cadastrado{documentosInstitucionais.length !== 1 ? 's' : ''}
+              </p>
+            </div>
+
+            <div className="p-6">
+              {loadingDocumentos ? (
+                <div className="text-center py-12">
+                  <svg className="animate-spin h-8 w-8 text-blue-600 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <p className="text-gray-500">Carregando documentos...</p>
+                </div>
+              ) : documentosInstitucionais.length === 0 ? (
+                <div className="text-center py-12 bg-gray-50 rounded-lg border-2 border-dashed border-gray-300">
+                  <svg className="w-16 h-16 text-gray-400 mx-auto mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                  </svg>
+                  <p className="text-gray-600 font-medium">Nenhum documento anexado</p>
+                  <p className="text-sm text-gray-500 mt-1">Faça o upload do primeiro documento usando o formulário acima</p>
+                </div>
+              ) : (
+                <div className="space-y-6">
+                  {/* Documentos Obrigatórios */}
+                  {documentosPorCategoria.obrigatorios.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-red-500 rounded-full"></span>
+                        Documentos Obrigatórios ({documentosPorCategoria.obrigatorios.length})
+                      </h4>
+                      <div className="space-y-3">
+                        {documentosPorCategoria.obrigatorios.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all bg-white"
+                          >
+                            <div className="flex items-start gap-4">
+                              {/* Ícone */}
+                              <div className="text-4xl flex-shrink-0">
+                                {getFileIcon2(doc.nomeArquivo)}
+                              </div>
+
+                              {/* Informações */}
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div className="flex-1">
+                                    <h5 className="font-semibold text-gray-900 text-sm">
+                                      {TIPOS_DOCUMENTO_LABELS[doc.tipoDocumento]}
+                                    </h5>
+                                    <p className="text-xs text-gray-500 truncate mt-0.5">{doc.nomeOriginal}</p>
+                                  </div>
+                                  {renderStatusBadge(doc.statusDocumento)}
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-xs text-gray-600">
+                                  <div>
+                                    <span className="text-gray-400">Tamanho:</span> {formatFileSize2(doc.tamanhoBytes)}
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Upload:</span> {new Date(doc.dataUpload).toLocaleDateString('pt-BR')}
+                                  </div>
+                                  {doc.dataEmissao && (
+                                    <div>
+                                      <span className="text-gray-400">Emissão:</span> {new Date(doc.dataEmissao).toLocaleDateString('pt-BR')}
+                                    </div>
+                                  )}
+                                  {doc.dataValidade && (
+                                    <div>
+                                      <span className="text-gray-400">Validade:</span> {new Date(doc.dataValidade).toLocaleDateString('pt-BR')}
+                                    </div>
+                                  )}
+                                  {doc.numeroDocumento && (
+                                    <div>
+                                      <span className="text-gray-400">Nº Doc:</span> {doc.numeroDocumento}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {doc.dataValidade && renderAlertaVencimento(doc.dataValidade)}
+
+                                {doc.observacoes && (
+                                  <p className="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">
+                                    💬 {doc.observacoes}
+                                  </p>
+                                )}
+
+                                {doc.motivoReprovacao && (
+                                  <p className="text-xs text-red-600 mt-2 bg-red-50 p-2 rounded border-l-2 border-red-500">
+                                    ❌ <strong>Motivo da reprovação:</strong> {doc.motivoReprovacao}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Ações */}
+                            <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100">
+                              <button
+                                onClick={() => handleDownloadDocumento(doc.id!)}
+                                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center gap-1.5 font-medium"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Baixar
+                              </button>
+
+                              {doc.statusDocumento !== 'APROVADO' && (
+                                <button
+                                  onClick={() => handleAprovarDocumento(doc.id!)}
+                                  className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 flex items-center gap-1.5 font-medium"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Aprovar
+                                </button>
+                              )}
+
+                              {doc.statusDocumento !== 'REPROVADO' && (
+                                <button
+                                  onClick={() => handleReprovarDocumento(doc.id!)}
+                                  className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 flex items-center gap-1.5 font-medium"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                  Reprovar
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => handleDeleteDocumento(doc.id!)}
+                                className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1.5 font-medium"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Excluir
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Documentos Opcionais */}
+                  {documentosPorCategoria.opcionais.length > 0 && (
+                    <div>
+                      <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
+                        Documentos Opcionais ({documentosPorCategoria.opcionais.length})
+                      </h4>
+                      <div className="space-y-3">
+                        {documentosPorCategoria.opcionais.map((doc) => (
+                          <div
+                            key={doc.id}
+                            className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-all bg-white"
+                          >
+                            {/* Mesmo layout dos obrigatórios */}
+                            <div className="flex items-start gap-4">
+                              <div className="text-4xl flex-shrink-0">
+                                {getFileIcon2(doc.nomeArquivo)}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-start justify-between gap-2 mb-2">
+                                  <div className="flex-1">
+                                    <h5 className="font-semibold text-gray-900 text-sm">
+                                      {TIPOS_DOCUMENTO_LABELS[doc.tipoDocumento]}
+                                    </h5>
+                                    <p className="text-xs text-gray-500 truncate mt-0.5">{doc.nomeOriginal}</p>
+                                  </div>
+                                  {renderStatusBadge(doc.statusDocumento)}
+                                </div>
+
+                                <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-1 text-xs text-gray-600">
+                                  <div>
+                                    <span className="text-gray-400">Tamanho:</span> {formatFileSize2(doc.tamanhoBytes)}
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-400">Upload:</span> {new Date(doc.dataUpload).toLocaleDateString('pt-BR')}
+                                  </div>
+                                  {doc.dataEmissao && (
+                                    <div>
+                                      <span className="text-gray-400">Emissão:</span> {new Date(doc.dataEmissao).toLocaleDateString('pt-BR')}
+                                    </div>
+                                  )}
+                                  {doc.dataValidade && (
+                                    <div>
+                                      <span className="text-gray-400">Validade:</span> {new Date(doc.dataValidade).toLocaleDateString('pt-BR')}
+                                    </div>
+                                  )}
+                                </div>
+
+                                {doc.dataValidade && renderAlertaVencimento(doc.dataValidade)}
+
+                                {doc.observacoes && (
+                                  <p className="text-xs text-gray-600 mt-2 bg-gray-50 p-2 rounded">
+                                    💬 {doc.observacoes}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100">
+                              <button
+                                onClick={() => handleDownloadDocumento(doc.id!)}
+                                className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center gap-1.5 font-medium"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                </svg>
+                                Baixar
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteDocumento(doc.id!)}
+                                className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1.5 font-medium"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                Excluir
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
+
+      {/* Modal de Cadastro/Edição de Dirigente - REMOVIDO - Agora usa página separada */}
     </div>
   );
 };

@@ -127,14 +127,6 @@ const DiretoriaPage: React.FC = () => {
     e.preventDefault();
 
     try {
-      if (editingDirigente) {
-        await dirigenteService.atualizar(editingDirigente.id!, formData);
-        alert('Dirigente atualizado com sucesso!');
-      } else {
-        await dirigenteService.criar(formData);
-        alert('Dirigente cadastrado com sucesso!');
-      }
-
       handleCloseModal();
       loadDirigentes();
       loadAvisos();
