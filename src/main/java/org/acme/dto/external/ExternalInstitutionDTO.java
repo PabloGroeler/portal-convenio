@@ -11,4 +11,7 @@ public class ExternalInstitutionDTO {
 
     @JsonProperty("name")
     public String name;
+
+    @JsonProperty("cnpj")
+    public String cnpj;
 }

@@ -83,7 +83,7 @@ public class PublicDataImportService {
 
                     // Required fields that external API may not provide.
                     // Keep empty strings to satisfy non-null constraints, and allow later completion via UI.
-                    entity.cnpj = "00000000000000";
+                    entity.cnpj = i.cnpj;
                     entity.inscricaoMunicipal = "";
                     entity.telefone = "";
                     entity.emailInstitucional = (i.institutionId + "@invalido.local");
@@ -101,6 +101,7 @@ public class PublicDataImportService {
                     Institution updated = new Institution();
                     updated.institutionId = i.institutionId;
                     updated.razaoSocial = i.name != null ? i.name : existing.razaoSocial;
+                    updated.cnpj = i.cnpj;
                     institutionService.updateStringId(existing.institutionId, updated);
                     summary.institutionsUpdated++;
                 }

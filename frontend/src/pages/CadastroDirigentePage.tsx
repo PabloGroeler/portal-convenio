@@ -369,6 +369,63 @@ const CadastroDirigentePage: React.FC = () => {
               )}
             </div>
 
+            {/* Órgão Expedidor */}
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Órgão Expedidor *</label>
+                          <input
+                            type="text"
+                            required
+                            value={formData.orgaoExpedidor}
+                            onChange={(e) => {
+                              setFormData({ ...formData, orgaoExpedidor: e.target.value });
+                              clearError('orgaoExpedidor');
+                            }}
+                            className={`w-full border rounded px-3 py-2 ${errors.orgaoExpedidor ? 'border-red-500' : ''}`}
+                            placeholder="Ex: SSP"
+                          />
+                          {errors.orgaoExpedidor && (
+                            <p className="text-red-500 text-xs mt-1">{errors.orgaoExpedidor}</p>
+                          )}
+                        </div>
+
+                        {/* UF Órgão */}
+                        <div>
+                          <label className="block text-sm font-medium mb-1">UF Órgão *</label>
+                          <select
+                            required
+                            value={formData.ufOrgaoExpedidor}
+                            onChange={(e) => {
+                              setFormData({ ...formData, ufOrgaoExpedidor: e.target.value });
+                              clearError('ufOrgaoExpedidor');
+                            }}
+                            className={`w-full border rounded px-3 py-2 ${errors.ufOrgaoExpedidor ? 'border-red-500' : ''}`}
+                          >
+                            <option value="">Selecione</option>
+                            {UF_OPTIONS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
+                          </select>
+                          {errors.ufOrgaoExpedidor && (
+                            <p className="text-red-500 text-xs mt-1">{errors.ufOrgaoExpedidor}</p>
+                          )}
+                        </div>
+
+                        {/* Data Expedição */}
+                        <div>
+                          <label className="block text-sm font-medium mb-1">Data Expedição *</label>
+                          <input
+                            type="date"
+                            required
+                            value={formData.dataExpedicao}
+                            onChange={(e) => {
+                              setFormData({ ...formData, dataExpedicao: e.target.value });
+                              clearError('dataExpedicao');
+                            }}
+                            className={`w-full border rounded px-3 py-2 ${errors.dataExpedicao ? 'border-red-500' : ''}`}
+                          />
+                          {errors.dataExpedicao && (
+                            <p className="text-red-500 text-xs mt-1">{errors.dataExpedicao}</p>
+                          )}
+                        </div>
+
             {/* Data de Nascimento */}
             <div>
               <label className="block text-sm font-medium mb-1">Data de Nascimento *</label>
@@ -501,63 +558,6 @@ const CadastroDirigentePage: React.FC = () => {
               />
               {errors.telefone && (
                 <p className="text-red-500 text-xs mt-1">{errors.telefone}</p>
-              )}
-            </div>
-
-            {/* Órgão Expedidor */}
-            <div>
-              <label className="block text-sm font-medium mb-1">Órgão Expedidor *</label>
-              <input
-                type="text"
-                required
-                value={formData.orgaoExpedidor}
-                onChange={(e) => {
-                  setFormData({ ...formData, orgaoExpedidor: e.target.value });
-                  clearError('orgaoExpedidor');
-                }}
-                className={`w-full border rounded px-3 py-2 ${errors.orgaoExpedidor ? 'border-red-500' : ''}`}
-                placeholder="Ex: SSP"
-              />
-              {errors.orgaoExpedidor && (
-                <p className="text-red-500 text-xs mt-1">{errors.orgaoExpedidor}</p>
-              )}
-            </div>
-
-            {/* UF Órgão */}
-            <div>
-              <label className="block text-sm font-medium mb-1">UF Órgão *</label>
-              <select
-                required
-                value={formData.ufOrgaoExpedidor}
-                onChange={(e) => {
-                  setFormData({ ...formData, ufOrgaoExpedidor: e.target.value });
-                  clearError('ufOrgaoExpedidor');
-                }}
-                className={`w-full border rounded px-3 py-2 ${errors.ufOrgaoExpedidor ? 'border-red-500' : ''}`}
-              >
-                <option value="">Selecione</option>
-                {UF_OPTIONS.map(uf => <option key={uf} value={uf}>{uf}</option>)}
-              </select>
-              {errors.ufOrgaoExpedidor && (
-                <p className="text-red-500 text-xs mt-1">{errors.ufOrgaoExpedidor}</p>
-              )}
-            </div>
-
-            {/* Data Expedição */}
-            <div>
-              <label className="block text-sm font-medium mb-1">Data Expedição *</label>
-              <input
-                type="date"
-                required
-                value={formData.dataExpedicao}
-                onChange={(e) => {
-                  setFormData({ ...formData, dataExpedicao: e.target.value });
-                  clearError('dataExpedicao');
-                }}
-                className={`w-full border rounded px-3 py-2 ${errors.dataExpedicao ? 'border-red-500' : ''}`}
-              />
-              {errors.dataExpedicao && (
-                <p className="text-red-500 text-xs mt-1">{errors.dataExpedicao}</p>
               )}
             </div>
 

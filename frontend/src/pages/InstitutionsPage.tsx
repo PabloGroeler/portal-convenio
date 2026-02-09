@@ -130,20 +130,20 @@ const InstitutionsPage: React.FC = () => {
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
         </div>
       ) : (
-        <div className="bg-white shadow-md rounded-lg overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-200">
+        <div className="bg-white shadow-md rounded-lg overflow-hidden overflow-x-auto">
+          <table className="min-w-full table-fixed divide-y divide-gray-200">
             <thead className="bg-gray-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[45%]">
                   Razão Social
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[22%]">
                   CNPJ
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[18%]">
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-[15%]">
                   Ações
                 </th>
               </tr>
@@ -151,34 +151,36 @@ const InstitutionsPage: React.FC = () => {
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredInstitutions.map((institution) => (
                 <tr key={institution.institutionId} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 w-[45%]">
                     <div className="flex flex-col">
-                      <div className="text-sm font-medium text-gray-900">
+                      <div className="text-sm font-medium text-gray-900 break-words">
                         {institution.razaoSocial}
                       </div>
                       {institution.nomeFantasia && (
-                        <div className="text-xs text-gray-500">
+                        <div className="text-xs text-gray-500 break-words">
                           {institution.nomeFantasia}
                         </div>
                       )}
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
-                    {institution.cnpj ?
-                      institution.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
-                      : '-'
-                    }
+                  <td className="px-6 py-4 text-sm text-gray-600 w-[22%]">
+                    <div className="break-all">
+                      {institution.cnpj ?
+                        institution.cnpj.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5')
+                        : '-'
+                      }
+                    </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
+                  <td className="px-6 py-4 w-[18%]">
                     <StatusOSCBadge
                       status={institution.statusOSC || StatusOSC.EM_CADASTRO}
                       size="sm"
                     />
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                  <td className="px-6 py-4 text-sm font-medium w-[15%]">
                     <button
                       onClick={() => handleEdit(institution)}
-                      className="text-blue-600 hover:text-blue-900 mr-4"
+                      className="text-blue-600 hover:text-blue-900 whitespace-nowrap"
                     >
                       Editar
                     </button>
