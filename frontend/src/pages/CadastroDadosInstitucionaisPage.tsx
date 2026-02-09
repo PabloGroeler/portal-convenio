@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import { lookupCep } from '../services/cepService';
 import {
   formatCep,
+  formatCnpj,
   formatPhoneBR,
   isValidCnpj,
   isValidEmail,
@@ -1089,10 +1090,11 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
               <input
                 type="text"
                 inputMode="numeric"
-                value={form.cnpj ?? ''}
-                onChange={(e) => setField('cnpj', e.target.value)}
+                value={formatCnpj(form.cnpj ?? '')}
+                onChange={(e) => setField('cnpj', onlyDigits(e.target.value))}
                 className={fieldClass('cnpj')}
                 placeholder="00.000.000/0000-00"
+                maxLength={18}
               />
               {help('cnpj')}
             </div>
