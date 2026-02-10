@@ -50,7 +50,63 @@ public class EmendaImportMapper {
         String s = blankToNull(src.status);
         if (s == null) s = blankToNull(src.state);
         if (s == null) s = blankToNull(src.situation);
-        return s != null ? s : "Pendente";
+
+        // If still null, default to "Recebido"
+        if (s == null) return "Recebido";
+
+        // Map external status to valid internal status
+        // Valid statuses: Recebido, Iniciado, Em execução, Concluído, Devolvido
+        String normalized = s.toLowerCase().trim();
+
+        // Map common variations
+        switch (normalized) {
+            // Aprovada -> Recebida
+            case "aprovada":
+            case "aprovado":
+            case "aprovada pelo gestor":
+            case "aprovado pelo gestor":
+                return "Recebido";
+
+            // Pendente/Aguardando -> Recebida
+            case "pendente":
+            case "aguardando":
+            case "aguardando detalhamento":
+                return "Recebido";
+
+            // Devolvida para Retificação -> Devolvido
+            case "devolvida":
+            case "devolvido":
+            case "devolvida para retificação":
+            case "devolvido para retificação":
+            case "retificação":
+                return "Devolvido";
+
+            // Iniciado
+            case "iniciado":
+            case "iniciada":
+            case "em análise":
+                return "Iniciado";
+
+            // Em execução
+            case "em execução":
+            case "em execucao":
+            case "executando":
+            case "em andamento":
+                return "Em execução";
+
+            // Concluído
+            case "concluído":
+            case "concluido":
+            case "concluída":
+            case "concluida":
+            case "finalizado":
+            case "finalizada":
+                return "Concluído";
+
+            default:
+                // If doesn't match any known status, default to "Recebido"
+                return "Recebido";
+        }
     }
 
     private static String blankToNull(String s) {
