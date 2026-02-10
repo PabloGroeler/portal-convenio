@@ -10,6 +10,7 @@ import org.acme.dto.external.ExternalInstitutionDTO;
 import org.acme.dto.external.ExternalPublicDataDTO;
 import org.acme.entity.Councilor;
 import org.acme.entity.Institution;
+import org.acme.util.DocumentUtils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -83,7 +84,8 @@ public class PublicDataImportService {
 
                     // Required fields that external API may not provide.
                     // Keep empty strings to satisfy non-null constraints, and allow later completion via UI.
-                    entity.cnpj = i.cnpj;
+                    // Clean CNPJ to remove formatting (dots, slashes, hyphens) - max 14 digits
+                    entity.cnpj = DocumentUtils.cleanCNPJ(i.cnpj);
                     entity.inscricaoMunicipal = "";
                     entity.telefone = "";
                     entity.emailInstitucional = (i.institutionId + "@invalido.local");
@@ -101,7 +103,8 @@ public class PublicDataImportService {
                     Institution updated = new Institution();
                     updated.institutionId = i.institutionId;
                     updated.razaoSocial = i.name != null ? i.name : existing.razaoSocial;
-                    updated.cnpj = i.cnpj;
+                    // Clean CNPJ to remove formatting (dots, slashes, hyphens) - max 14 digits
+                    updated.cnpj = DocumentUtils.cleanCNPJ(i.cnpj);
                     institutionService.updateStringId(existing.institutionId, updated);
                     summary.institutionsUpdated++;
                 }
