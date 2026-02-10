@@ -96,6 +96,8 @@ public class UserService {
             user.username,
             user.email,
             user.nomeCompleto,
+            user.role.name(),    // Include role for RBAC
+            user.status.name(),  // Include status
             java.util.Collections.emptyList() // Novo usuário sem instituições
         );
     }

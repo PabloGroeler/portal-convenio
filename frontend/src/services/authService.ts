@@ -1,11 +1,17 @@
 // src/services/authService.ts
 import api from './api';
+import type { User as UserType, UserRole, UserStatus } from '../types/user.types';
 
-export interface User {
+// Re-export User type for consumers
+export type User = {
   id: number;
+  username: string;
   email: string;
   name: string;
-}
+  role?: UserRole | string;
+  status?: UserStatus | string;
+  instituicoes?: string[];
+};
 
 interface LoginResponse {
   success: boolean;

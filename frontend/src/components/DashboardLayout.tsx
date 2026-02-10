@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Permission } from '../types/user.types';
 import DashboardTopBar from './DashboardTopBar';
 
 const linkBase =
@@ -26,13 +27,28 @@ const Caret: React.FC<{ open: boolean }> = ({ open }) => (
 const DashboardLayout: React.FC = () => {
   const [gestaoOpen, setGestaoOpen] = useState(true);
   const [usuariosOpen, setUsuariosOpen] = useState(true);
-  const { logout, user } = useAuth();
+  const { logout, user, hasPermission, hasAnyPermission } = useAuth();
   const navigate = useNavigate();
 
   const handleLogout = () => {
     logout();
     navigate('/');
   };
+
+  // Check if user has access to any Gestão items
+  const hasGestaoAccess = hasAnyPermission([
+    Permission.VIEW_EMENDAS,
+    Permission.VIEW_INSTITUTIONS,
+    Permission.VIEW_COUNCILORS,
+  ]);
+
+  // Check if user has access to Usuários section
+  const hasUsuariosAccess = hasPermission(Permission.VIEW_USERS);
+
+  // Individual permission checks for menu items
+  const canViewEmendas = hasPermission(Permission.VIEW_EMENDAS);
+  const canViewInstitutions = hasPermission(Permission.VIEW_INSTITUTIONS);
+  const canViewCouncilors = hasPermission(Permission.VIEW_COUNCILORS);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -66,7 +82,8 @@ const DashboardLayout: React.FC = () => {
                 </NavLink>
               </li>
 
-              {/* Gestão (collapsible) */}
+              {/* Gestão (collapsible) - Only show if user has access to at least one item */}
+              {hasGestaoAccess && (
               <li>
                 <button
                   type="button"
@@ -85,6 +102,7 @@ const DashboardLayout: React.FC = () => {
 
                 {gestaoOpen && (
                   <ul className="mt-1 ml-3 pl-3 border-l border-gray-200 space-y-1">
+                    {canViewEmendas && (
                     <li>
                       <NavLink
                         to="/dashboard/emendas"
@@ -96,6 +114,8 @@ const DashboardLayout: React.FC = () => {
                         <span>Emendas</span>
                       </NavLink>
                     </li>
+                    )}
+                    {canViewInstitutions && (
                     <li>
                       <NavLink
                         to="/dashboard/instituicoes"
@@ -107,6 +127,8 @@ const DashboardLayout: React.FC = () => {
                         <span>Instituições</span>
                       </NavLink>
                     </li>
+                    )}
+                    {canViewCouncilors && (
                     <li>
                       <NavLink
                         to="/dashboard/parlamentares"
@@ -118,11 +140,14 @@ const DashboardLayout: React.FC = () => {
                         <span>Parlamentares</span>
                       </NavLink>
                     </li>
+                    )}
                   </ul>
                 )}
               </li>
+              )}
 
-              {/* Usuários (collapsible) */}
+              {/* Usuários (collapsible) - Only show if user has VIEW_USERS permission */}
+              {hasUsuariosAccess && (
               <li>
                 <button
                   type="button"
@@ -155,6 +180,7 @@ const DashboardLayout: React.FC = () => {
                   </ul>
                 )}
               </li>
+              )}
             </ul>
           </nav>
 

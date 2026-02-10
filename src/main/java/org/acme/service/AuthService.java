@@ -37,8 +37,13 @@ public class AuthService {
         }
 
         if (!BCrypt.checkpw(password, user.password)) return null;
-        // Generate JWT
-        return JwtUtil.generateToken(user.username, user.id);
+        // Generate JWT with role and status
+        return JwtUtil.generateToken(
+            user.username,
+            user.id,
+            user.role.name(),
+            user.status.name()
+        );
     }
 
     public void logout(String token) {
@@ -51,7 +56,12 @@ public class AuthService {
             user = User.findByEmail(request.username());
         }
         if (user != null && BCrypt.checkpw(request.password(), user.password)) {
-            return JwtUtil.generateToken(user.username, user.id);
+            return JwtUtil.generateToken(
+                user.username,
+                user.id,
+                user.role.name(),
+                user.status.name()
+            );
         }
         throw new SecurityException("Invalid credentials");
     }

@@ -99,6 +99,8 @@ public class UserResource {
                 user.username,
                 user.email,
                 user.nomeCompleto,
+                user.role.name(),
+                user.status.name(),
                 instituicoes
             );
 
@@ -146,6 +148,8 @@ public class UserResource {
                 user.username,
                 user.email,
                 user.nomeCompleto,
+                user.role.name(),
+                user.status.name(),
                 instituicoes
             );
 
@@ -182,6 +186,8 @@ public class UserResource {
                 user.username,
                 user.email,
                 user.nomeCompleto,
+                user.role.name(),
+                user.status.name(),
                 instituicoes
             );
 

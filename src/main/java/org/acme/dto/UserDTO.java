@@ -7,6 +7,8 @@ public record UserDTO(
     String username,
     String email,
     String name,
+    String role,        // User role for RBAC (ADMIN, OPERADOR, ANALISTA, JURIDICO)
+    String status,      // User status (ATIVO, INATIVO, BLOQUEADO, PENDENTE)
     List<String> instituicoes // Lista de todas as instituições vinculadas
 ) {}
 

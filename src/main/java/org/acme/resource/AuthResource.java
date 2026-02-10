@@ -68,6 +68,8 @@ public class AuthResource {
                 user.username,
                 user.email,
                 user.nomeCompleto,
+                user.role.name(),      // Include role for RBAC
+                user.status.name(),    // Include status
                 instituicoes
             );
             return Response.ok(new LoginResponse(true, token, userDTO)).build();

@@ -1,5 +1,6 @@
 import api from './api';
-import type { User, InstituicaoDetalhada, RegisterPayload, EmendaResumida } from '../types/user.types';
+import type { User } from './authService';
+import type { InstituicaoDetalhada, RegisterPayload, EmendaResumida } from '../types/user.types';
 
 // Re-export types
 export type { User, InstituicaoDetalhada, RegisterPayload, EmendaResumida };

@@ -1,13 +1,8 @@
 // src/context/AuthContext.tsx
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from 'react';
 import { login as loginService, logout as logoutService, getCurrentUser } from '../services/authService';
-
-interface User {
-  id: number;
-  email: string;
-  name: string;
-  instituicoes?: string[];
-}
+import type { User } from '../services/authService';
+import { Permission, ROLE_PERMISSIONS, UserRole } from '../types/user.types';
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -15,6 +10,10 @@ interface AuthContextType {
   login: (document: string, password: string) => Promise<boolean>;
   logout: () => void;
   refreshUser: () => void;
+  hasPermission: (permission: Permission) => boolean;
+  hasAnyPermission: (permissions: Permission[]) => boolean;
+  hasRole: (role: UserRole) => boolean;
+  isAdmin: () => boolean;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -68,8 +67,48 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const getUserPermissions = useCallback((): Permission[] => {
+    if (!user || !user.role) return [];
+    const userRole = user.role as UserRole;
+    return ROLE_PERMISSIONS[userRole] || [];
+  }, [user]);
+
+  const hasPermission = useCallback((permission: Permission): boolean => {
+    const permissions = getUserPermissions();
+    return permissions.includes(permission);
+  }, [getUserPermissions]);
+
+  const hasAnyPermission = useCallback((permissions: Permission[]): boolean => {
+    if (!permissions || permissions.length === 0) return true;
+    const userPerms = getUserPermissions();
+    return permissions.some(p => userPerms.includes(p));
+  }, [getUserPermissions]);
+
+  const hasRole = useCallback((role: UserRole): boolean => {
+    if (!user || !user.role) return false;
+    return user.role === role;
+  }, [user]);
+
+  const isAdmin = useCallback((): boolean => {
+    if (!user || !user.role) return false;
+    return user.role === UserRole.ADMIN;
+  }, [user]);
+
+  const contextValue = {
+    isAuthenticated,
+    user,
+    login,
+    logout,
+    refreshUser,
+    hasPermission,
+    hasAnyPermission,
+    hasRole,
+    isAdmin,
+  };
+
+
   return (
-    <AuthContext.Provider value={{ isAuthenticated, user, login, logout, refreshUser }}>
+    <AuthContext.Provider value={contextValue}>
       {children}
     </AuthContext.Provider>
   );

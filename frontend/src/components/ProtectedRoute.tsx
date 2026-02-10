@@ -1,13 +1,48 @@
-// Simple protected route wrapper that redirects to /login when the user is not authenticated
+// Protected route wrapper with permission-based access control
 import React from 'react';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { Permission, ROUTE_PERMISSIONS } from '../types/user.types';
 
-const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const { isAuthenticated } = useAuth();
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  requiredPermissions?: Permission[];
+}
+
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPermissions }) => {
+  const { isAuthenticated, hasAnyPermission } = useAuth();
+  const location = useLocation();
+
+  // Check if user is authenticated
   if (!isAuthenticated) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
+
+  // Check route-based permissions if defined
+  const routePermissions = ROUTE_PERMISSIONS[location.pathname] || requiredPermissions;
+
+  if (routePermissions && routePermissions.length > 0 && hasAnyPermission) {
+    if (!hasAnyPermission(routePermissions)) {
+      return (
+        <div className="flex items-center justify-center min-h-screen bg-gray-100">
+          <div className="bg-white p-8 rounded-lg shadow-md max-w-md text-center">
+            <div className="text-red-500 text-5xl mb-4">🚫</div>
+            <h1 className="text-2xl font-bold text-gray-800 mb-2">Acesso Negado</h1>
+            <p className="text-gray-600 mb-4">
+              Você não tem permissão para acessar esta página.
+            </p>
+            <button
+              onClick={() => window.history.back()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Voltar
+            </button>
+          </div>
+        </div>
+      );
+    }
+  }
+
   return <>{children}</>;
 };
 
