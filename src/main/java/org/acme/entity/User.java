@@ -55,6 +55,21 @@ public class User extends PanacheEntity {
     @Column(name = "email", unique = true, nullable = false)
     public String email;
 
+    @Column(name = "email_verificado", nullable = false)
+    public Boolean emailVerified = false;
+
+    @Column(name = "token_verificacao", length = 64)
+    public String verificationToken;
+
+    @Column(name = "token_verificacao_expira")
+    public OffsetDateTime verificationTokenExpiry;
+
+    @Column(name = "token_redefinir_senha", length = 64)
+    public String passwordResetToken;
+
+    @Column(name = "token_redefinir_senha_expira")
+    public OffsetDateTime passwordResetTokenExpiry;
+
     @Column(name = "telefone", length = 30)
     public String telefone;
 

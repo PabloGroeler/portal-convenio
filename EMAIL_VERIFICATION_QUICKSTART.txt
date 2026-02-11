@@ -1,0 +1,195 @@
+╔══════════════════════════════════════════════════════════════════╗
+║                                                                  ║
+║     ✅ EMAIL VERIFICATION - QUICK START GUIDE                   ║
+║                                                                  ║
+╚══════════════════════════════════════════════════════════════════╝
+
+📋 IMPLEMENTATION STATUS: ✅ 100% COMPLETE
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 WHAT'S NEW?
+
+✅ Email verification page at /verify-email
+✅ Email sent with verification link after registration
+✅ Token expires in 24 hours
+✅ Backend endpoints: GET and POST /api/users/verify-email
+✅ Frontend page with loading, success, and error states
+✅ Auto-redirect to login after verification
+✅ Configuration via .env file
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🚀 HOW TO TEST
+
+1️⃣  Start Backend:
+   mvnw quarkus:dev
+
+2️⃣  Start Frontend (new terminal):
+   cd frontend
+   npm run dev
+
+3️⃣  Open Browser:
+   http://localhost:3000/register
+
+4️⃣  Register New User:
+   - Fill all fields
+   - Use strong password (8+ chars, uppercase, lowercase, number, special char)
+   - Use CPF or CNPJ
+
+5️⃣  Check Email:
+   - If MOCK=false: Check your inbox
+   - If MOCK=true: Check backend console logs
+   - Click verification link
+
+6️⃣  Verify Success:
+   - You'll see "Email Verificado!" page
+   - Auto-redirect to login in 3 seconds
+   - Try to login (needs admin approval)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔧 CONFIGURATION (.env)
+
+Required variables:
+┌────────────────────────────────────────────────────────────────┐
+│ FRONTEND_BASE_URL=http://localhost:3000                       │
+│ QUARKUS_MAILER_HOST=mail.sinop.mt.gov.br                     │
+│ QUARKUS_MAILER_PORT=465                                       │
+│ QUARKUS_MAILER_FROM=sigadoc@sinop.mt.gov.br                  │
+│ QUARKUS_MAILER_USERNAME=sigadoc@sinop.mt.gov.br              │
+│ QUARKUS_MAILER_PASSWORD=LwYc7@1FX9BZVa3                      │
+│ QUARKUS_MAILER_MOCK=false                                     │
+│ QUARKUS_MAILER_SSL=true                                       │
+└────────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🧪 TEST EMAIL CONFIGURATION
+
+Option 1 - Check Config:
+curl http://localhost:8080/api/test-email/config
+
+Option 2 - Send Test Email:
+curl "http://localhost:8080/api/test-email/send?to=your-email@example.com"
+
+Option 3 - Use Batch Script:
+test-email.bat
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📧 USER FLOW
+
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  1. User registers                                              │
+│     └─> POST /api/users/register                               │
+│                                                                 │
+│  2. Backend creates user                                        │
+│     ├─> status = PENDENTE                                       │
+│     ├─> emailVerified = false                                   │
+│     └─> Generate token (expires in 24h)                         │
+│                                                                 │
+│  3. Send verification email                                     │
+│     └─> Link: /verify-email?token=abc123...                    │
+│                                                                 │
+│  4. User clicks link in email                                   │
+│     └─> Opens /verify-email page                               │
+│                                                                 │
+│  5. Frontend verifies token                                     │
+│     └─> POST /api/users/verify-email                           │
+│                                                                 │
+│  6. Backend validates                                           │
+│     ├─> Check token exists                                      │
+│     ├─> Check not expired                                       │
+│     ├─> Check not already verified                              │
+│     └─> Mark emailVerified = true                               │
+│                                                                 │
+│  7. Send welcome email                                          │
+│                                                                 │
+│  8. User redirected to login                                    │
+│     └─> Can login after admin approval                          │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📁 FILES MODIFIED/CREATED
+
+Backend:
+✅ UserService.java - Verification logic
+✅ UserResource.java - GET/POST endpoints
+✅ EmailService.java - HTML email template
+
+Frontend:
+✅ VerifyEmailPage.tsx - NEW verification page
+✅ App.tsx - Route added
+✅ RegisterPage.tsx - Success message
+✅ LoginPage.tsx - Display messages
+
+Config:
+✅ .env - FRONTEND_BASE_URL added
+✅ docker-compose.yml - env_file configured
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🐳 DOCKER DEPLOYMENT
+
+When deploying to Docker:
+1. Environment variables loaded from .env automatically
+2. Frontend URL will be different in production
+3. Update FRONTEND_BASE_URL in .env or docker-compose.yml
+
+Example for production:
+FRONTEND_BASE_URL=https://your-domain.com
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🔐 SECURITY FEATURES
+
+✅ 64-character random token (UUID-based)
+✅ Token expires in 24 hours
+✅ One-time use only
+✅ Email must be verified before full access
+✅ Prevents duplicate emails
+✅ Secure password requirements enforced
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+❗ TROUBLESHOOTING
+
+Problem: Email not sending
+Solution:
+  - Check .env file has correct SMTP settings
+  - Set QUARKUS_MAILER_MOCK=false
+  - Verify SMTP credentials
+  - Test with: test-email.bat
+
+Problem: Token expired
+Solution:
+  - Token expires in 24h
+  - User needs to register again
+  - TODO: Add "resend token" feature
+
+Problem: Link not working
+Solution:
+  - Check FRONTEND_BASE_URL is correct
+  - Verify frontend is running
+  - Check browser console for errors
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📚 DOCUMENTATION
+
+Full documentation: EMAIL_VERIFICATION_IMPLEMENTATION.md
+Docker guide: DOCKER-ENV-GUIDE.md
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎉 STATUS: READY TO USE!
+
+Last Updated: February 11, 2026
+Version: 1.0.0
+Tested: ✅ Local Development
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

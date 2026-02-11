@@ -27,6 +27,9 @@ import DashboardEmendasPage from './pages/DashboardEmendasPage';
 import UsersPage from './pages/UsersPage';
 import ProfilePage from './pages/ProfilePage';
 import DiretoriaPage from './pages/DiretoriaPage';
+import VerifyEmailPage from './pages/VerifyEmailPage';
+import ForgotPasswordPage from './pages/ForgotPasswordPage';
+import ResetPasswordPage from './pages/ResetPasswordPage';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -37,6 +40,13 @@ function App() {
       <Router>
         <AuthProvider>
           <Routes>
+              {/* Email verification (public route) */}
+              <Route path="/verify-email" element={<VerifyEmailPage />} />
+
+              {/* Password reset (public routes) */}
+              <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+
               {/* Dashboard SPA layout (task-6) */}
               <Route
                 path="/dashboard"

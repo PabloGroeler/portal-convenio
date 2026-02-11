@@ -6,6 +6,7 @@ import jakarta.transaction.Transactional;
 import org.acme.dto.RegisterRequest;
 import org.acme.dto.UserDTO;
 import org.acme.entity.User;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 import org.mindrot.jbcrypt.BCrypt;
 
 @ApplicationScoped
@@ -13,6 +14,9 @@ public class UserService {
 
     @Inject
     EmailService emailService;
+
+    @ConfigProperty(name = "frontend.base.url", defaultValue = "http://localhost:3000")
+    String frontendBaseUrl;
 
     @Transactional
     public UserDTO register(RegisterRequest request) {
@@ -85,11 +89,17 @@ public class UserService {
         user.status = User.UserStatus.PENDENTE;
         user.role = User.UserRole.OPERADOR; // Default role
 
+        // Email verification: generate token
+        user.emailVerified = false;
+        user.verificationToken = generateVerificationToken();
+        user.verificationTokenExpiry = java.time.OffsetDateTime.now().plusHours(24); // Token expires in 24 hours
+
         user.persist();
         user.flush();
 
-        // REQUIREMENT: Após registro, enviar email
-        emailService.sendWelcomeEmail(user.email, user.nomeCompleto);
+        // REQUIREMENT: Após registro, enviar email de verificação
+        String verificationLink = buildVerificationLink(user.verificationToken);
+        emailService.sendEmailVerification(user.email, user.nomeCompleto, verificationLink);
 
         return new UserDTO(
             user.id,
@@ -118,5 +128,120 @@ public class UserService {
         if (!password.matches(".*[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?].*")) {
             throw new RuntimeException("Senha deve conter pelo menos um caractere especial");
         }
+    }
+
+    /**
+     * Generate a secure random verification token (64 characters hex)
+     */
+    private String generateVerificationToken() {
+        return java.util.UUID.randomUUID().toString().replace("-", "") +
+               java.util.UUID.randomUUID().toString().replace("-", "");
+    }
+
+    /**
+     * Build verification link for email
+     */
+    private String buildVerificationLink(String token) {
+        return frontendBaseUrl + "/verify-email?token=" + token;
+    }
+
+    /**
+     * Request password reset - sends email with reset link
+     */
+    @Transactional
+    public void requestPasswordReset(String email) {
+        if (email == null || email.isBlank()) {
+            throw new RuntimeException("Email é obrigatório");
+        }
+
+        User user = User.findByEmail(email);
+        if (user == null) {
+            // Don't reveal if email exists or not (security best practice)
+            // Just return success but don't send email
+            return;
+        }
+
+        // Generate password reset token
+        String resetToken = generateVerificationToken();
+        user.passwordResetToken = resetToken;
+        user.passwordResetTokenExpiry = java.time.OffsetDateTime.now().plusHours(1); // Token expires in 1 hour
+        user.persist();
+
+        // Send password reset email
+        String resetLink = frontendBaseUrl + "/reset-password?token=" + resetToken;
+        emailService.sendPasswordResetEmail(user.email, user.username, resetLink);
+    }
+
+    /**
+     * Reset password with token
+     */
+    @Transactional
+    public void resetPassword(String token, String newPassword) {
+        if (token == null || token.isBlank()) {
+            throw new RuntimeException("Token é obrigatório");
+        }
+        if (newPassword == null || newPassword.isBlank()) {
+            throw new RuntimeException("Nova senha é obrigatória");
+        }
+
+        // Validate password strength
+        validatePasswordStrength(newPassword);
+
+        User user = User.find("passwordResetToken", token).firstResult();
+        if (user == null) {
+            throw new RuntimeException("Token de redefinição de senha inválido");
+        }
+
+        // Check if token expired
+        if (user.passwordResetTokenExpiry.isBefore(java.time.OffsetDateTime.now())) {
+            throw new RuntimeException("Token de redefinição de senha expirado");
+        }
+
+        // Update password
+        user.password = BCrypt.hashpw(newPassword, BCrypt.gensalt());
+
+        // Clear reset token
+        user.passwordResetToken = null;
+        user.passwordResetTokenExpiry = null;
+
+        user.persist();
+
+        // Send confirmation email
+        emailService.sendPasswordChangedEmail(user.email, user.username);
+    }
+
+    /**
+     * Verify email with token
+     */
+    @Transactional
+    public void verifyEmail(String token) {
+        User user = User.find("verificationToken", token).firstResult();
+
+        if (user == null) {
+            throw new RuntimeException("Token de verificação inválido");
+        }
+
+        if (user.verificationTokenExpiry.isBefore(java.time.OffsetDateTime.now())) {
+            throw new RuntimeException("Token de verificação expirado");
+        }
+
+        if (user.emailVerified) {
+            throw new RuntimeException("Email já verificado");
+        }
+
+        // Verify email
+        user.emailVerified = true;
+        user.verificationToken = null;
+        user.verificationTokenExpiry = null;
+
+        // Change status from PENDENTE to ATIVO after email verification
+        if (user.status == User.UserStatus.PENDENTE) {
+            user.status = User.UserStatus.ATIVO;
+        }
+
+        user.persist();
+
+        // Send welcome email after verification
+        emailService.sendWelcomeEmail(user.email, user.nomeCompleto);
     }
 }

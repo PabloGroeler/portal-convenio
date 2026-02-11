@@ -55,6 +55,101 @@ public class UserResource {
         }
     }
 
+    @GET
+    @Path("/verify-email")
+    public Response verifyEmailGet(@QueryParam("token") String token) {
+        return verifyEmailInternal(token);
+    }
+
+    @POST
+    @Path("/verify-email")
+    public Response verifyEmailPost(Map<String, String> body) {
+        String token = body != null ? body.get("token") : null;
+        return verifyEmailInternal(token);
+    }
+
+    private Response verifyEmailInternal(String token) {
+        try {
+            if (token == null || token.isBlank()) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("{\"error\":\"Token é obrigatório\"}")
+                        .build();
+            }
+
+            userService.verifyEmail(token);
+
+            return Response.ok()
+                    .entity("{\"message\":\"Email verificado com sucesso! Você já pode fazer login após aprovação do administrador.\"}")
+                    .build();
+        } catch (RuntimeException e) {
+            return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("/forgot-password")
+    public Response forgotPassword(Map<String, String> body) {
+        try {
+            String email = body != null ? body.get("email") : null;
+
+            if (email == null || email.isBlank()) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("{\"error\":\"Email é obrigatório\"}")
+                        .build();
+            }
+
+            userService.requestPasswordReset(email);
+
+            return Response.ok()
+                    .entity("{\"message\":\"Se o email estiver cadastrado, você receberá um link para redefinir sua senha.\"}")
+                    .build();
+        } catch (RuntimeException e) {
+            // Don't reveal if email exists or not
+            return Response.ok()
+                    .entity("{\"message\":\"Se o email estiver cadastrado, você receberá um link para redefinir sua senha.\"}")
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("/reset-password")
+    public Response resetPassword(Map<String, String> body) {
+        try {
+            String token = body != null ? body.get("token") : null;
+            String newPassword = body != null ? body.get("newPassword") : null;
+
+            if (token == null || token.isBlank()) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("{\"error\":\"Token é obrigatório\"}")
+                        .build();
+            }
+
+            if (newPassword == null || newPassword.isBlank()) {
+                return Response
+                        .status(Response.Status.BAD_REQUEST)
+                        .entity("{\"error\":\"Nova senha é obrigatória\"}")
+                        .build();
+            }
+
+            userService.resetPassword(token, newPassword);
+
+            return Response.ok()
+                    .entity("{\"message\":\"Senha redefinida com sucesso! Você já pode fazer login com a nova senha.\"}")
+                    .build();
+        } catch (RuntimeException e) {
+            return Response
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                    .build();
+        }
+    }
+
     @POST
     @Path("/vincular-instituicao")
     @RolesAllowed({"ADMIN", "OPERADOR", "ANALISTA", "JURIDICO"})

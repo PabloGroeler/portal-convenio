@@ -112,6 +112,11 @@ const LoginPage = () => {
             className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 px-3 py-2 border"
             required
           />
+          <div className="mt-2 text-right">
+            <Link to="/forgot-password" className="text-sm text-blue-600 hover:underline">
+              Esqueci minha senha
+            </Link>
+          </div>
         </div>
         <button
           type="submit"
