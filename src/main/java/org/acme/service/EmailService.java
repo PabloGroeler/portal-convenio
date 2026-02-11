@@ -5,6 +5,7 @@ import io.quarkus.mailer.Mail;
 import io.quarkus.mailer.Mailer;
 import jakarta.enterprise.context.ApplicationScoped;
 import jakarta.inject.Inject;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 /**
  * Email service para envio de notificações aos usuários.
@@ -18,6 +19,9 @@ public class EmailService {
 
     @Inject
     Mailer mailer;
+
+    @ConfigProperty(name = "frontend.base.url", defaultValue = "http://localhost:3000")
+    String frontendBaseUrl;
 
     /**
      * Envia email de boas-vindas para novo usuário registrado.
@@ -107,13 +111,13 @@ public class EmailService {
             
             Sua conta no Portal de Emendas está agora ATIVA e você já pode fazer login.
             
-            Acesse: http://localhost:3000/login
+            Acesse: %s/login
             
             Use seu CPF/CNPJ e a senha cadastrada para acessar o sistema.
             
             Atenciosamente,
             Equipe Portal de Emendas
-            """, userName);
+            """, userName, frontendBaseUrl);
     }
 
     private String buildVerificationEmailBody(String userName, String verificationLink) {
@@ -181,11 +185,11 @@ public class EmailService {
             
             Você já pode acessar o sistema usando suas credenciais.
             
-            Acesse: http://localhost:3000/login
+            Acesse: %s/login
             
             Atenciosamente,
             Equipe Portal de Emendas
-            """, userName);
+            """, userName, frontendBaseUrl);
     }
 
     private String buildRejectionEmailBody(String userName, String reason) {
