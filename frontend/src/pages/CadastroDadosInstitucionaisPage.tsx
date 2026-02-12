@@ -48,6 +48,8 @@ import {
   STATUS_OSC_COLORS,
 } from '../types/statusOSC.types';
 import { StatusOSCBadge, StatusOSCPanel } from '../components/StatusOSCComponents';
+import tipoDocumentoConfigService from '../services/tipoDocumentoConfigService';
+import type { TipoDocumentoConfig } from '../services/tipoDocumentoConfigService';
 
 const UFS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
@@ -137,6 +139,11 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
 
   // RF-02.3 - Status da OSC
   const [statusOSC, setStatusOSC] = useState<StatusOSC>(StatusOSC.EM_CADASTRO);
+
+  // Document type configurations
+  const [documentConfigs, setDocumentConfigs] = useState<TipoDocumentoConfig[]>([]);
+  const [loadingConfigs, setLoadingConfigs] = useState(false);
+  const [selectedDocConfig, setSelectedDocConfig] = useState<TipoDocumentoConfig | null>(null);
 
   const [dirigenteFormData, setDirigenteFormData] = useState<Dirigente>({
     instituicaoId: editId || '',
@@ -547,6 +554,59 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
     }
   }, [editId, apenasAtivos]);
 
+  // Load document type configurations on mount
+  useEffect(() => {
+    loadDocumentConfigs();
+  }, []);
+
+  const loadDocumentConfigs = async () => {
+    try {
+      setLoadingConfigs(true);
+      const configs = await tipoDocumentoConfigService.listar();
+      console.log('[loadDocumentConfigs] Loaded configs from backend:', configs);
+      console.log('[loadDocumentConfigs] Config details:', configs.map(c => ({
+        codigo: c.codigo,
+        nome: c.nome,
+        numeroObrigatorio: c.numeroDocumentoObrigatorio,
+        dataEmissaoObrigatoria: c.dataEmissaoObrigatoria,
+        dataValidadeObrigatoria: c.dataValidadeObrigatoria
+      })));
+      setDocumentConfigs(configs);
+    } catch (error) {
+      console.error('Erro ao carregar configurações de documentos:', error);
+    } finally {
+      setLoadingConfigs(false);
+    }
+  };
+
+  // Handle tipo documento selection change
+  const handleTipoDocumentoChange = (codigo: string) => {
+    setTipoDocumentoSelecionado(codigo as TipoDocumentoInstitucional);
+
+    if (codigo) {
+      console.log('[handleTipoDocumentoChange] Looking for codigo:', codigo);
+      console.log('[handleTipoDocumentoChange] Available configs:', documentConfigs.map(c => c.codigo));
+
+      const config = documentConfigs.find(c => c.codigo === codigo);
+      console.log('[handleTipoDocumentoChange] Found config:', config);
+
+      setSelectedDocConfig(config || null);
+
+      // Clear fields based on configuration
+      if (config && !config.numeroDocumentoObrigatorio) {
+        setNumeroDocumento('');
+      }
+      if (config && !config.dataEmissaoObrigatoria) {
+        setDataEmissao('');
+      }
+      if (config && !config.dataValidadeObrigatoria) {
+        setDataValidade('');
+      }
+    } else {
+      setSelectedDocConfig(null);
+    }
+  };
+
 
   // Funções para gerenciamento de documentos institucionais
   const loadDocumentos = async () => {
@@ -620,6 +680,28 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       return;
     }
 
+    // Validate based on document type configuration
+    if (selectedDocConfig) {
+      const validationErrors: string[] = [];
+
+      if (selectedDocConfig.numeroDocumentoObrigatorio && !numeroDocumento.trim()) {
+        validationErrors.push('Número do Documento é obrigatório para este tipo de documento');
+      }
+
+      if (selectedDocConfig.dataEmissaoObrigatoria && !dataEmissao) {
+        validationErrors.push('Data de Emissão é obrigatória para este tipo de documento');
+      }
+
+      if (selectedDocConfig.dataValidadeObrigatoria && !dataValidade) {
+        validationErrors.push('Data de Validade é obrigatória para este tipo de documento');
+      }
+
+      if (validationErrors.length > 0) {
+        alert('Por favor, corrija os seguintes erros:\n\n' + validationErrors.map(e => `• ${e}`).join('\n'));
+        return;
+      }
+    }
+
     try {
       setUploadingFile(true);
 
@@ -640,6 +722,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       // Limpar formulário
       setSelectedFile(null);
       setTipoDocumentoSelecionado('');
+      setSelectedDocConfig(null);
       setDataEmissao('');
       setDataValidade('');
       setNumeroDocumento('');
@@ -1587,11 +1670,12 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                   </label>
                   <select
                     required
+                    disabled={loadingConfigs}
                     value={tipoDocumentoSelecionado}
-                    onChange={(e) => setTipoDocumentoSelecionado(e.target.value as TipoDocumentoInstitucional)}
-                    className="w-full border rounded px-3 py-2"
+                    onChange={(e) => handleTipoDocumentoChange(e.target.value)}
+                    className="w-full border rounded px-3 py-2 disabled:bg-gray-100"
                   >
-                    <option value="">Selecione o tipo de documento</option>
+                    <option value="">{loadingConfigs ? 'Carregando...' : 'Selecione o tipo de documento'}</option>
                     <optgroup label="📄 Documentos Institucionais">
                       {DOCUMENTOS_INSTITUICAO.slice(0, 7).map((tipo) => (
                         <option key={tipo} value={tipo}>
@@ -1609,6 +1693,21 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                       ))}
                     </optgroup>
                   </select>
+                  {selectedDocConfig && (
+                    <div className="mt-2 text-xs bg-blue-50 border border-blue-200 rounded p-2">
+                      <p className="font-medium text-blue-900">Campos obrigatórios para este documento:</p>
+                      <ul className="mt-1 space-y-0.5 text-blue-700">
+                        {selectedDocConfig.numeroDocumentoObrigatorio && <li>• Número do Documento</li>}
+                        {selectedDocConfig.dataEmissaoObrigatoria && <li>• Data de Emissão</li>}
+                        {selectedDocConfig.dataValidadeObrigatoria && <li>• Data de Validade</li>}
+                        {!selectedDocConfig.numeroDocumentoObrigatorio &&
+                         !selectedDocConfig.dataEmissaoObrigatoria &&
+                         !selectedDocConfig.dataValidadeObrigatoria && (
+                          <li className="text-green-700">✓ Apenas o arquivo é obrigatório</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -1632,38 +1731,53 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Número do Documento <span className="text-xs text-gray-500">(se aplicável)</span>
+                    Número do Documento {selectedDocConfig?.numeroDocumentoObrigatorio ? (
+                      <span className="text-red-600">*</span>
+                    ) : (
+                      <span className="text-xs text-gray-500">(opcional)</span>
+                    )}
                   </label>
                   <input
                     type="text"
+                    required={selectedDocConfig?.numeroDocumentoObrigatorio}
                     value={numeroDocumento}
                     onChange={(e) => setNumeroDocumento(e.target.value)}
-                    className="w-full border rounded px-3 py-2"
+                    className={`w-full border rounded px-3 py-2 ${selectedDocConfig?.numeroDocumentoObrigatorio ? 'border-blue-300' : ''}`}
                     placeholder="Ex: 123456789"
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Data de Emissão <span className="text-xs text-gray-500">(quando aplicável)</span>
+                    Data de Emissão {selectedDocConfig?.dataEmissaoObrigatoria ? (
+                      <span className="text-red-600">*</span>
+                    ) : (
+                      <span className="text-xs text-gray-500">(opcional)</span>
+                    )}
                   </label>
                   <input
                     type="date"
+                    required={selectedDocConfig?.dataEmissaoObrigatoria}
                     value={dataEmissao}
                     onChange={(e) => setDataEmissao(e.target.value)}
-                    className="w-full border rounded px-3 py-2"
+                    className={`w-full border rounded px-3 py-2 ${selectedDocConfig?.dataEmissaoObrigatoria ? 'border-blue-300' : ''}`}
                   />
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Data de Validade <span className="text-xs text-gray-500">(quando aplicável)</span>
+                    Data de Validade {selectedDocConfig?.dataValidadeObrigatoria ? (
+                      <span className="text-red-600">*</span>
+                    ) : (
+                      <span className="text-xs text-gray-500">(opcional)</span>
+                    )}
                   </label>
                   <input
                     type="date"
+                    required={selectedDocConfig?.dataValidadeObrigatoria}
                     value={dataValidade}
                     onChange={(e) => setDataValidade(e.target.value)}
-                    className="w-full border rounded px-3 py-2"
+                    className={`w-full border rounded px-3 py-2 ${selectedDocConfig?.dataValidadeObrigatoria ? 'border-blue-300' : ''}`}
                   />
                 </div>
 

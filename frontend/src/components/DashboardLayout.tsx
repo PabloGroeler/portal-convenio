@@ -159,7 +159,7 @@ const DashboardLayout: React.FC = () => {
                     <svg className={iconBase} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                       <path d="M16 11c1.66 0 3-1.34 3-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zM8 11c1.66 0 3-1.34 3-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.95 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z" />
                     </svg>
-                    <span>Usuários</span>
+                    <span>Administrador</span>
                   </span>
                   <Caret open={usuariosOpen} />
                 </button>
@@ -174,7 +174,18 @@ const DashboardLayout: React.FC = () => {
                         }
                       >
                         <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-gray-200 text-gray-700 text-[10px] font-bold">U</span>
-                        <span>Gerenciar Usuários</span>
+                        <span>Usuários</span>
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/dashboard/tipos-documento-config"
+                        className={({ isActive }) =>
+                          `${linkBase} ${isActive ? 'bg-purple-100 text-purple-800' : 'text-gray-700 hover:bg-gray-100'}`
+                        }
+                      >
+                        <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-gray-200 text-gray-700 text-[10px] font-bold">D</span>
+                        <span>Tipos de Documentos</span>
                       </NavLink>
                     </li>
                   </ul>

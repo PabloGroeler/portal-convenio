@@ -30,6 +30,7 @@ import DiretoriaPage from './pages/DiretoriaPage';
 import VerifyEmailPage from './pages/VerifyEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
+import TiposDocumentoConfigPage from './pages/TiposDocumentoConfigPage';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -66,6 +67,7 @@ function App() {
                 <Route path="parlamentares" element={<CouncilorsPage />} />
                 <Route path="usuarios" element={<UsersPage />} />
                 <Route path="profile" element={<ProfilePage />} />
+                <Route path="tipos-documento-config" element={<TiposDocumentoConfigPage />} />
               </Route>
 
               {/* Full-screen pages (no header/footer) */}
