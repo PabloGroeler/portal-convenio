@@ -145,6 +145,11 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   const [loadingConfigs, setLoadingConfigs] = useState(false);
   const [selectedDocConfig, setSelectedDocConfig] = useState<TipoDocumentoConfig | null>(null);
 
+  // File viewer modal state
+  const [showFileViewer, setShowFileViewer] = useState(false);
+  const [currentViewingDoc, setCurrentViewingDoc] = useState<DocInstitucional | null>(null);
+  const [currentViewingIndex, setCurrentViewingIndex] = useState(0);
+
   const [dirigenteFormData, setDirigenteFormData] = useState<Dirigente>({
     instituicaoId: editId || '',
     nomeCompleto: '',
@@ -750,6 +755,53 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       console.error('Erro ao baixar documento:', error);
       alert('Erro ao baixar documento');
     }
+  };
+
+  const handleViewDocumento = (doc: DocInstitucional) => {
+    const index = documentosInstitucionais.findIndex(d => d.id === doc.id);
+    setCurrentViewingDoc(doc);
+    setCurrentViewingIndex(index);
+    setShowFileViewer(true);
+  };
+
+  const handleNextDocument = () => {
+    if (currentViewingIndex < documentosInstitucionais.length - 1) {
+      const nextIndex = currentViewingIndex + 1;
+      setCurrentViewingDoc(documentosInstitucionais[nextIndex]);
+      setCurrentViewingIndex(nextIndex);
+    }
+  };
+
+  const handlePreviousDocument = () => {
+    if (currentViewingIndex > 0) {
+      const prevIndex = currentViewingIndex - 1;
+      setCurrentViewingDoc(documentosInstitucionais[prevIndex]);
+      setCurrentViewingIndex(prevIndex);
+    }
+  };
+
+  const handleCloseFileViewer = () => {
+    setShowFileViewer(false);
+    setCurrentViewingDoc(null);
+    setCurrentViewingIndex(0);
+  };
+
+  const getFileViewerUrl = (doc: DocInstitucional) => {
+    const url = documentoInstitucionalService.downloadUrl(doc.id!);
+    const extension = doc.nomeArquivo.split('.').pop()?.toLowerCase();
+
+    // For PDFs, we can display them directly
+    if (extension === 'pdf') {
+      return url;
+    }
+
+    // For images, return the URL
+    if (['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) {
+      return url;
+    }
+
+    // For other file types, return null (will show download option)
+    return null;
   };
 
   const handleDeleteDocumento = async (id: string) => {
@@ -1926,6 +1978,17 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                             {/* Ações */}
                             <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100">
                               <button
+                                onClick={() => handleViewDocumento(doc)}
+                                className="px-3 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 flex items-center gap-1.5 font-medium"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Visualizar
+                              </button>
+
+                              <button
                                 onClick={() => handleDownloadDocumento(doc.id!)}
                                 className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center gap-1.5 font-medium"
                               >
@@ -2035,6 +2098,17 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
 
                             <div className="flex flex-wrap gap-2 mt-4 pt-3 border-t border-gray-100">
                               <button
+                                onClick={() => handleViewDocumento(doc)}
+                                className="px-3 py-1.5 bg-purple-600 text-white text-xs rounded hover:bg-purple-700 flex items-center gap-1.5 font-medium"
+                              >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                </svg>
+                                Visualizar
+                              </button>
+
+                              <button
                                 onClick={() => handleDownloadDocumento(doc.id!)}
                                 className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 flex items-center gap-1.5 font-medium"
                               >
@@ -2067,6 +2141,132 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       )}
 
       {/* Modal de Cadastro/Edição de Dirigente - REMOVIDO - Agora usa página separada */}
+
+      {/* File Viewer Modal */}
+      {showFileViewer && currentViewingDoc && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75">
+          <div className="relative w-full h-full max-w-7xl max-h-screen p-4">
+            {/* Header */}
+            <div className="bg-white rounded-t-lg p-4 flex items-center justify-between">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-gray-900 truncate">
+                  {TIPOS_DOCUMENTO_LABELS[currentViewingDoc.tipoDocumento]}
+                </h3>
+                <p className="text-sm text-gray-500 truncate">{currentViewingDoc.nomeOriginal}</p>
+              </div>
+
+              {/* Navigation Controls */}
+              <div className="flex items-center gap-2 ml-4">
+                <button
+                  onClick={handlePreviousDocument}
+                  disabled={currentViewingIndex === 0}
+                  className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Documento anterior"
+                >
+                  <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                </button>
+
+                <span className="text-sm text-gray-600 font-medium px-2">
+                  {currentViewingIndex + 1} / {documentosInstitucionais.length}
+                </span>
+
+                <button
+                  onClick={handleNextDocument}
+                  disabled={currentViewingIndex === documentosInstitucionais.length - 1}
+                  className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                  title="Próximo documento"
+                >
+                  <svg className="w-5 h-5 text-gray-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+
+                <div className="w-px h-6 bg-gray-300 mx-2"></div>
+
+                {/* Download Button */}
+                <button
+                  onClick={() => handleDownloadDocumento(currentViewingDoc.id!)}
+                  className="p-2 rounded-lg bg-blue-100 hover:bg-blue-200 text-blue-700"
+                  title="Baixar documento"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                </button>
+
+                {/* Close Button */}
+                <button
+                  onClick={handleCloseFileViewer}
+                  className="p-2 rounded-lg bg-red-100 hover:bg-red-200 text-red-700"
+                  title="Fechar visualizador"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div className="bg-gray-900 rounded-b-lg overflow-hidden" style={{ height: 'calc(100% - 80px)' }}>
+              {(() => {
+                const viewerUrl = getFileViewerUrl(currentViewingDoc);
+                const extension = currentViewingDoc.nomeArquivo.split('.').pop()?.toLowerCase();
+
+                if (!viewerUrl) {
+                  // File type not supported for preview
+                  return (
+                    <div className="flex flex-col items-center justify-center h-full text-white">
+                      <svg className="w-20 h-20 mb-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                      </svg>
+                      <p className="text-lg font-medium mb-2">Visualização não disponível</p>
+                      <p className="text-gray-400 mb-4">Este tipo de arquivo não pode ser visualizado no navegador</p>
+                      <button
+                        onClick={() => handleDownloadDocumento(currentViewingDoc.id!)}
+                        className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center gap-2"
+                      >
+                        <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                        Baixar Arquivo
+                      </button>
+                    </div>
+                  );
+                }
+
+                if (extension === 'pdf') {
+                  // PDF Viewer
+                  return (
+                    <iframe
+                      src={viewerUrl}
+                      className="w-full h-full"
+                      title="Visualizador de PDF"
+                    />
+                  );
+                }
+
+                if (['jpg', 'jpeg', 'png', 'gif'].includes(extension || '')) {
+                  // Image Viewer
+                  return (
+                    <div className="flex items-center justify-center h-full p-4">
+                      <img
+                        src={viewerUrl}
+                        alt={currentViewingDoc.nomeOriginal}
+                        className="max-w-full max-h-full object-contain"
+                      />
+                    </div>
+                  );
+                }
+
+                return null;
+              })()}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

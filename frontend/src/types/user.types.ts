@@ -95,14 +95,10 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
 
   [UserRole.OPERADOR]: [
     Permission.VIEW_DASHBOARD,
-    Permission.VIEW_EMENDAS,
-    Permission.CREATE_EMENDA,
-    Permission.EDIT_EMENDA,
-    Permission.VIEW_INSTITUTIONS,
+    // Can manage their own institution data directly
     Permission.EDIT_INSTITUTION,
     Permission.MANAGE_INSTITUTION_DOCS,
     Permission.MANAGE_INSTITUTION_DIRIGENTES,
-    Permission.VIEW_COUNCILORS,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
   ],
@@ -146,7 +142,7 @@ export const ROUTE_PERMISSIONS: Record<string, Permission[]> = {
   '/dashboard': [Permission.VIEW_DASHBOARD],
   '/dashboard/emendas': [Permission.VIEW_EMENDAS],
   '/dashboard/instituicoes': [Permission.VIEW_INSTITUTIONS],
-  '/dashboard/cadastro-dados-institucionais': [Permission.VIEW_INSTITUTIONS],
+  '/dashboard/cadastro-dados-institucionais': [Permission.EDIT_INSTITUTION], // Changed from VIEW_INSTITUTIONS
   '/dashboard/cadastro-dirigente': [Permission.MANAGE_INSTITUTION_DIRIGENTES],
   '/dashboard/diretoria': [Permission.MANAGE_INSTITUTION_DIRIGENTES],
   '/dashboard/parlamentares': [Permission.VIEW_COUNCILORS],
