@@ -131,6 +131,32 @@ public class DocumentoInstitucionalResource {
         }
     }
 
+    @GET
+    @Path("/{id}/view")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response view(@PathParam("id") String id) {
+        try {
+            File file = service.obterArquivo(id);
+            if (file == null || !file.exists()) {
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity(new ErrorResponse("Arquivo não encontrado"))
+                        .build();
+            }
+
+            DocumentoInstitucional documento = service.obterDocumento(id);
+
+            // Use "inline" para visualizar no navegador em vez de forçar download
+            return Response.ok(file)
+                    .header("Content-Disposition", "inline; filename=\"" + documento.getNomeOriginal() + "\"")
+                    .header("Content-Type", documento.getTipoMime())
+                    .build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Erro ao visualizar arquivo: " + e.getMessage()))
+                    .build();
+        }
+    }
+
     // Classes internas para response
     public static class ErrorResponse {
         public String error;

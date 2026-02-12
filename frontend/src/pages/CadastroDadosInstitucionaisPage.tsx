@@ -787,7 +787,8 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   };
 
   const getFileViewerUrl = (doc: DocInstitucional) => {
-    const url = documentoInstitucionalService.downloadUrl(doc.id!);
+    // Use the /view endpoint for inline viewing (uses Content-Disposition: inline)
+    const url = documentoInstitucionalService.viewUrl(doc.id!);
     const extension = doc.nomeArquivo.split('.').pop()?.toLowerCase();
 
     // For PDFs, we can display them directly
