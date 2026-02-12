@@ -42,6 +42,17 @@ const DashboardLayout: React.FC = () => {
     Permission.VIEW_COUNCILORS,
   ]);
 
+  console.log('[DashboardLayout] Gestão access check:', {
+    user: user?.email,
+    userRole: user?.role,
+    hasGestaoAccess,
+    checkingPermissions: [
+      Permission.VIEW_EMENDAS,
+      Permission.VIEW_INSTITUTIONS,
+      Permission.VIEW_COUNCILORS
+    ]
+  });
+
   // Check if user has access to Usuários section
   const hasUsuariosAccess = hasPermission(Permission.VIEW_USERS);
 
@@ -52,10 +63,10 @@ const DashboardLayout: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="flex min-h-screen">
-        {/* Sidebar */}
-        <aside className="w-72 shrink-0 border-r border-gray-200 bg-white flex flex-col">
-          <div className="h-16 px-4 flex items-center border-b border-gray-200">
+      <div className="flex">
+        {/* Sidebar - Fixed Position */}
+        <aside className="fixed left-0 top-0 h-screen w-72 shrink-0 border-r border-gray-200 bg-white flex flex-col z-40">
+          <div className="h-16 px-4 flex items-center border-b border-gray-200 shrink-0">
             <div className="flex items-center gap-3">
               <img src="/favicon.ico" alt="Aplicação" className="h-7 w-7" />
               <div className="leading-tight">
@@ -195,7 +206,7 @@ const DashboardLayout: React.FC = () => {
             </ul>
           </nav>
 
-          <div className="mt-auto p-4 border-t border-gray-200 bg-white">
+          <div className="mt-auto p-4 border-t border-gray-200 bg-white shrink-0">
             <button
               type="button"
               onClick={handleLogout}
@@ -206,8 +217,8 @@ const DashboardLayout: React.FC = () => {
           </div>
         </aside>
 
-        {/* Main content */}
-        <main className="flex-1 min-w-0">
+        {/* Main content - Add left margin to account for fixed sidebar */}
+        <main className="flex-1 min-w-0 ml-72">
           <DashboardTopBar />
           <div className="max-w-6xl mx-auto px-6 py-6">
             <Outlet />

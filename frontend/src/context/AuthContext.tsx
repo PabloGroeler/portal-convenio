@@ -68,9 +68,33 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const getUserPermissions = useCallback((): Permission[] => {
-    if (!user || !user.role) return [];
-    const userRole = user.role as UserRole;
-    return ROLE_PERMISSIONS[userRole] || [];
+    if (!user || !user.role) {
+      console.log('[AuthContext] getUserPermissions: No user or role', { user });
+      return [];
+    }
+
+    // Handle both enum and string types for role
+    const roleString = typeof user.role === 'string' ? user.role : String(user.role);
+    const userRole = UserRole[roleString as keyof typeof UserRole];
+
+    if (!userRole) {
+      console.error('[AuthContext] getUserPermissions: Invalid role', {
+        rawRole: user.role,
+        roleString,
+        availableRoles: Object.keys(UserRole)
+      });
+      return [];
+    }
+
+    const permissions = ROLE_PERMISSIONS[userRole] || [];
+    console.log('[AuthContext] getUserPermissions:', {
+      rawRole: user.role,
+      roleString,
+      userRole,
+      permissionsCount: permissions.length,
+      permissions: permissions.map(p => p.toString())
+    });
+    return permissions;
   }, [user]);
 
   const hasPermission = useCallback((permission: Permission): boolean => {
@@ -81,7 +105,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const hasAnyPermission = useCallback((permissions: Permission[]): boolean => {
     if (!permissions || permissions.length === 0) return true;
     const userPerms = getUserPermissions();
-    return permissions.some(p => userPerms.includes(p));
+    const hasAny = permissions.some(p => userPerms.includes(p));
+    console.log('[AuthContext] hasAnyPermission:', {
+      checking: permissions.map(p => p.toString()),
+      userHas: userPerms.map(p => p.toString()),
+      result: hasAny
+    });
+    return hasAny;
   }, [getUserPermissions]);
 
   const hasRole = useCallback((role: UserRole): boolean => {
