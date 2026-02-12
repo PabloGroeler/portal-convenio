@@ -47,6 +47,30 @@ public class DocumentoInstitucional {
     @Column(name = "data_atualizacao")
     private LocalDateTime dataAtualizacao;
 
+    @Column(name = "status_documento", length = 50)
+    private String statusDocumento = "PENDENTE_ENVIO";
+
+    @Column(name = "observacoes", columnDefinition = "TEXT")
+    private String observacoes;
+
+    @Column(name = "motivo_reprovacao", columnDefinition = "TEXT")
+    private String motivoReprovacao;
+
+    @Column(name = "data_aprovacao")
+    private LocalDateTime dataAprovacao;
+
+    @Column(name = "data_reprovacao")
+    private LocalDateTime dataReprovacao;
+
+    @Column(name = "numero_documento", length = 100)
+    private String numeroDocumento;
+
+    @Column(name = "data_emissao")
+    private LocalDateTime dataEmissao;
+
+    @Column(name = "data_validade")
+    private LocalDateTime dataValidade;
+
     @PrePersist
     protected void onCreate() {
         dataCriacao = LocalDateTime.now();
@@ -164,6 +188,70 @@ public class DocumentoInstitucional {
 
     public void setDataAtualizacao(LocalDateTime dataAtualizacao) {
         this.dataAtualizacao = dataAtualizacao;
+    }
+
+    public String getStatusDocumento() {
+        return statusDocumento;
+    }
+
+    public void setStatusDocumento(String statusDocumento) {
+        this.statusDocumento = statusDocumento;
+    }
+
+    public String getObservacoes() {
+        return observacoes;
+    }
+
+    public void setObservacoes(String observacoes) {
+        this.observacoes = observacoes;
+    }
+
+    public String getMotivoReprovacao() {
+        return motivoReprovacao;
+    }
+
+    public void setMotivoReprovacao(String motivoReprovacao) {
+        this.motivoReprovacao = motivoReprovacao;
+    }
+
+    public LocalDateTime getDataAprovacao() {
+        return dataAprovacao;
+    }
+
+    public void setDataAprovacao(LocalDateTime dataAprovacao) {
+        this.dataAprovacao = dataAprovacao;
+    }
+
+    public LocalDateTime getDataReprovacao() {
+        return dataReprovacao;
+    }
+
+    public void setDataReprovacao(LocalDateTime dataReprovacao) {
+        this.dataReprovacao = dataReprovacao;
+    }
+
+    public String getNumeroDocumento() {
+        return numeroDocumento;
+    }
+
+    public void setNumeroDocumento(String numeroDocumento) {
+        this.numeroDocumento = numeroDocumento;
+    }
+
+    public LocalDateTime getDataEmissao() {
+        return dataEmissao;
+    }
+
+    public void setDataEmissao(LocalDateTime dataEmissao) {
+        this.dataEmissao = dataEmissao;
+    }
+
+    public LocalDateTime getDataValidade() {
+        return dataValidade;
+    }
+
+    public void setDataValidade(LocalDateTime dataValidade) {
+        this.dataValidade = dataValidade;
     }
 }
 

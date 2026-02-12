@@ -157,6 +157,81 @@ public class DocumentoInstitucionalResource {
         }
     }
 
+    @POST
+    @Path("/{id}/aprovar")
+    public Response aprovar(@PathParam("id") String id, AprovarRequest request) {
+        try {
+            DocumentoInstitucional documento = service.obterDocumento(id);
+            if (documento == null) {
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity(new ErrorResponse("Documento não encontrado"))
+                        .build();
+            }
+
+            String idInstituicao = documento.getIdInstituicao();
+            DocumentoInstitucionalDTO result = service.aprovarDocumento(id, request.observacoes);
+
+            // RF-02.3 - Atualizar status da OSC automaticamente após aprovação
+            try {
+                statusOSCService.atualizarStatusAutomatico(idInstituicao);
+            } catch (Exception e) {
+                System.err.println("Erro ao atualizar status da OSC: " + e.getMessage());
+            }
+
+            return Response.ok(result).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Erro ao aprovar documento: " + e.getMessage()))
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("/{id}/reprovar")
+    public Response reprovar(@PathParam("id") String id, ReprovarRequest request) {
+        try {
+            if (request.motivo == null || request.motivo.trim().isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(new ErrorResponse("Motivo da reprovação é obrigatório"))
+                        .build();
+            }
+
+            DocumentoInstitucional documento = service.obterDocumento(id);
+            if (documento == null) {
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity(new ErrorResponse("Documento não encontrado"))
+                        .build();
+            }
+
+            String idInstituicao = documento.getIdInstituicao();
+            DocumentoInstitucionalDTO result = service.reprovarDocumento(id, request.motivo);
+
+            // RF-02.3 - Atualizar status da OSC automaticamente após reprovação
+            try {
+                statusOSCService.atualizarStatusAutomatico(idInstituicao);
+            } catch (Exception e) {
+                System.err.println("Erro ao atualizar status da OSC: " + e.getMessage());
+            }
+
+            return Response.ok(result).build();
+        } catch (Exception e) {
+            e.printStackTrace();
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(new ErrorResponse("Erro ao reprovar documento: " + e.getMessage()))
+                    .build();
+        }
+    }
+
+    // Classes internas para request e response
+    public static class AprovarRequest {
+        public String observacoes;
+    }
+
+    public static class ReprovarRequest {
+        public String motivo;
+    }
+
     // Classes internas para response
     public static class ErrorResponse {
         public String error;

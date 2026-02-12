@@ -102,6 +102,36 @@ public class DocumentoInstitucionalService {
         return repository.findById(id);
     }
 
+    @Transactional
+    public DocumentoInstitucionalDTO aprovarDocumento(String id, String observacoes) {
+        DocumentoInstitucional documento = repository.findById(id);
+        if (documento == null) {
+            throw new RuntimeException("Documento não encontrado: " + id);
+        }
+
+        documento.setStatusDocumento("APROVADO");
+        documento.setObservacoes(observacoes);
+        documento.setDataAprovacao(LocalDateTime.now());
+        repository.persist(documento);
+
+        return toDTO(documento);
+    }
+
+    @Transactional
+    public DocumentoInstitucionalDTO reprovarDocumento(String id, String motivo) {
+        DocumentoInstitucional documento = repository.findById(id);
+        if (documento == null) {
+            throw new RuntimeException("Documento não encontrado: " + id);
+        }
+
+        documento.setStatusDocumento("REPROVADO");
+        documento.setMotivoReprovacao(motivo);
+        documento.setDataReprovacao(LocalDateTime.now());
+        repository.persist(documento);
+
+        return toDTO(documento);
+    }
+
     private String obterExtensao(String nomeArquivo) {
         int lastDot = nomeArquivo.lastIndexOf('.');
         return lastDot > 0 ? nomeArquivo.substring(lastDot) : "";
@@ -119,6 +149,14 @@ public class DocumentoInstitucionalService {
         dto.setDescricao(entity.getDescricao());
         dto.setDataUpload(entity.getDataUpload());
         dto.setUsuarioUpload(entity.getUsuarioUpload());
+        dto.setStatusDocumento(entity.getStatusDocumento());
+        dto.setObservacoes(entity.getObservacoes());
+        dto.setMotivoReprovacao(entity.getMotivoReprovacao());
+        dto.setDataAprovacao(entity.getDataAprovacao());
+        dto.setDataReprovacao(entity.getDataReprovacao());
+        dto.setNumeroDocumento(entity.getNumeroDocumento());
+        dto.setDataEmissao(entity.getDataEmissao());
+        dto.setDataValidade(entity.getDataValidade());
         return dto;
     }
 }

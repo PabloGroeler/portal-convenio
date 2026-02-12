@@ -14,6 +14,14 @@ public class DocumentoInstitucionalDTO {
     private String descricao;
     private LocalDateTime dataUpload;
     private String usuarioUpload;
+    private String statusDocumento;
+    private String observacoes;
+    private String motivoReprovacao;
+    private LocalDateTime dataAprovacao;
+    private LocalDateTime dataReprovacao;
+    private String numeroDocumento;
+    private LocalDateTime dataEmissao;
+    private LocalDateTime dataValidade;
 
     // Getters and Setters
     public String getId() {
@@ -94,6 +102,70 @@ public class DocumentoInstitucionalDTO {
 
     public void setUsuarioUpload(String usuarioUpload) {
         this.usuarioUpload = usuarioUpload;
+    }
+
+    public String getStatusDocumento() {
+        return statusDocumento;
+    }
+
+    public void setStatusDocumento(String statusDocumento) {
+        this.statusDocumento = statusDocumento;
+    }
+
+    public String getObservacoes() {
+        return observacoes;
+    }
+
+    public void setObservacoes(String observacoes) {
+        this.observacoes = observacoes;
+    }
+
+    public String getMotivoReprovacao() {
+        return motivoReprovacao;
+    }
+
+    public void setMotivoReprovacao(String motivoReprovacao) {
+        this.motivoReprovacao = motivoReprovacao;
+    }
+
+    public LocalDateTime getDataAprovacao() {
+        return dataAprovacao;
+    }
+
+    public void setDataAprovacao(LocalDateTime dataAprovacao) {
+        this.dataAprovacao = dataAprovacao;
+    }
+
+    public LocalDateTime getDataReprovacao() {
+        return dataReprovacao;
+    }
+
+    public void setDataReprovacao(LocalDateTime dataReprovacao) {
+        this.dataReprovacao = dataReprovacao;
+    }
+
+    public String getNumeroDocumento() {
+        return numeroDocumento;
+    }
+
+    public void setNumeroDocumento(String numeroDocumento) {
+        this.numeroDocumento = numeroDocumento;
+    }
+
+    public LocalDateTime getDataEmissao() {
+        return dataEmissao;
+    }
+
+    public void setDataEmissao(LocalDateTime dataEmissao) {
+        this.dataEmissao = dataEmissao;
+    }
+
+    public LocalDateTime getDataValidade() {
+        return dataValidade;
+    }
+
+    public void setDataValidade(LocalDateTime dataValidade) {
+        this.dataValidade = dataValidade;
     }
 }
 
