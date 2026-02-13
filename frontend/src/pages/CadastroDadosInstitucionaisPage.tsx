@@ -246,6 +246,76 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
     setForm((p) => ({ ...p, [key]: value }));
   };
 
+  const handleCnpjBlur = async () => {
+    const cnpj = onlyDigits(form.cnpj || '');
+
+    // Only search if CNPJ is valid (14 digits) and we're NOT in edit mode
+    if (!cnpj || cnpj.length !== 14 || editId) {
+      return;
+    }
+
+    // Don't search if CNPJ is invalid
+    if (!isValidCnpj(cnpj)) {
+      return;
+    }
+
+    try {
+      setLoadingExisting(true);
+      console.log('[CadastroDados] Searching for CNPJ:', cnpj);
+
+      const institution = await institutionService.getByCnpj(cnpj);
+
+      console.log('[CadastroDados] Institution found:', institution);
+
+      // Populate all form fields with existing data
+      setForm({
+        razaoSocial: institution.razaoSocial || '',
+        nomeFantasia: institution.nomeFantasia || '',
+        cnpj: institution.cnpj || '',
+        inscricaoEstadual: institution.inscricaoEstadual || '',
+        inscricaoMunicipal: institution.inscricaoMunicipal || '',
+        dataFundacao: institution.dataFundacao || '',
+        areasAtuacao: institution.areasAtuacao || [],
+
+        telefone: institution.telefone || '',
+        celular: institution.celular || '',
+        emailInstitucional: institution.emailInstitucional || '',
+        emailSecundario: institution.emailSecundario || '',
+        website: institution.website || '',
+
+        cep: institution.cep || '',
+        logradouro: institution.logradouro || '',
+        numero: institution.numero || '',
+        complemento: institution.complemento || '',
+        bairro: institution.bairro || '',
+        cidade: institution.cidade || '',
+        uf: institution.uf || 'MT',
+        pontoReferencia: institution.pontoReferencia || '',
+
+        numeroRegistroConselhoMunicipal: institution.numeroRegistroConselhoMunicipal || '',
+        dataRegistroConselho: institution.dataRegistroConselho || '',
+        objetoSocial: institution.objetoSocial || '',
+        quantidadeBeneficiarios: institution.quantidadeBeneficiarios,
+      });
+
+      // Show success message
+      alert(`Instituição encontrada: ${institution.razaoSocial}\n\nOs dados foram preenchidos automaticamente. Você pode editar os campos se necessário.`);
+
+    } catch (error: any) {
+      // 404 means not found - this is OK, user can continue filling the form
+      if (error.response?.status === 404) {
+        console.log('[CadastroDados] CNPJ not found - user can continue with new registration');
+        return;
+      }
+
+      // Other errors should be logged
+      console.error('[CadastroDados] Error searching CNPJ:', error);
+      alert('Erro ao buscar CNPJ. Por favor, preencha os dados manualmente.');
+    } finally {
+      setLoadingExisting(false);
+    }
+  };
+
   const handleToggleArea = (area: string) => {
     const current = form.areasAtuacao ?? [];
     if (current.includes(area)) {
@@ -1197,6 +1267,29 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Dados Básicos</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* CNPJ - PRIMEIRO CAMPO */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                CNPJ * {!editId && <span className="text-xs text-gray-500">(Ao sair do campo, buscaremos se este CNPJ já está cadastrado)</span>}
+              </label>
+              <input
+                type="text"
+                inputMode="numeric"
+                value={formatCnpj(form.cnpj ?? '')}
+                onChange={(e) => setField('cnpj', onlyDigits(e.target.value))}
+                onBlur={handleCnpjBlur}
+                disabled={loadingExisting}
+                className={fieldClass('cnpj')}
+                placeholder="00.000.000/0000-00"
+                maxLength={18}
+              />
+              {loadingExisting && <p className="text-xs text-blue-600 mt-1">🔍 Buscando CNPJ...</p>}
+              {help('cnpj')}
+            </div>
+
+            {/* Espaço vazio para manter grid 2 colunas */}
+            <div></div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social *</label>
               <input

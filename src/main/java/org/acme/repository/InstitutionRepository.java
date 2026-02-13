@@ -14,6 +14,10 @@ public class InstitutionRepository implements PanacheRepositoryBase<Institution,
         return find("institutionId", institutionId).firstResult();
     }
 
+    public Institution findByCnpj(String cnpj) {
+        return find("cnpj", cnpj).firstResult();
+    }
+
     public List<Institution> listAllOrdered() {
         return listAll(Sort.by("razaoSocial").and("institutionId"));
     }

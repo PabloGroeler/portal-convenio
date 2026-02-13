@@ -28,6 +28,11 @@ public class InstitutionService {
         return institutionRepository.findByInstitutionId(institutionId);
     }
 
+    public Institution findByCnpj(String cnpj) {
+        if (cnpj == null || cnpj.isBlank()) return null;
+        return institutionRepository.findByCnpj(cnpj);
+    }
+
     @Transactional
     public Institution create(Institution institution) {
         institution.createTime = OffsetDateTime.now();

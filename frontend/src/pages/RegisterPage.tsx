@@ -14,6 +14,8 @@ const RegisterPage = () => {
     cpfCnpj: ''
   });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const navigate = useNavigate();
 
@@ -141,26 +143,31 @@ const RegisterPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setLoading(true);
 
     // Validate CPF/CNPJ
     if (!formData.cpfCnpj) {
       setError(`Por favor, informe o ${formData.personType === 'PF' ? 'CPF' : 'CNPJ'}`);
+      setLoading(false);
       return;
     }
 
     if (!isCpfCnpjValid()) {
       setError(`${formData.personType === 'PF' ? 'CPF' : 'CNPJ'} inválido`);
+      setLoading(false);
       return;
     }
 
     // Validate password requirements
     if (!isPasswordValid) {
       setError('A senha não atende aos requisitos mínimos de segurança');
+      setLoading(false);
       return;
     }
 
     if (formData.password !== formData.confirmPassword) {
       setError('As senhas não coincidem');
+      setLoading(false);
       return;
     }
 
@@ -175,13 +182,20 @@ const RegisterPage = () => {
         nomeCompleto: formData.name
       };
       await register(payload);
-      // Redirect to login after successful registration
-      navigate('/login', { state: { message: 'Cadastro realizado com sucesso! Você receberá um e-mail de confirmação. Aguarde aprovação do administrador para fazer login.' } });
+
+      // Show success modal instead of navigating directly
+      setShowSuccessModal(true);
     } catch (err: any) {
       console.error('Register error:', err);
       const msg = err?.response?.data?.error || err?.response?.data || err?.message || 'Erro ao realizar cadastro. Tente novamente.';
       setError(String(msg));
+      setLoading(false);
     }
+  };
+
+  const handleSuccessModalClose = () => {
+    setShowSuccessModal(false);
+    navigate('/login');
   };
 
   return (
@@ -369,13 +383,55 @@ const RegisterPage = () => {
           <div>
             <button
               type="submit"
-              disabled={!isPasswordValid || formData.password !== formData.confirmPassword}
+              disabled={loading || !isPasswordValid || formData.password !== formData.confirmPassword}
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-300 disabled:cursor-not-allowed"
             >
-              Cadastrar
+              {loading ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Cadastrando...
+                </>
+              ) : (
+                'Cadastrar'
+              )}
             </button>
           </div>
         </form>
+
+        {/* Success Modal */}
+        {showSuccessModal && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+            <div className="relative mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+              <div className="mt-3 text-center">
+                <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-green-100">
+                  <svg className="h-6 w-6 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 13l4 4L19 7"></path>
+                  </svg>
+                </div>
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mt-5">Cadastro realizado com sucesso!</h3>
+                <div className="mt-2 px-7 py-3">
+                  <p className="text-sm text-gray-500">
+                    Você receberá um e-mail para ativar sua conta.
+                  </p>
+                  <p className="text-sm text-gray-500 mt-2">
+                    Após a ativação, será possível realizar o login.
+                  </p>
+                </div>
+                <div className="items-center px-4 py-3">
+                  <button
+                    onClick={handleSuccessModalClose}
+                    className="px-4 py-2 bg-green-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                  >
+                    OK
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

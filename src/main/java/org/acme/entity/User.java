@@ -30,6 +30,7 @@ public class User extends PanacheEntity {
     public enum UserRole {
         ADMIN,
         OPERADOR,
+        GESTOR,
         ANALISTA,
         JURIDICO
     }

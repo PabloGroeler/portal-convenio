@@ -70,6 +70,25 @@ public class InstitutionResource {
         return Response.ok(institution).build();
     }
 
+    @GET
+    @Path("/by-cnpj/{cnpj}")
+    public Response getByCnpj(@PathParam("cnpj") String cnpj) {
+        // Remove formatting and keep only digits
+        String cleanCnpj = onlyDigits(cnpj);
+
+        if (cleanCnpj == null || cleanCnpj.length() != 14) {
+            return badRequest("CNPJ inválido - deve conter 14 dígitos");
+        }
+
+        Institution institution = institutionService.findByCnpj(cleanCnpj);
+        if (institution == null) {
+            return Response.status(Response.Status.NOT_FOUND)
+                    .entity("{\"error\": \"Instituição não encontrada com este CNPJ\"}")
+                    .build();
+        }
+        return Response.ok(institution).build();
+    }
+
     @POST
     @Transactional
     // TODO: Adicionar @RolesAllowed quando JWT estiver configurado

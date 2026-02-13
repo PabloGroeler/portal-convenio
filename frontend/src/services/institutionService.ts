@@ -63,6 +63,11 @@ const institutionService = {
     return response.data;
   },
 
+  getByCnpj: async (cnpj: string): Promise<InstitutionDTO> => {
+    const response = await api.get(`/institutions/by-cnpj/${cnpj}`);
+    return response.data;
+  },
+
   create: async (institution: Partial<InstitutionDTO>): Promise<InstitutionDTO> => {
     const response = await api.post('/institutions', institution);
     return response.data;
