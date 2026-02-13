@@ -95,7 +95,6 @@ public class UserService {
         user.verificationTokenExpiry = java.time.OffsetDateTime.now().plusHours(24); // Token expires in 24 hours
 
         user.persist();
-        user.flush();
 
         // REQUIREMENT: Após registro, enviar email de verificação
         String verificationLink = buildVerificationLink(user.verificationToken);
