@@ -86,8 +86,8 @@ public class User extends PanacheEntity {
     public UserRole role = UserRole.OPERADOR;
 
     @NotBlank
-    @Size(min = 3, max = 50)
-    @Column(name = "nome_usuario", unique = true, nullable = false, length = 50)
+    @Size(min = 3, max = 256)
+    @Column(name = "nome_usuario", unique = true, nullable = false, length = 256)
     public String username;
 
     @NotBlank
