@@ -18,6 +18,7 @@ import org.acme.service.*;
 import org.acme.dto.EmendaAcaoDTO;
 import org.acme.dto.EmendaHistoricoDTO;
 import org.acme.dto.EmendaDetailDTO;
+import org.jboss.logging.Logger;
 
 import java.util.List;
 
@@ -25,6 +26,8 @@ import java.util.List;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 public class EmendasResource {
+
+    private static final Logger log = Logger.getLogger(EmendasResource.class);
 
     @Inject
     EmendaService emendaService;
@@ -62,7 +65,21 @@ public class EmendasResource {
     @GET
     @Path("/with-details")
     public List<EmendaDetailDTO> listWithDetails() {
-        return emendaService.listAllWithDetails();
+        log.info("🔍 GET /api/emendas/with-details - Listing all emendas with details");
+        try {
+            List<EmendaDetailDTO> result = emendaService.listAllWithDetails();
+            log.info("✅ Found " + (result != null ? result.size() : 0) + " emendas with details");
+            if (result != null && !result.isEmpty()) {
+                EmendaDetailDTO first = result.get(0);
+                log.info("📋 First emenda: id=" + first.id + ", officialCode=" + first.officialCode + ", institutionName=" + first.institutionName);
+            } else {
+                log.warn("⚠️ No emendas found in database!");
+            }
+            return result;
+        } catch (Exception e) {
+            log.error("❌ Error listing emendas with details", e);
+            throw e;
+        }
     }
 
     @GET
@@ -88,30 +105,51 @@ public class EmendasResource {
     @POST
     public Response create(Emenda emenda) {
         try {
+            log.info("🔵 POST /api/emendas - Creating new emenda");
+            log.info("📋 Received emenda data: officialCode=" + emenda.officialCode +
+                ", councilorId=" + emenda.councilorId +
+                ", institutionId=" + emenda.institutionId +
+                ", value=" + emenda.value +
+                ", classification=" + emenda.classification);
+
             // JIRA 9: default/validate status do ciclo de vida
             if (emenda.statusCicloVida == null || emenda.statusCicloVida.isBlank()) {
                 emenda.statusCicloVida = "Recebido";
             }
+            log.info("✅ Status ciclo vida: " + emenda.statusCicloVida);
             statusCicloVidaEmendaService.validateOrThrow(emenda.statusCicloVida);
             emenda.statusCicloVida = statusCicloVidaEmendaService.normalize(emenda.statusCicloVida);
 
             // JIRA 4: validate tipo de emenda (mapped in 'classification')
+            log.info("🔍 Validating tipo emenda (classification): " + emenda.classification);
             tipoEmendaService.validateCodigoAtivoOrThrow(emenda.classification);
 
             // JIRA 6: validate esfera
+            log.info("🔍 Validating esfera: " + emenda.esfera);
             esferaEmendaService.validateOrThrow(emenda.esfera);
             emenda.esfera = esferaEmendaService.normalize(emenda.esfera);
 
             // JIRA 7: validate convênio fields
+            log.info("🔍 Validating convenio: existeConvenio=" + emenda.existeConvenio +
+                ", numeroConvenio=" + emenda.numeroConvenio +
+                ", anoConvenio=" + emenda.anoConvenio);
             convenioValidationService.validateOrThrow(emenda.existeConvenio, emenda.numeroConvenio, emenda.anoConvenio);
             convenioValidationService.normalize(emenda);
 
             // JIRA 5: validate business rules per tipo (executed in service)
+            log.info("✅ All validations passed, creating emenda...");
             Emenda created = emendaService.create(emenda, getCurrentUser());
+            log.info("✅ Emenda created successfully with id: " + created.id);
             return Response.status(Response.Status.CREATED).entity(EmendaDetailDTO.fromEmenda(created)).build();
         } catch (IllegalArgumentException e) {
+            log.error("❌ Validation error creating emenda: " + e.getMessage());
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .build();
+        } catch (Exception e) {
+            log.error("❌ Unexpected error creating emenda", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\": \"Erro interno ao criar emenda: " + e.getMessage().replace("\"", "\\\"") + "\"}")
                     .build();
         }
     }

@@ -67,3 +67,35 @@ export function isValidCnpj(cnpj: string): boolean {
   return v.endsWith(`${d1}${d2}`);
 }
 
+/**
+ * Format a number to Brazilian currency format
+ * @param value Number in reais (e.g., 50 = R$ 50,00)
+ * @returns Formatted string (e.g., "R$ 50,00")
+ */
+export function formatCurrency(value: number | string): string {
+  const numValue = typeof value === 'string' ? parseFloat(value) : value;
+  if (isNaN(numValue)) return 'R$ 0,00';
+
+  return new Intl.NumberFormat('pt-BR', {
+    style: 'currency',
+    currency: 'BRL',
+  }).format(numValue);
+}
+
+/**
+ * Parse a Brazilian currency string to number (in reais for API)
+ * @param value Currency string (e.g., "R$ 50,00" or "50,00")
+ * @returns Number in reais (e.g., 50.00)
+ */
+export function parseCurrency(value: string): number {
+  if (!value) return 0;
+
+  // Remove currency symbol, spaces, and dots (thousands separator)
+  // Keep only digits and comma (decimal separator)
+  const cleaned = value.replace(/[R$\s.]/g, '').replace(',', '.');
+  const numValue = parseFloat(cleaned);
+
+  if (isNaN(numValue)) return 0;
+
+  return numValue;
+}

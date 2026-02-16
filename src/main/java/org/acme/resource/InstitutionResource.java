@@ -122,11 +122,60 @@ public class InstitutionResource {
         if (institution.numeroRegistroConselhoMunicipal == null || institution.numeroRegistroConselhoMunicipal.isBlank()) return badRequest("Número de Registro no Conselho Municipal é obrigatório");
 
         // Uniqueness checks
+        // Check if email already exists BUT allow if it belongs to institution with same CNPJ
+        // (this handles the case where user searches by CNPJ and updates the same institution)
         Institution emailExisting = institutionRepository.find("emailInstitucional", institution.emailInstitucional).firstResult();
         if (emailExisting != null) {
-            return Response.status(Response.Status.CONFLICT)
-                    .entity("{\"error\": \"E-mail institucional já cadastrado\"}")
-                    .build();
+            log.info("Email '{}' já existe na instituição ID: {} (CNPJ: {})",
+                     institution.emailInstitucional, emailExisting.institutionId, emailExisting.cnpj);
+            log.info("CNPJ recebido no request: '{}'", institution.cnpj);
+
+            // Normalize CNPJs for comparison (remove any formatting)
+            String cnpjNormalized = institution.cnpj.replaceAll("\\D", "");
+            String emailExistingCnpjNormalized = emailExisting.cnpj.replaceAll("\\D", "");
+
+            log.info("CNPJ normalizado request: '{}', CNPJ normalizado DB: '{}'",
+                     cnpjNormalized, emailExistingCnpjNormalized);
+
+            // Allow if the email belongs to an institution with the SAME CNPJ (editing scenario)
+            if (!cnpjNormalized.equals(emailExistingCnpjNormalized)) {
+                log.warn("CNPJs diferentes! Bloqueando - Request: '{}', DB: '{}'",
+                         cnpjNormalized, emailExistingCnpjNormalized);
+                return Response.status(Response.Status.CONFLICT)
+                        .entity("{\"error\": \"E-mail institucional já cadastrado em outra instituição\"}")
+                        .build();
+            }
+            // Same CNPJ: this is an UPDATE, not a CREATE - redirect to update flow
+            log.info("✅ Mesmo CNPJ! Convertendo CREATE em UPDATE para ID: {}", emailExisting.institutionId);
+            Institution updated = institutionService.update(emailExisting.institutionId, institution);
+
+            // Try to link user to institution
+            try {
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    String token = authHeader.substring(7);
+                    io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+                    String username = claims.getSubject();
+                    User user = User.findByUsername(username);
+
+                    if (user != null) {
+                        UsuarioInstituicao vinculoExistente = UsuarioInstituicao.findByUsuarioAndInstituicao(
+                            user.id, updated.institutionId
+                        );
+
+                        if (vinculoExistente == null) {
+                            UsuarioInstituicao novoVinculo = new UsuarioInstituicao();
+                            novoVinculo.usuarioId = user.id;
+                            novoVinculo.instituicaoId = updated.institutionId;
+                            novoVinculo.persist();
+                            log.info("✅ Vínculo criado: usuário {} → instituição {}", user.username, updated.institutionId);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Erro ao vincular usuário na atualização: {}", e.getMessage());
+            }
+
+            return Response.ok(updated).build();
         }
 
         // Check if institutionId already exists
@@ -137,6 +186,42 @@ public class InstitutionResource {
                         .entity("{\"error\": \"ID da instituição já existe\"}")
                         .build();
             }
+        }
+
+        // Check if CNPJ already exists - if yes, this should be an UPDATE, not CREATE
+        Institution cnpjExisting = institutionService.findByCnpj(institution.cnpj);
+        if (cnpjExisting != null) {
+            log.info("CNPJ já cadastrado. Convertendo CREATE em UPDATE para instituição ID: {}", cnpjExisting.institutionId);
+            // This is an update of existing institution, not a new one
+            Institution updated = institutionService.update(cnpjExisting.institutionId, institution);
+
+            // Try to link user to institution (same logic as CREATE)
+            try {
+                if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                    String token = authHeader.substring(7);
+                    io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+                    String username = claims.getSubject();
+                    User user = User.findByUsername(username);
+
+                    if (user != null) {
+                        UsuarioInstituicao vinculoExistente = UsuarioInstituicao.findByUsuarioAndInstituicao(
+                            user.id, updated.institutionId
+                        );
+
+                        if (vinculoExistente == null) {
+                            UsuarioInstituicao novoVinculo = new UsuarioInstituicao();
+                            novoVinculo.usuarioId = user.id;
+                            novoVinculo.instituicaoId = updated.institutionId;
+                            novoVinculo.persist();
+                            log.info("✅ Vínculo criado: usuário {} → instituição {}", user.username, updated.institutionId);
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("Erro ao vincular usuário na atualização: {}", e.getMessage());
+            }
+
+            return Response.ok(updated).build();
         }
 
         Institution created = institutionService.create(institution);
@@ -218,11 +303,59 @@ public class InstitutionResource {
 
     @PUT
     @Path("/{id}")
-    public Response update(@PathParam("id") String id, Institution institution) {
+    @Transactional
+    public Response update(@PathParam("id") String id, Institution institution, @HeaderParam("Authorization") String authHeader) {
+        log.info("🔧 PUT /api/institutions/{} - Atualizando instituição", id);
+
         Institution updated = institutionService.update(id, institution);
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
+
+        // IMPORTANTE: Vincular usuário logado à instituição atualizada
+        // Isso é necessário quando o usuário busca por CNPJ e edita uma instituição existente
+        try {
+            log.info("🔗 Tentando vincular usuário à instituição após UPDATE...");
+
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                log.warn("⚠️ Nenhum token JWT fornecido no header Authorization");
+                return Response.ok(updated).build();
+            }
+
+            String token = authHeader.substring(7);
+            io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+            String username = claims.getSubject();
+            log.info("Username extraído do token: '{}'", username);
+
+            User user = User.findByUsername(username);
+            if (user == null) {
+                log.warn("⚠️ Usuário '{}' não encontrado", username);
+                return Response.ok(updated).build();
+            }
+
+            log.info("✅ Usuário encontrado: {} (ID: {})", user.username, user.id);
+
+            // Verificar se vínculo já existe
+            UsuarioInstituicao vinculoExistente = UsuarioInstituicao.findByUsuarioAndInstituicao(
+                user.id, updated.institutionId
+            );
+
+            if (vinculoExistente != null) {
+                log.info("ℹ️ Vínculo já existe entre usuário {} e instituição {}", user.username, updated.institutionId);
+            } else {
+                // Criar novo vínculo
+                UsuarioInstituicao novoVinculo = new UsuarioInstituicao();
+                novoVinculo.usuarioId = user.id;
+                novoVinculo.instituicaoId = updated.institutionId;
+                novoVinculo.persist();
+                log.info("✅ Vínculo criado com sucesso: usuário {} → instituição {}", user.username, updated.institutionId);
+            }
+
+        } catch (Exception e) {
+            log.warn("⚠️ Erro ao vincular usuário na atualização: {}", e.getMessage());
+            // Não bloqueia o UPDATE - retorna sucesso mesmo se vinculação falhar
+        }
+
         return Response.ok(updated).build();
     }
 
@@ -323,5 +456,84 @@ public class InstitutionResource {
             "statusNovo", statusNovo,
             "mudou", statusAnterior != statusNovo
         )).build();
+    }
+
+    /**
+     * Endpoint específico para vincular usuário logado à instituição
+     * Evita problemas de validação ao fazer UPDATE parcial
+     */
+    @POST
+    @Path("/{id}/vincular")
+    @Transactional
+    public Response vincularUsuario(@PathParam("id") String id, @HeaderParam("Authorization") String authHeader) {
+        log.info("🔗 POST /api/institutions/{}/vincular - Vinculando usuário", id);
+
+        // Verificar se instituição existe
+        Institution institution = institutionRepository.findById(id);
+        if (institution == null) {
+            log.warn("❌ Instituição {} não encontrada", id);
+            return Response.status(Response.Status.NOT_FOUND)
+                .entity(Map.of("error", "Instituição não encontrada"))
+                .build();
+        }
+
+        // Verificar token JWT
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            log.warn("❌ Token JWT não fornecido");
+            return Response.status(Response.Status.UNAUTHORIZED)
+                .entity(Map.of("error", "Token não fornecido"))
+                .build();
+        }
+
+        try {
+            String token = authHeader.substring(7);
+            io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+            String username = claims.getSubject();
+            log.info("👤 Username extraído do token: '{}'", username);
+
+            User user = User.findByUsername(username);
+            if (user == null) {
+                log.warn("❌ Usuário '{}' não encontrado", username);
+                return Response.status(Response.Status.NOT_FOUND)
+                    .entity(Map.of("error", "Usuário não encontrado"))
+                    .build();
+            }
+
+            log.info("✅ Usuário encontrado: {} (ID: {})", user.username, user.id);
+
+            // Verificar se vínculo já existe
+            UsuarioInstituicao vinculoExistente = UsuarioInstituicao.findByUsuarioAndInstituicao(
+                user.id, institution.institutionId
+            );
+
+            if (vinculoExistente != null) {
+                log.info("ℹ️ Vínculo já existe entre usuário {} e instituição {}", user.username, institution.institutionId);
+                return Response.ok(Map.of(
+                    "message", "Vínculo já existe",
+                    "usuario", user.username,
+                    "instituicao", institution.razaoSocial
+                )).build();
+            }
+
+            // Criar novo vínculo
+            UsuarioInstituicao novoVinculo = new UsuarioInstituicao();
+            novoVinculo.usuarioId = user.id;
+            novoVinculo.instituicaoId = institution.institutionId;
+            novoVinculo.persist();
+
+            log.info("✅ Vínculo criado com sucesso: usuário {} → instituição {}", user.username, institution.institutionId);
+
+            return Response.ok(Map.of(
+                "message", "Vínculo criado com sucesso",
+                "usuario", user.username,
+                "instituicao", institution.razaoSocial
+            )).build();
+
+        } catch (Exception e) {
+            log.error("❌ Erro ao vincular usuário: {}", e.getMessage(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                .entity(Map.of("error", "Erro ao vincular usuário: " + e.getMessage()))
+                .build();
+        }
     }
 }

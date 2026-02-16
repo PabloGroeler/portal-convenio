@@ -71,10 +71,17 @@ type FormState = Partial<InstitutionDTO>;
 const CadastroDadosInstitucionaisPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { refreshUser } = useAuth();
+  const { refreshUser, user, hasRole } = useAuth();
   const editId = searchParams.get('id');
 
+  // Check if user is OPERADOR (operators cannot approve/reject documents)
+  const isOperador = user?.role === 'OPERADOR';
+
   const [loadingExisting, setLoadingExisting] = useState(false);
+
+  // Nova lógica: controle de exibição do formulário
+  const [cnpjSearchStatus, setCnpjSearchStatus] = useState<'initial' | 'searching' | 'found' | 'notFound'>('initial');
+  const [foundInstitution, setFoundInstitution] = useState<InstitutionDTO | null>(null);
 
   const [form, setForm] = useState<FormState>({
      razaoSocial: '',
@@ -260,6 +267,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
     }
 
     try {
+      setCnpjSearchStatus('searching');
       setLoadingExisting(true);
       console.log('[CadastroDados] Searching for CNPJ:', cnpj);
 
@@ -267,52 +275,57 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
 
       console.log('[CadastroDados] Institution found:', institution);
 
-      // Populate all form fields with existing data
-      setForm({
-        razaoSocial: institution.razaoSocial || '',
-        nomeFantasia: institution.nomeFantasia || '',
-        cnpj: institution.cnpj || '',
-        inscricaoEstadual: institution.inscricaoEstadual || '',
-        inscricaoMunicipal: institution.inscricaoMunicipal || '',
-        dataFundacao: institution.dataFundacao || '',
-        areasAtuacao: institution.areasAtuacao || [],
-
-        telefone: institution.telefone || '',
-        celular: institution.celular || '',
-        emailInstitucional: institution.emailInstitucional || '',
-        emailSecundario: institution.emailSecundario || '',
-        website: institution.website || '',
-
-        cep: institution.cep || '',
-        logradouro: institution.logradouro || '',
-        numero: institution.numero || '',
-        complemento: institution.complemento || '',
-        bairro: institution.bairro || '',
-        cidade: institution.cidade || '',
-        uf: institution.uf || 'MT',
-        pontoReferencia: institution.pontoReferencia || '',
-
-        numeroRegistroConselhoMunicipal: institution.numeroRegistroConselhoMunicipal || '',
-        dataRegistroConselho: institution.dataRegistroConselho || '',
-        objetoSocial: institution.objetoSocial || '',
-        quantidadeBeneficiarios: institution.quantidadeBeneficiarios,
-      });
-
-      // Show success message
-      alert(`Instituição encontrada: ${institution.razaoSocial}\n\nOs dados foram preenchidos automaticamente. Você pode editar os campos se necessário.`);
+      // CNPJ existe - mostrar botão de vincular
+      setFoundInstitution(institution);
+      setCnpjSearchStatus('found');
 
     } catch (error: any) {
-      // 404 means not found - this is OK, user can continue filling the form
+      // 404 means not found - show form to create new institution
       if (error.response?.status === 404) {
-        console.log('[CadastroDados] CNPJ not found - user can continue with new registration');
+        console.log('[CadastroDados] CNPJ not found - showing form to create new institution');
+        setFoundInstitution(null);
+        setCnpjSearchStatus('notFound');
         return;
       }
 
       // Other errors should be logged
       console.error('[CadastroDados] Error searching CNPJ:', error);
-      alert('Erro ao buscar CNPJ. Por favor, preencha os dados manualmente.');
+      alert('Erro ao buscar CNPJ. Por favor, tente novamente.');
+      setCnpjSearchStatus('initial');
     } finally {
       setLoadingExisting(false);
+    }
+  };
+
+  // Nova função: Vincular usuário à instituição existente
+  const handleVincular = async () => {
+    if (!foundInstitution) return;
+
+    try {
+      setSaving(true);
+      console.log('[CadastroDados] Vinculando usuário à instituição:', foundInstitution.institutionId);
+
+      // Usar endpoint dedicado de vinculação (não precisa enviar todos os campos)
+      const result = await institutionService.vincularUsuario(foundInstitution.institutionId);
+
+      console.log('[CadastroDados] Vinculação bem-sucedida:', result);
+
+      // Atualizar dados do usuário
+      await getCurrentUserData();
+      refreshUser();
+
+      setSuccess(result.message || 'Você foi vinculado à instituição com sucesso!');
+
+      setTimeout(() => {
+        navigate('/dashboard');
+      }, 1500);
+
+    } catch (error: any) {
+      console.error('[CadastroDados] Error linking user to institution:', error);
+      const errorMessage = error?.response?.data?.error || 'Erro ao vincular usuário à instituição.';
+      setError(errorMessage);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -777,6 +790,35 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       }
     }
 
+    // Additional date validations (independent of document config)
+    const dateValidationErrors: string[] = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset time to compare only dates
+
+    // Validate: Data de Emissão cannot be greater than Data de Validade
+    if (dataEmissao && dataValidade) {
+      const emissaoDate = new Date(dataEmissao + 'T00:00:00');
+      const validadeDate = new Date(dataValidade + 'T00:00:00');
+
+      if (emissaoDate > validadeDate) {
+        dateValidationErrors.push('Data de Emissão não pode ser maior que Data de Validade');
+      }
+    }
+
+    // Validate: Data de Validade must be equal or greater than today
+    if (dataValidade) {
+      const validadeDate = new Date(dataValidade + 'T00:00:00');
+
+      if (validadeDate < today) {
+        dateValidationErrors.push('Data de Validade não pode ser anterior à data atual');
+      }
+    }
+
+    if (dateValidationErrors.length > 0) {
+      alert('Por favor, corrija os seguintes erros:\n\n' + dateValidationErrors.map(e => `• ${e}`).join('\n'));
+      return;
+    }
+
     try {
       setUploadingFile(true);
 
@@ -1036,12 +1078,19 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
         const existing = await institutionService.getById(editId);
         if (cancelled) return;
 
+        console.log('🔄 CARREGANDO DADOS DA INSTITUIÇÃO');
+        console.log('editId:', editId);
+        console.log('existing.institutionId:', existing.institutionId);
+        console.log('existing completo:', existing);
+
         setForm((prev) => ({
           ...prev,
           ...existing,
           // Ensure arrays are always arrays
           areasAtuacao: Array.isArray(existing.areasAtuacao) ? existing.areasAtuacao : [],
         }));
+
+        console.log('✅ Formulário atualizado com dados da instituição');
       } catch (e: any) {
         if (cancelled) return;
         setError(e?.response?.data?.error || 'Não foi possível carregar a instituição para edição.');
@@ -1097,12 +1146,42 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
          quantidadeBeneficiarios: form.quantidadeBeneficiarios != null ? Number(form.quantidadeBeneficiarios) : undefined,
       };
 
-      const isEdit = Boolean(editId && editId.trim().length > 0);
-      console.debug('[CadastroDadosInstitucionais] submit', { isEdit, editId, payload });
+      // IMPORTANT: Determine if this is an UPDATE or CREATE
+      // Check BOTH editId (from URL) AND form.institutionId (from loaded data)
+      // This prevents duplicate email errors when data was loaded from CNPJ search
+      const institutionIdToUpdate = editId || form.institutionId;
+      const isEdit = Boolean(institutionIdToUpdate && institutionIdToUpdate.trim().length > 0);
+
+      console.log('=====================================');
+      console.log('🔍 SUBMIT DEBUG - ANTES DE ENVIAR');
+      console.log('=====================================');
+      console.log('editId (da URL):', editId);
+      console.log('form.institutionId:', form.institutionId);
+      console.log('institutionIdToUpdate:', institutionIdToUpdate);
+      console.log('isEdit:', isEdit);
+      console.log('CNPJ:', payload.cnpj);
+      console.log('Email:', payload.emailInstitucional);
+      console.log('Método que será usado:', isEdit ? 'PUT (UPDATE)' : 'POST (CREATE)');
+      console.log('URL que será chamada:', isEdit ? `/api/institutions/${institutionIdToUpdate}` : '/api/institutions');
+      console.log('Payload completo:', JSON.stringify(payload, null, 2));
+      console.log('=====================================');
 
       if (isEdit) {
-        await institutionService.update(editId as string, payload);
-        setSuccess('Cadastro atualizado com sucesso.');
+        await institutionService.update(institutionIdToUpdate as string, payload);
+
+        // IMPORTANTE: Vincular usuário à instituição após update
+        // Isso é necessário quando o usuário busca por CNPJ e edita uma instituição existente
+        try {
+          console.log('🔗 Vinculando usuário à instituição após UPDATE...');
+          await getCurrentUserData();
+          refreshUser();
+          console.log('✅ Dados do usuário atualizados');
+        } catch (err) {
+          console.warn('⚠️ Erro ao atualizar dados do usuário após UPDATE:', err);
+          // Não bloqueia o fluxo - vinculação pode já existir
+        }
+
+        setSuccess('Cadastro atualizado com sucesso e vinculado ao seu usuário.');
         setTimeout(() => navigate('/dashboard/instituicoes'), 500);
       } else {
         await institutionService.create(payload);
@@ -1166,15 +1245,15 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                   </svg>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Status do Cadastro</h3>
+                  <h3 className="font-semibold text-gray-900">Status dos Documentos</h3>
                   <p className="text-sm text-gray-600">
                     {statusOSC === StatusOSC.EM_CADASTRO && 'Cadastro iniciado - Aguardando documentos'}
                     {statusOSC === StatusOSC.DOCUMENTOS_INCOMPLETOS && `${dashboard.obrigatoriosFaltando} documento(s) obrigatório(s) faltando`}
                     {statusOSC === StatusOSC.EM_ANALISE && 'Todos os documentos enviados - Aguardando análise'}
-                    {statusOSC === StatusOSC.APROVADO && 'Cadastro aprovado e ativo'}
-                    {statusOSC === StatusOSC.REPROVADO && 'Cadastro reprovado - Necessita correções'}
-                    {statusOSC === StatusOSC.SUSPENSA && 'Cadastro temporariamente suspenso'}
-                    {statusOSC === StatusOSC.INATIVA && 'OSC desativada'}
+                    {statusOSC === StatusOSC.APROVADO && 'Documentos aprovados'}
+                    {statusOSC === StatusOSC.REPROVADO && 'Documentos reprovados - Necessita correções'}
+                    {statusOSC === StatusOSC.SUSPENSA && 'Documentação temporariamente suspensa'}
+                    {statusOSC === StatusOSC.INATIVA && 'Documentação inativa'}
                   </p>
                 </div>
               </div>
@@ -1262,34 +1341,146 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       {/* Aba 1: Formulário da Instituição */}
       {activeTab === 'instituicao' && (
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Dados Básicos */}
+        {/* SEMPRE mostrar campo CNPJ */}
         <section className="bg-white rounded-lg shadow p-6 border border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Dados Básicos</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">Buscar ou Cadastrar Instituição</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* CNPJ - PRIMEIRO CAMPO */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                CNPJ * {!editId && <span className="text-xs text-gray-500">(Ao sair do campo, buscaremos se este CNPJ já está cadastrado)</span>}
-              </label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={formatCnpj(form.cnpj ?? '')}
-                onChange={(e) => setField('cnpj', onlyDigits(e.target.value))}
-                onBlur={handleCnpjBlur}
-                disabled={loadingExisting}
-                className={fieldClass('cnpj')}
-                placeholder="00.000.000/0000-00"
-                maxLength={18}
-              />
-              {loadingExisting && <p className="text-xs text-blue-600 mt-1">🔍 Buscando CNPJ...</p>}
-              {help('cnpj')}
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              CNPJ *
+              {!editId && <span className="text-xs text-gray-500 ml-2">(Digite o CNPJ e pressione TAB ou clique fora do campo)</span>}
+            </label>
+            <input
+              type="text"
+              inputMode="numeric"
+              value={formatCnpj(form.cnpj ?? '')}
+              onChange={(e) => {
+                setField('cnpj', onlyDigits(e.target.value));
+                // Reset status when user changes CNPJ
+                if (cnpjSearchStatus !== 'initial' && cnpjSearchStatus !== 'searching') {
+                  setCnpjSearchStatus('initial');
+                  setFoundInstitution(null);
+                }
+              }}
+              onBlur={handleCnpjBlur}
+              disabled={loadingExisting || editId !== null}
+              className={`w-full px-4 py-3 border-2 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 ${
+                errors.cnpj ? 'border-red-400' : 'border-gray-300'
+              } ${loadingExisting ? 'bg-gray-50' : ''}`}
+              placeholder="00.000.000/0000-00"
+              maxLength={18}
+            />
+            {loadingExisting && (
+              <p className="text-sm text-blue-600 mt-2 flex items-center">
+                <svg className="animate-spin h-4 w-4 mr-2" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                Buscando CNPJ...
+              </p>
+            )}
+            {help('cnpj')}
+          </div>
+
+          {/* CNPJ ENCONTRADO: Mostrar card com botão Vincular */}
+          {cnpjSearchStatus === 'found' && foundInstitution && (
+            <div className="mt-6 bg-green-50 border-2 border-green-200 rounded-lg p-6">
+              <div className="flex items-start">
+                <div className="flex-shrink-0">
+                  <svg className="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                </div>
+                <div className="ml-4 flex-1">
+                  <h3 className="text-lg font-semibold text-green-900 mb-2">
+                    ✅ Instituição Encontrada!
+                  </h3>
+                  <div className="bg-white rounded-lg p-4 mb-4 border border-green-200">
+                    <p className="text-sm text-gray-600 mb-2">
+                      <span className="font-semibold">Razão Social:</span> {foundInstitution.razaoSocial}
+                    </p>
+                    <p className="text-sm text-gray-600 mb-2">
+                      <span className="font-semibold">CNPJ:</span> {formatCnpj(foundInstitution.cnpj)}
+                    </p>
+                    {foundInstitution.emailInstitucional && (
+                      <p className="text-sm text-gray-600 mb-2">
+                        <span className="font-semibold">Email:</span> {foundInstitution.emailInstitucional}
+                      </p>
+                    )}
+                    {foundInstitution.telefone && (
+                      <p className="text-sm text-gray-600">
+                        <span className="font-semibold">Telefone:</span> {foundInstitution.telefone}
+                      </p>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-700 mb-4">
+                    Esta instituição já está cadastrada no sistema. Clique no botão abaixo para vincular seu usuário a ela.
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleVincular}
+                      disabled={saving}
+                      className="inline-flex items-center px-6 py-3 bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      {saving ? (
+                        <>
+                          <svg className="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          </svg>
+                          Vinculando...
+                        </>
+                      ) : (
+                        <>
+                          🔗 Vincular à Minha Conta
+                        </>
+                      )}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCnpjSearchStatus('initial');
+                        setFoundInstitution(null);
+                        setField('cnpj', '');
+                      }}
+                      className="inline-flex items-center px-6 py-3 bg-gray-200 text-gray-700 font-semibold rounded-lg hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-400 focus:ring-offset-2 transition-colors"
+                    >
+                      Buscar Outro CNPJ
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
+          )}
 
-            {/* Espaço vazio para manter grid 2 colunas */}
-            <div></div>
+          {/* CNPJ NÃO ENCONTRADO: Mostrar mensagem e continuar com formulário */}
+          {cnpjSearchStatus === 'notFound' && (
+            <div className="mt-4 bg-blue-50 border-l-4 border-blue-400 p-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-blue-700">
+                    <strong>CNPJ não encontrado no sistema.</strong> Preencha os dados abaixo para cadastrar esta instituição.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </section>
 
+        {/* MOSTRAR RESTO DO FORMULÁRIO apenas se CNPJ não foi encontrado OU está em modo de edição */}
+        {(cnpjSearchStatus === 'notFound' || editId) && (
+          <>
+            {/* Dados Básicos */}
+            <section className="bg-white rounded-lg shadow p-6 border border-gray-100">
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">Dados Básicos</h2>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Razão Social *</label>
               <input
@@ -1312,20 +1503,6 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                 className={fieldClass('nomeFantasia')}
               />
               {help('nomeFantasia')}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">CNPJ *</label>
-              <input
-                type="text"
-                inputMode="numeric"
-                value={formatCnpj(form.cnpj ?? '')}
-                onChange={(e) => setField('cnpj', onlyDigits(e.target.value))}
-                className={fieldClass('cnpj')}
-                placeholder="00.000.000/0000-00"
-                maxLength={18}
-              />
-              {help('cnpj')}
             </div>
 
             <div>
@@ -1628,6 +1805,8 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
             {saving ? 'Salvando...' : (editId ? 'Salvar Alterações' : 'Salvar Cadastro')}
           </button>
         </div>
+          </>
+        )}
       </form>
       )}
 
@@ -1960,8 +2139,8 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                   ) : (
                     <>
                       <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                      </svg>
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
                       Enviar Documento
                     </>
                   )}

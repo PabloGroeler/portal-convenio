@@ -68,7 +68,7 @@ export const TIPOS_DOCUMENTO_LABELS: Record<TipoDocumentoInstitucional, string> 
 };
 
 export const STATUS_DOCUMENTO_LABELS: Record<StatusDocumento, string> = {
-  PENDENTE_ENVIO: 'Pendente de Envio',
+  PENDENTE_ENVIO: 'Em Análise',
   ENVIADO: 'Enviado',
   EM_ANALISE: 'Em Análise',
   APROVADO: 'Aprovado',

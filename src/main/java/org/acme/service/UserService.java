@@ -94,13 +94,11 @@ public class UserService {
         user.verificationToken = generateVerificationToken();
         user.verificationTokenExpiry = java.time.OffsetDateTime.now().plusHours(24); // Token expires in 24 hours
 
+        // Persist user - if this fails, transaction will rollback
         user.persist();
 
-        // REQUIREMENT: Após registro, enviar email de verificação
-        String verificationLink = buildVerificationLink(user.verificationToken);
-        emailService.sendEmailVerification(user.email, user.nomeCompleto, verificationLink);
-
-        return new UserDTO(
+        // Create DTO to return - if this fails, transaction will rollback
+        UserDTO userDTO = new UserDTO(
             user.id,
             user.username,
             user.email,
@@ -109,6 +107,21 @@ public class UserService {
             user.status.name(),  // Include status
             java.util.Collections.emptyList() // Novo usuário sem instituições
         );
+
+        // IMPORTANT: Only send email AFTER all validations and persistence succeed
+        // If any error occurred above, transaction rollbacks and email is NOT sent
+        // This prevents sending verification emails for users that weren't actually created
+        try {
+            String verificationLink = buildVerificationLink(user.verificationToken);
+            emailService.sendEmailVerification(user.email, user.nomeCompleto, verificationLink);
+        } catch (Exception e) {
+            // Log email error but don't fail the registration
+            // User was created successfully, they can request a new verification email later
+            System.err.println("Warning: User registered successfully but email verification failed: " + e.getMessage());
+            // Don't throw - user is already created
+        }
+
+        return userDTO;
     }
 
     private void validatePasswordStrength(String password) {

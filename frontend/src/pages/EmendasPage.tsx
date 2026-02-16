@@ -1,5 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useRef, useState, useMemo } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import EmendasStats from '../components/EmendasStats';
 import emendaService from '../services/emendaService';
 import institutionService, { type InstitutionDTO } from '../services/institutionService';
@@ -31,6 +31,7 @@ interface Emenda {
 }
 
 const EmendasPage: React.FC = () => {
+  const navigate = useNavigate();
   const [emendas, setEmendas] = useState<Emenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
@@ -76,6 +77,10 @@ const EmendasPage: React.FC = () => {
   const [tiposEmenda, setTiposEmenda] = useState<TipoEmendaDTO[]>([]);
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [councilorSearch, setCouncilorSearch] = useState('');
+
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 30; // Show 30 emendas per page
 
   const closeButtonRef = useRef<HTMLButtonElement | null>(null);
   const previousActiveRef = useRef<HTMLElement | null>(null);
@@ -214,26 +219,7 @@ const EmendasPage: React.FC = () => {
   }, [isCreateMode, isEditMode, selectedEmenda]);
 
   const openCreateModal = () => {
-    setEditForm({
-      id: '',
-      councilorId: '',
-      officialCode: '',
-      date: new Date().toISOString().split('T')[0],
-      value: 'R$ 0,00',
-      classification: '',
-      esfera: 'Municipal',
-      existeConvenio: false,
-      numeroConvenio: '',
-      anoConvenio: undefined,
-      category: '',
-      status: 'Recebido',
-      institutionId: '',
-      signedLink: '',
-      attachments: [],
-      description: '',
-      objectDetail: '',
-    });
-    setIsCreateMode(true);
+    navigate('/dashboard/cadastro-emenda');
   };
 
   const openViewModal = async (emenda: Emenda) => {
@@ -579,46 +565,71 @@ const EmendasPage: React.FC = () => {
     }
   };
 
-  const filtered = emendas.filter((e) => {
-    const q = query.trim().toLowerCase();
-    if (q) {
-      const hay = [
-        e.status,
-        e.description,
-        e.officialCode,
-        e.institutionName,
-        e.institutionId,
-        e.councilorName,
-        e.councilorId,
-        e.category,
-        e.classification,
-      ]
-        .filter((v): v is string => Boolean(v && String(v).trim()))
-        .join(' ')
-        .toLowerCase();
+  // Optimized filtering with useMemo to avoid recalculating on every render
+  const filtered = useMemo(() => {
+    console.log('[EmendasPage] Filtering emendas...', {
+      total: emendas.length,
+      query,
+      statusFilter,
+      detailFilter,
+      year
+    });
 
-      if (!hay.includes(q)) return false;
-    }
+    return emendas.filter((e) => {
+      const q = query.trim().toLowerCase();
+      if (q) {
+        const hay = [
+          e.status,
+          e.description,
+          e.officialCode,
+          e.institutionName,
+          e.institutionId,
+          e.councilorName,
+          e.councilorId,
+          e.category,
+          e.classification,
+        ]
+          .filter((v): v is string => Boolean(v && String(v).trim()))
+          .join(' ')
+          .toLowerCase();
 
-    // NOTE: year filter is still based on the legacy data model; keep it until the API provides a year field.
-    if (year && String((e as any).year) !== year) return false;
+        if (!hay.includes(q)) return false;
+      }
 
-    // status filter relies on the emenda "status" field with NEW lifecycle values
-    if (statusFilter && statusFilter !== 'Todas') {
-      const st = (e.status || '').trim().toLowerCase();
-      const sf = statusFilter.trim().toLowerCase();
-      if (st !== sf) return false;
-    }
+      // NOTE: year filter is still based on the legacy data model; keep it until the API provides a year field.
+      if (year && String((e as any).year) !== year) return false;
 
-    // detail filter
-    if (detailFilter && detailFilter !== 'Todas') {
-      const hasDetail = Boolean((e.objectDetail ?? '').trim());
-      if (detailFilter === 'Com Detalhamento' && !hasDetail) return false;
-      if (detailFilter === 'Sem Detalhamento' && hasDetail) return false;
-    }
+      // status filter relies on the emenda "status" field with NEW lifecycle values
+      if (statusFilter && statusFilter !== 'Todas') {
+        const st = (e.status || '').trim().toLowerCase();
+        const sf = statusFilter.trim().toLowerCase();
+        if (st !== sf) return false;
+      }
 
-    return true;
-  });
+      // detail filter
+      if (detailFilter && detailFilter !== 'Todas') {
+        const hasDetail = Boolean((e.objectDetail ?? '').trim());
+        if (detailFilter === 'Com Detalhamento' && !hasDetail) return false;
+        if (detailFilter === 'Sem Detalhamento' && hasDetail) return false;
+      }
+
+      return true;
+    });
+  }, [emendas, query, year, statusFilter, detailFilter]);
+
+  // Paginated results
+  const paginatedEmendas = useMemo(() => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return filtered.slice(startIndex, endIndex);
+  }, [filtered, currentPage, itemsPerPage]);
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [query, year, statusFilter, detailFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -721,9 +732,9 @@ const EmendasPage: React.FC = () => {
                    </button>
                  )}
                </div>
-             ) : (
-               <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                 {filtered.map((e) => (
+              ) : (
+                <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-4">
+                  {paginatedEmendas.map((e) => (
                    <div key={e.id} className="border rounded-lg p-4 bg-white shadow-sm">
                      {/* Status + Institution */}
                      <div className="flex items-start justify-between gap-3">
@@ -799,10 +810,91 @@ const EmendasPage: React.FC = () => {
                        </button>
                      </div>
                    </div>
-                 ))}
-               </div>
-             )}
-           </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Pagination Controls */}
+              {filtered.length > 0 && (
+                <div className="mt-8 flex items-center justify-between border-t pt-6">
+                  <div className="text-sm text-gray-700">
+                    Mostrando <span className="font-medium">{(currentPage - 1) * itemsPerPage + 1}</span> a{' '}
+                    <span className="font-medium">
+                      {Math.min(currentPage * itemsPerPage, filtered.length)}
+                    </span>{' '}
+                    de <span className="font-medium">{filtered.length}</span> emendas
+                    {filtered.length !== emendas.length && (
+                      <span className="text-gray-500"> (filtradas de {emendas.length} total)</span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Primeira página"
+                    >
+                      ««
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                      disabled={currentPage === 1}
+                      className="px-3 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Página anterior"
+                    >
+                      « Anterior
+                    </button>
+
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum;
+                        if (totalPages <= 5) {
+                          pageNum = i + 1;
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1;
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i;
+                        } else {
+                          pageNum = currentPage - 2 + i;
+                        }
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`px-3 py-2 border rounded-lg text-sm font-medium ${
+                              currentPage === pageNum
+                                ? 'bg-blue-600 text-white border-blue-600'
+                                : 'hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNum}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Próxima página"
+                    >
+                      Próxima »
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-2 border rounded-lg text-sm font-medium hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      title="Última página"
+                    >
+                      »»
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
          </div>
        </div>
 

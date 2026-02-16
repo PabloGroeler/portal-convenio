@@ -20,6 +20,7 @@ import InstitutionsPage from './pages/InstitutionsPage';
 import CouncilorsPage from './pages/CouncilorsPage';
 import CadastroDadosInstitucionaisPage from './pages/CadastroDadosInstitucionaisPage';
 import CadastroDirigentePage from './pages/CadastroDirigentePage';
+import CadastroEmendaPage from './pages/CadastroEmendaPage';
 import ProtectedRoute from './components/ProtectedRoute';
 import DashboardLayout from './components/DashboardLayout';
 import DashboardHomePage from './pages/DashboardHomePage';
@@ -57,12 +58,13 @@ function App() {
                   </ProtectedRoute>
                 }
               >
-                {/* default content */}
-                <Route index element={<DashboardHomePage />} />
-                <Route path="emendas" element={<DashboardEmendasPage />} />
-                <Route path="instituicoes" element={<InstitutionsPage />} />
-                <Route path="cadastro-dados-institucionais" element={<CadastroDadosInstitucionaisPage />} />
-                <Route path="cadastro-dirigente" element={<CadastroDirigentePage />} />
+              {/* default content */}
+              <Route index element={<DashboardHomePage />} />
+              <Route path="emendas" element={<DashboardEmendasPage />} />
+              <Route path="cadastro-emenda" element={<CadastroEmendaPage />} />
+              <Route path="instituicoes" element={<InstitutionsPage />} />
+              <Route path="cadastro-dados-institucionais" element={<CadastroDadosInstitucionaisPage />} />
+              <Route path="cadastro-dirigente" element={<CadastroDirigentePage />} />
                 <Route path="diretoria" element={<DiretoriaPage />} />
                 <Route path="parlamentares" element={<CouncilorsPage />} />
                 <Route path="usuarios" element={<UsersPage />} />

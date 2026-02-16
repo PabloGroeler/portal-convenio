@@ -54,8 +54,21 @@ export const emendaService = {
   },
 
   listWithDetails: async (): Promise<EmendaDTO[]> => {
-    const response = await api.get('/emendas/with-details');
-    return response.data;
+    console.log('[emendaService] Calling GET /emendas/with-details');
+    try {
+      const response = await api.get('/emendas/with-details');
+      console.log('[emendaService] Response status:', response.status);
+      console.log('[emendaService] Response data:', response.data);
+      console.log('[emendaService] Data type:', typeof response.data);
+      console.log('[emendaService] Is array:', Array.isArray(response.data));
+      console.log('[emendaService] Data length:', response.data?.length);
+      return response.data;
+    } catch (error: any) {
+      console.error('[emendaService] Error fetching emendas:', error);
+      console.error('[emendaService] Error response:', error.response);
+      console.error('[emendaService] Error message:', error.message);
+      throw error;
+    }
   },
 
   getById: async (id: string): Promise<EmendaDTO> => {

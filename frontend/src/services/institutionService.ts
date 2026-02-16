@@ -69,13 +69,33 @@ const institutionService = {
   },
 
   create: async (institution: Partial<InstitutionDTO>): Promise<InstitutionDTO> => {
+    console.log('📤 institutionService.create CHAMADO');
+    console.log('⚠️ ATENÇÃO: Criando NOVA instituição (POST)');
+    console.log('URL: /institutions');
+    console.log('Payload:', institution);
+    console.log('Método HTTP: POST');
+
     const response = await api.post('/institutions', institution);
+
+    console.log('✅ institutionService.create SUCESSO');
+    console.log('Response:', response.data);
+
     return response.data;
   },
 
   update: async (id: string, institution: Partial<InstitutionDTO>): Promise<InstitutionDTO> => {
     // Backend uses institutionId as the identifier (@Id).
+    console.log('📤 institutionService.update CHAMADO');
+    console.log('ID:', id);
+    console.log('URL completa:', `/institutions/${encodeURIComponent(id)}`);
+    console.log('Payload:', institution);
+    console.log('Método HTTP: PUT');
+
     const response = await api.put(`/institutions/${encodeURIComponent(id)}`, institution);
+
+    console.log('✅ institutionService.update SUCESSO');
+    console.log('Response:', response.data);
+
     return response.data;
   },
 
@@ -99,6 +119,21 @@ const institutionService = {
 
   getHistoricoStatus: async (id: string): Promise<any[]> => {
     const response = await api.get(`/institutions/${encodeURIComponent(id)}/historico-status`);
+    return response.data;
+  },
+
+  // Vincular usuário logado à instituição
+  vincularUsuario: async (id: string): Promise<{ message: string; usuario: string; instituicao: string }> => {
+    console.log('🔗 institutionService.vincularUsuario CHAMADO');
+    console.log('   Institution ID:', id);
+    console.log('   URL:', `/institutions/${encodeURIComponent(id)}/vincular`);
+    console.log('   Método: POST');
+
+    const response = await api.post(`/institutions/${encodeURIComponent(id)}/vincular`);
+
+    console.log('✅ institutionService.vincularUsuario SUCESSO');
+    console.log('   Response:', response.data);
+
     return response.data;
   },
 };

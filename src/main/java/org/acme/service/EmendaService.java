@@ -14,11 +14,15 @@ import org.acme.dto.EmendaHistoricoDTO;
 import org.acme.dto.EmendaDetailDTO;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import org.jboss.logging.Logger;
 
 @ApplicationScoped
 public class EmendaService {
+
+    private static final Logger log = Logger.getLogger(EmendaService.class);
 
     @Inject
     EmendaRepository emendaRepository;
@@ -74,10 +78,21 @@ public class EmendaService {
      * Get all emendas with enriched institution and councilor data
      */
     public List<EmendaDetailDTO> listAllWithDetails() {
+        log.info("📋 EmendaService.listAllWithDetails() - Starting");
         List<Emenda> emendas = listAllInitialized();
-        return emendas.stream()
+        log.info("📋 Found " + (emendas != null ? emendas.size() : 0) + " emendas in database");
+
+        if (emendas == null || emendas.isEmpty()) {
+            log.warn("⚠️ No emendas found in database - returning empty list");
+            return new ArrayList<>();
+        }
+
+        List<EmendaDetailDTO> result = emendas.stream()
                 .map(this::enrichEmendaWithDetails)
                 .collect(Collectors.toList());
+
+        log.info("✅ Returning " + result.size() + " enriched emendas");
+        return result;
     }
 
     /**

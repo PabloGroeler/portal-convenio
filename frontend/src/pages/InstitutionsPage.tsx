@@ -182,7 +182,7 @@ const InstitutionsPage: React.FC = () => {
                       onClick={() => handleEdit(institution)}
                       className="text-blue-600 hover:text-blue-900 whitespace-nowrap"
                     >
-                      Editar
+                      Analisar
                     </button>
                   </td>
                 </tr>

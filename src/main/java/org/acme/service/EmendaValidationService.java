@@ -73,8 +73,9 @@ public class EmendaValidationService {
             );
         }
 
-        if (emenda.justificativa != null) {
-            if (emenda.justificativa.length() < 20) {
+        // Justificativa é opcional, mas se preenchida deve ter entre 20 e 250 caracteres
+        if (emenda.justificativa != null && !emenda.justificativa.trim().isEmpty()) {
+            if (emenda.justificativa.trim().length() < 20) {
                 throw new BadRequestException("Justificativa deve ter no mínimo 20 caracteres");
             }
             if (emenda.justificativa.length() > 250) {

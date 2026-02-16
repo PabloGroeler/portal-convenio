@@ -63,6 +63,7 @@ const DashboardHomePage: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
       </div>
@@ -112,7 +113,20 @@ const DashboardHomePage: React.FC = () => {
 
       {hasInstituicoes && !loading && instituicoes.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Minhas Instituições</h2>
+          {/* Header com título e botão */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">Minhas Instituições</h2>
+            <button
+              onClick={() => navigate('/dashboard/cadastro-dados-institucionais')}
+              className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors shadow-sm text-sm"
+              title="Cadastrar nova instituição"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="hidden sm:inline">Nova</span> Instituição
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {instituicoes.map((inst) => (
               <div
@@ -188,7 +202,20 @@ const DashboardHomePage: React.FC = () => {
 
       {hasInstituicoes && !loading && emendas.length > 0 && (
         <div className="space-y-4">
-          <h2 className="text-xl font-semibold text-gray-900">Minhas Emendas</h2>
+          {/* Header com título e botão */}
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">Minhas Emendas</h2>
+            <button
+              onClick={() => navigate('/dashboard/cadastro-emenda')}
+              className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors shadow-sm text-sm"
+              title="Cadastrar nova emenda"
+            >
+              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+              </svg>
+              <span className="hidden sm:inline">Nova</span> Emenda
+            </button>
+          </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {emendas.slice(0, 6).map((emenda) => (
               <div
