@@ -40,6 +40,9 @@ public class UserResource {
     org.acme.repository.EmendaRepository emendaRepository;
 
     @Inject
+    org.acme.security.JwtUtil jwtUtil;
+
+    @Inject
     org.acme.repository.CouncilorRepository councilorRepository;
 
     @POST
@@ -314,7 +317,7 @@ public class UserResource {
 
             io.jsonwebtoken.Claims claims;
             try {
-                claims = org.acme.security.JwtUtil.parseToken(token);
+                claims = jwtUtil.parseToken(token);
             } catch (io.jsonwebtoken.ExpiredJwtException e) {
                 log.warn("⚠️ Token expirado: {}", e.getMessage());
                 return Response.status(Response.Status.UNAUTHORIZED)
@@ -409,7 +412,7 @@ public class UserResource {
 
             io.jsonwebtoken.Claims claims;
             try {
-                claims = org.acme.security.JwtUtil.parseToken(token);
+                claims = jwtUtil.parseToken(token);
             } catch (io.jsonwebtoken.ExpiredJwtException e) {
                 log.warn("⚠️ Token expirado: {}", e.getMessage());
                 return Response.status(Response.Status.UNAUTHORIZED)

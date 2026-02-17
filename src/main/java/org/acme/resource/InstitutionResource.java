@@ -3,8 +3,11 @@ package org.acme.resource;
 import jakarta.inject.Inject;
 import jakarta.transaction.Transactional;
 import jakarta.ws.rs.*;
+import jakarta.ws.rs.container.ContainerRequestContext;
+import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
+import jakarta.ws.rs.core.SecurityContext;
 import lombok.extern.slf4j.Slf4j;
 import org.acme.dto.AlterarStatusDTO;
 import org.acme.dto.StatusCalculadoDTO;
@@ -16,6 +19,7 @@ import org.acme.entity.UsuarioInstituicao;
 import org.acme.repository.InstitutionRepository;
 import org.acme.service.InstitutionService;
 import org.acme.service.StatusOSCService;
+import org.acme.service.AuditService;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +38,18 @@ public class InstitutionResource {
 
     @Inject
     StatusOSCService statusOSCService;
+
+    @Inject
+    AuditService auditService;
+
+    @Inject
+    org.acme.security.JwtUtil jwtUtil;
+
+    @Context
+    ContainerRequestContext requestContext;
+
+    @Context
+    SecurityContext securityContext;
 
     private Response badRequest(String msg) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -153,7 +169,7 @@ public class InstitutionResource {
             try {
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     String token = authHeader.substring(7);
-                    io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+                    io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
                     String username = claims.getSubject();
                     User user = User.findByUsername(username);
 
@@ -199,7 +215,7 @@ public class InstitutionResource {
             try {
                 if (authHeader != null && authHeader.startsWith("Bearer ")) {
                     String token = authHeader.substring(7);
-                    io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+                    io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
                     String username = claims.getSubject();
                     User user = User.findByUsername(username);
 
@@ -227,6 +243,16 @@ public class InstitutionResource {
         Institution created = institutionService.create(institution);
         log.info("Instituição criada com ID: {}", created.institutionId);
 
+        // AUDIT LOG - Criação de instituição
+        auditService.logCreate(
+            "Institution",
+            created.institutionId,
+            created,
+            getCurrentUserId(),
+            getCurrentUserName(),
+            getClientIP()
+        );
+
         // Vincular usuário logado à instituição criada
         // Extrair username do token JWT manualmente
         try {
@@ -242,7 +268,7 @@ public class InstitutionResource {
             log.info("Token extraído: {}...", token.substring(0, Math.min(20, token.length())));
 
             // Validar token e extrair username
-            io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+            io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
             String username = claims.getSubject();
             log.info("Username extraído do token: '{}'", username);
 
@@ -307,10 +333,27 @@ public class InstitutionResource {
     public Response update(@PathParam("id") String id, Institution institution, @HeaderParam("Authorization") String authHeader) {
         log.info("🔧 PUT /api/institutions/{} - Atualizando instituição", id);
 
+        // Get old values for audit
+        Institution oldInstitution = institutionService.findById(id);
+        if (oldInstitution == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+
         Institution updated = institutionService.update(id, institution);
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
+
+        // AUDIT LOG - Atualização de instituição
+        auditService.logUpdate(
+            "Institution",
+            id,
+            oldInstitution,
+            updated,
+            getCurrentUserId(),
+            getCurrentUserName(),
+            getClientIP()
+        );
 
         // IMPORTANTE: Vincular usuário logado à instituição atualizada
         // Isso é necessário quando o usuário busca por CNPJ e edita uma instituição existente
@@ -323,7 +366,7 @@ public class InstitutionResource {
             }
 
             String token = authHeader.substring(7);
-            io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+            io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
             String username = claims.getSubject();
             log.info("Username extraído do token: '{}'", username);
 
@@ -379,8 +422,26 @@ public class InstitutionResource {
     @Transactional
     public Response alterarStatus(@PathParam("id") String id, AlterarStatusDTO dto) {
         try {
+            // Get old status for audit
+            Institution old = institutionRepository.findById(id);
+            StatusOSC oldStatus = old != null ? old.statusOSC : null;
+
             log.info("Alterando status da instituição {} para {}", id, dto.getNovoStatus());
             Institution instituicao = statusOSCService.alterarStatus(id, dto);
+
+            // AUDIT LOG - Mudança de status
+            if (oldStatus != instituicao.statusOSC) {
+                auditService.logMudancaStatus(
+                    "Institution",
+                    id,
+                    oldStatus != null ? oldStatus.name() : "NONE",
+                    instituicao.statusOSC != null ? instituicao.statusOSC.name() : "NONE",
+                    getCurrentUserId(),
+                    getCurrentUserName(),
+                    getClientIP()
+                );
+            }
+
             return Response.ok(instituicao).build();
         } catch (IllegalArgumentException e) {
             log.warn("Erro ao alterar status: {}", e.getMessage());
@@ -487,7 +548,7 @@ public class InstitutionResource {
 
         try {
             String token = authHeader.substring(7);
-            io.jsonwebtoken.Claims claims = org.acme.security.JwtUtil.parseToken(token);
+            io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
             String username = claims.getSubject();
             log.info("👤 Username extraído do token: '{}'", username);
 
@@ -523,6 +584,17 @@ public class InstitutionResource {
 
             log.info("✅ Vínculo criado com sucesso: usuário {} → instituição {}", user.username, institution.institutionId);
 
+            // AUDIT LOG - Vinculação
+            auditService.logAcao(
+                "VINCULACAO_USUARIO",
+                "Institution",
+                institution.institutionId,
+                "Usuário " + user.username + " vinculado à instituição " + institution.razaoSocial,
+                user.id,
+                user.username,
+                getClientIP()
+            );
+
             return Response.ok(Map.of(
                 "message", "Vínculo criado com sucesso",
                 "usuario", user.username,
@@ -535,5 +607,45 @@ public class InstitutionResource {
                 .entity(Map.of("error", "Erro ao vincular usuário: " + e.getMessage()))
                 .build();
         }
+    }
+
+    private Long getCurrentUserId() {
+        if (securityContext != null && securityContext.getUserPrincipal() != null) {
+            try {
+                String username = securityContext.getUserPrincipal().getName();
+                User user = User.find("username", username).firstResult();
+                return user != null ? user.id : null;
+            } catch (Exception e) {
+                log.warn("Error getting current user ID: " + e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    private String getCurrentUserName() {
+        if (securityContext != null && securityContext.getUserPrincipal() != null) {
+            try {
+                return securityContext.getUserPrincipal().getName();
+            } catch (Exception e) {
+                log.warn("Error getting current user name: " + e.getMessage());
+            }
+        }
+        return "system";
+    }
+
+    private String getClientIP() {
+        if (requestContext == null) {
+            return "unknown";
+        }
+        // Try to get real IP from headers (in case of proxy/load balancer)
+        String ip = requestContext.getHeaderString("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = requestContext.getHeaderString("X-Real-IP");
+        }
+        // If multiple IPs in X-Forwarded-For, get the first one
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip != null && !ip.isEmpty() ? ip : "unknown";
     }
 }

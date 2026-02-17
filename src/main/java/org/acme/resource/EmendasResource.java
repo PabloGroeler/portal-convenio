@@ -9,6 +9,7 @@ import jakarta.ws.rs.PUT;
 import jakarta.ws.rs.Path;
 import jakarta.ws.rs.PathParam;
 import jakarta.ws.rs.Produces;
+import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
@@ -46,6 +47,12 @@ public class EmendasResource {
 
     @Inject
     StatusCicloVidaEmendaService statusCicloVidaEmendaService;
+
+    @Inject
+    AuditService auditService;
+
+    @Context
+    ContainerRequestContext httpRequest;
 
     @Context
     SecurityContext securityContext;
@@ -140,6 +147,18 @@ public class EmendasResource {
             log.info("✅ All validations passed, creating emenda...");
             Emenda created = emendaService.create(emenda, getCurrentUser());
             log.info("✅ Emenda created successfully with id: " + created.id);
+
+            // AUDIT LOG - Criação de emenda
+            String currentUser = getCurrentUser();
+            auditService.logCreate(
+                "Emenda",
+                created.id,
+                created,
+                getCurrentUserId(),
+                currentUser != null ? currentUser : "system",
+                getClientIP()
+            );
+
             return Response.status(Response.Status.CREATED).entity(EmendaDetailDTO.fromEmenda(created)).build();
         } catch (IllegalArgumentException e) {
             log.error("❌ Validation error creating emenda: " + e.getMessage());
@@ -158,6 +177,15 @@ public class EmendasResource {
     @Path("/{id}")
     public Response update(@PathParam("id") String id, Emenda emenda) {
         try {
+            // Get old values for audit
+            Emenda oldEmenda = emendaService.findById(id);
+            if (oldEmenda == null) {
+                return Response.status(Response.Status.NOT_FOUND).build();
+            }
+
+            // Clone for audit before update
+            EmendaDetailDTO oldValues = EmendaDetailDTO.fromEmenda(oldEmenda);
+
             // JIRA 9: default/validate status do ciclo de vida
             if (emenda.statusCicloVida == null || emenda.statusCicloVida.isBlank()) {
                 emenda.statusCicloVida = "Recebido";
@@ -181,6 +209,19 @@ public class EmendasResource {
             if (updated == null) {
                 return Response.status(Response.Status.NOT_FOUND).build();
             }
+
+            // AUDIT LOG - Atualização de emenda
+            String currentUser = getCurrentUser();
+            auditService.logUpdate(
+                "Emenda",
+                id,
+                oldValues,
+                EmendaDetailDTO.fromEmenda(updated),
+                getCurrentUserId(),
+                currentUser != null ? currentUser : "system",
+                getClientIP()
+            );
+
             return Response.ok(EmendaDetailDTO.fromEmenda(updated)).build();
         } catch (IllegalArgumentException e) {
             return Response.status(Response.Status.BAD_REQUEST)
@@ -198,6 +239,13 @@ public class EmendasResource {
                     .build();
         }
 
+        // Get old status for audit
+        Emenda oldEmenda = emendaService.findById(id);
+        if (oldEmenda == null) {
+            return Response.status(Response.Status.NOT_FOUND).build();
+        }
+        String oldStatus = oldEmenda.statusCicloVida;
+
         // Set current user if not provided
         if (acao.usuario == null || acao.usuario.isBlank()) {
             acao.usuario = getCurrentUser();
@@ -214,6 +262,54 @@ public class EmendasResource {
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
+
+        // AUDIT LOG - Ação na emenda
+        String currentUser = getCurrentUser();
+        String acaoUpper = acao.acao.toUpperCase();
+
+        if ("APROVAR".equals(acaoUpper)) {
+            auditService.logAprovacao(
+                "Emenda",
+                id,
+                acao.observacao,
+                getCurrentUserId(),
+                currentUser != null ? currentUser : "system",
+                getClientIP()
+            );
+        } else if ("REPROVAR".equals(acaoUpper)) {
+            auditService.logReprovacao(
+                "Emenda",
+                id,
+                acao.observacao != null ? acao.observacao : "Sem motivo informado",
+                getCurrentUserId(),
+                currentUser != null ? currentUser : "system",
+                getClientIP()
+            );
+        } else if ("DEVOLVER".equals(acaoUpper) || "RETIFICAR".equals(acaoUpper)) {
+            auditService.logAcao(
+                "DEVOLUCAO",
+                "Emenda",
+                id,
+                "Devolvido para retificação: " + (acao.observacao != null ? acao.observacao : ""),
+                getCurrentUserId(),
+                currentUser != null ? currentUser : "system",
+                getClientIP()
+            );
+        }
+
+        // Log status change if changed
+        if (updated.statusCicloVida != null && !updated.statusCicloVida.equals(oldStatus)) {
+            auditService.logMudancaStatus(
+                "Emenda",
+                id,
+                oldStatus,
+                updated.statusCicloVida,
+                getCurrentUserId(),
+                currentUser != null ? currentUser : "system",
+                getClientIP()
+            );
+        }
+
         return Response.ok(EmendaDetailDTO.fromEmenda(updated)).build();
     }
 
@@ -255,5 +351,34 @@ public class EmendasResource {
                     .entity("{\"error\": \"Falha ao sincronizar com API externa\", \"details\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
                     .build();
         }
+    }
+
+    private Long getCurrentUserId() {
+        if (securityContext != null && securityContext.getUserPrincipal() != null) {
+            try {
+                String username = securityContext.getUserPrincipal().getName();
+                org.acme.entity.User user = org.acme.entity.User.find("username", username).firstResult();
+                return user != null ? user.id : null;
+            } catch (Exception e) {
+                log.warn("Error getting current user ID: " + e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    private String getClientIP() {
+        if (httpRequest == null) {
+            return "unknown";
+        }
+        // Try to get real IP from headers (in case of proxy/load balancer)
+        String ip = httpRequest.getHeaderString("X-Forwarded-For");
+        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
+            ip = httpRequest.getHeaderString("X-Real-IP");
+        }
+        // If multiple IPs in X-Forwarded-For, get the first one
+        if (ip != null && ip.contains(",")) {
+            ip = ip.split(",")[0].trim();
+        }
+        return ip != null && !ip.isEmpty() ? ip : "unknown";
     }
 }

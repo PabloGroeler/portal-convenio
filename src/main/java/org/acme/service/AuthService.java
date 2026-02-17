@@ -15,6 +15,9 @@ public class AuthService {
     @Inject
     UserRepository userRepository;
 
+    @Inject
+    JwtUtil jwtUtil;
+
     public String login(String document, String password) {
         if (document == null || password == null) return null;
 
@@ -38,7 +41,7 @@ public class AuthService {
 
         if (!BCrypt.checkpw(password, user.password)) return null;
         // Generate JWT with role and status
-        return JwtUtil.generateToken(
+        return jwtUtil.generateToken(
             user.username,
             user.id,
             user.role.name(),
@@ -56,7 +59,7 @@ public class AuthService {
             user = User.findByEmail(request.username());
         }
         if (user != null && BCrypt.checkpw(request.password(), user.password)) {
-            return JwtUtil.generateToken(
+            return jwtUtil.generateToken(
                 user.username,
                 user.id,
                 user.role.name(),
@@ -69,8 +72,8 @@ public class AuthService {
     public boolean isTokenValid(String token) {
         if (token == null) return false;
         try {
-            Claims claims = JwtUtil.parseToken(token);
-            return !JwtUtil.isTokenExpired(claims);
+            Claims claims = jwtUtil.parseToken(token);
+            return !jwtUtil.isTokenExpired(claims);
         } catch (Exception e) {
             return false;
         }

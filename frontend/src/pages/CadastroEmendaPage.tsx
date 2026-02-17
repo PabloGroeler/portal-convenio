@@ -33,7 +33,9 @@ const CadastroEmendaPage: React.FC = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const emendaId = searchParams.get('id');
+  const instituicaoIdParam = searchParams.get('instituicaoId'); // Pega instituição da URL
   const isEditMode = !!emendaId;
+  const isInstituicaoLocked = !!instituicaoIdParam; // Bloqueia se veio da URL
 
   const [form, setForm] = useState<EmendaForm>({
     councilorId: '',
@@ -47,7 +49,7 @@ const CadastroEmendaPage: React.FC = () => {
     anoConvenio: undefined,
     category: '',
     status: 'Recebido',
-    institutionId: '',
+    institutionId: instituicaoIdParam || '', // Preenche com o parâmetro da URL se existir
     signedLink: '',
     description: '',
     objectDetail: '',
@@ -297,20 +299,25 @@ const CadastroEmendaPage: React.FC = () => {
             {/* Instituição */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Instituição *
+                Instituição * {isInstituicaoLocked && <span className="text-blue-600 text-xs">(Pré-selecionada)</span>}
               </label>
-              <input
-                type="text"
-                placeholder="Buscar instituição..."
-                value={institutionSearch}
-                onChange={(e) => setInstitutionSearch(e.target.value)}
-                className="w-full border rounded px-3 py-2 mb-2 text-sm"
-              />
+              {!isInstituicaoLocked && (
+                <input
+                  type="text"
+                  placeholder="Buscar instituição..."
+                  value={institutionSearch}
+                  onChange={(e) => setInstitutionSearch(e.target.value)}
+                  className="w-full border rounded px-3 py-2 mb-2 text-sm"
+                />
+              )}
               <select
                 required
                 value={form.institutionId}
                 onChange={(e) => handleChange('institutionId', e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                disabled={isInstituicaoLocked}
+                className={`w-full border rounded px-3 py-2 ${
+                  isInstituicaoLocked ? 'bg-gray-100 cursor-not-allowed' : ''
+                }`}
               >
                 <option value="">Selecione a instituição</option>
                 {filteredInstitutions.map((inst) => (
@@ -319,6 +326,11 @@ const CadastroEmendaPage: React.FC = () => {
                   </option>
                 ))}
               </select>
+              {isInstituicaoLocked && (
+                <p className="text-xs text-blue-600 mt-1">
+                  ℹ️ Instituição vinculada automaticamente ao criar emenda pelo dashboard
+                </p>
+              )}
             </div>
 
             {/* Código Oficial */}

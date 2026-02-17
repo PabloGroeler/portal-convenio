@@ -5,28 +5,34 @@ import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
-import org.eclipse.microprofile.config.Config;
-import org.eclipse.microprofile.config.ConfigProvider;
+import jakarta.enterprise.context.ApplicationScoped;
+import org.eclipse.microprofile.config.inject.ConfigProperty;
 
 import java.security.Key;
 import java.time.Instant;
-import java.util.Base64;
 import java.util.Date;
 import java.nio.charset.StandardCharsets;
 
-public final class JwtUtil {
-    private static final Config CONFIG = ConfigProvider.getConfig();
-    private static final String SECRET = getSecret();
-    private static final Key KEY = buildKey(SECRET);
-    private static final long EXPIRATION_SECONDS = Long.parseLong(CONFIG.getOptionalValue("jwt.expiration.seconds", String.class).orElse("3600"));
+@ApplicationScoped
+public class JwtUtil {
 
-    private JwtUtil() {}
+    @ConfigProperty(name = "jwt.secret", defaultValue = "changeit-changeit-changeit-changeit")
+    String secret;
 
-    private static String getSecret() {
-        return CONFIG.getOptionalValue("jwt.secret", String.class).orElse("changeit-changeit-changeit-changeit");
+    @ConfigProperty(name = "jwt.expiration.seconds", defaultValue = "3600")
+    long expirationSeconds;
+
+    private Key key;
+
+    // Inicialização lazy do key
+    private Key getKey() {
+        if (key == null) {
+            key = buildKey(secret);
+        }
+        return key;
     }
 
-    private static Key buildKey(String secret) {
+    private Key buildKey(String secret) {
         if (secret == null) secret = "changeit-changeit-changeit-changeit";
         try {
             byte[] decoded = null;
@@ -42,21 +48,21 @@ public final class JwtUtil {
         }
     }
 
-    public static String generateToken(String username, Long userId) {
+    public String generateToken(String username, Long userId) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .setSubject(username)
                 .claim("userId", userId)
                 .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(now.plusSeconds(EXPIRATION_SECONDS)))
-                .signWith(KEY, SignatureAlgorithm.HS256)
+                .setExpiration(Date.from(now.plusSeconds(expirationSeconds)))
+                .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     /**
      * Generate JWT token with user role and status for RBAC
      */
-    public static String generateToken(String username, Long userId, String role, String status) {
+    public String generateToken(String username, Long userId, String role, String status) {
         Instant now = Instant.now();
         return Jwts.builder()
                 .setSubject(username)
@@ -64,15 +70,15 @@ public final class JwtUtil {
                 .claim("role", role)
                 .claim("status", status)
                 .setIssuedAt(Date.from(now))
-                .setExpiration(Date.from(now.plusSeconds(EXPIRATION_SECONDS)))
-                .signWith(KEY, SignatureAlgorithm.HS256)
+                .setExpiration(Date.from(now.plusSeconds(expirationSeconds)))
+                .signWith(getKey(), SignatureAlgorithm.HS256)
                 .compact();
     }
 
     /**
      * Extract user role from token
      */
-    public static String getRoleFromToken(String token) {
+    public String getRoleFromToken(String token) {
         try {
             Claims claims = parseToken(token);
             return claims.get("role", String.class);
@@ -84,7 +90,7 @@ public final class JwtUtil {
     /**
      * Extract user status from token
      */
-    public static String getStatusFromToken(String token) {
+    public String getStatusFromToken(String token) {
         try {
             Claims claims = parseToken(token);
             return claims.get("status", String.class);
@@ -96,7 +102,7 @@ public final class JwtUtil {
     /**
      * Extract userId from token
      */
-    public static Long getUserIdFromToken(String token) {
+    public Long getUserIdFromToken(String token) {
         try {
             Claims claims = parseToken(token);
             return claims.get("userId", Long.class);
@@ -105,15 +111,15 @@ public final class JwtUtil {
         }
     }
 
-    public static Claims parseToken(String token) {
+    public Claims parseToken(String token) {
         return Jwts.parserBuilder()
-                .setSigningKey(KEY)
+                .setSigningKey(getKey())
                 .build()
                 .parseClaimsJws(token)
                 .getBody();
     }
 
-    public static boolean isTokenExpired(Claims claims) {
+    public boolean isTokenExpired(Claims claims) {
         Date exp = claims.getExpiration();
         return exp == null || exp.before(new Date());
     }

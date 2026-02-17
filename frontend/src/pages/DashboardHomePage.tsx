@@ -181,7 +181,16 @@ const DashboardHomePage: React.FC = () => {
                     <span>Vinculado em {new Date(inst.dataVinculo).toLocaleDateString('pt-BR')}</span>
                   </div>
 
-                  <div className="mt-4 pt-3 border-t border-gray-100">
+                  <div className="mt-4 pt-3 border-t border-gray-100 space-y-2">
+                    <button
+                      onClick={() => navigate(`/dashboard/cadastro-emenda?instituicaoId=${inst.id}`)}
+                      className="w-full inline-flex items-center justify-center px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:ring-offset-2 transition-colors"
+                    >
+                      <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      Nova Emenda
+                    </button>
                     <button
                       onClick={() => handleVisualizarInstituicao(inst)}
                       className="w-full inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
@@ -202,19 +211,9 @@ const DashboardHomePage: React.FC = () => {
 
       {hasInstituicoes && !loading && emendas.length > 0 && (
         <div className="space-y-4">
-          {/* Header com título e botão */}
+          {/* Header com título */}
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-semibold text-gray-900">Minhas Emendas</h2>
-            <button
-              onClick={() => navigate('/dashboard/cadastro-emenda')}
-              className="inline-flex items-center px-4 py-2 bg-emerald-600 text-white rounded-lg font-medium hover:bg-emerald-700 transition-colors shadow-sm text-sm"
-              title="Cadastrar nova emenda"
-            >
-              <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-              </svg>
-              <span className="hidden sm:inline">Nova</span> Emenda
-            </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {emendas.slice(0, 6).map((emenda) => (
