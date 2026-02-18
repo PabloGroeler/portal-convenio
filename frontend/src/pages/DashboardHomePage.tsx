@@ -124,7 +124,7 @@ const DashboardHomePage: React.FC = () => {
               <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
               </svg>
-              <span className="hidden sm:inline">Nova</span> Instituição
+              Instituição
             </button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
