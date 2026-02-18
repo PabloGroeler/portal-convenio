@@ -21,7 +21,7 @@ public class TipoDocumentoConfig extends PanacheEntityBase {
     public String nome;
 
     @Column(name = "categoria", length = 100)
-    public String categoria; // INSTITUCIONAL, CERTIDAO, DIRIGENTE
+    public String categoria; // INSTITUCIONAL, CERTIDAO, PESSOAL
 
     @Column(name = "obrigatorio", nullable = false)
     public Boolean obrigatorio = true;

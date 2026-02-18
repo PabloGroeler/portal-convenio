@@ -37,6 +37,7 @@ public class StatusOSCService {
         "COMPROVANTE_INSCRICAO_CONSELHO",
         "COMPROVANTE_ENDERECO_INSTITUICAO",
         "CERTIDAO_TRIBUTOS_FEDERAIS",
+        "CERTIDAO_TRIBUTOS_ESTADUAIS_PGE",
         "CERTIFICADO_FGTS",
         "CERTIDAO_DEBITOS_TRABALHISTAS",
         "CERTIDAO_DEBITOS_MUNICIPAIS",
@@ -234,6 +235,87 @@ public class StatusOSCService {
             return securityContext.getUserPrincipal().getName();
         }
         return "sistema";
+    }
+
+    /**
+     * Aprovar a instituição (após análise de documentos)
+     */
+    @Transactional
+    public Institution aprovarInstituicao(String instituicaoId, String observacoes) {
+        LOG.info("Aprovando instituição: {}", instituicaoId);
+
+        Institution instituicao = institutionRepository.findById(instituicaoId);
+        if (instituicao == null) {
+            throw new IllegalArgumentException("Instituição não encontrada: " + instituicaoId);
+        }
+
+        // Validar se está em análise
+        if (!"EM_ANALISE".equals(instituicao.statusAprovacao)) {
+            throw new IllegalStateException("Só é possível aprovar instituições que estão EM_ANALISE. Status atual: " + instituicao.statusAprovacao);
+        }
+
+        // Validar se já foi aprovada
+        if ("APROVADA".equals(instituicao.statusAprovacao)) {
+            throw new IllegalStateException("Instituição já está aprovada");
+        }
+
+        // Atualizar campos de aprovação
+        instituicao.statusAprovacao = "APROVADA";
+        instituicao.dataAprovacao = LocalDateTime.now();
+        instituicao.observacoesAprovacao = observacoes;
+        instituicao.usuarioAprovador = getCurrentUser();
+
+        // Limpar campos de reprovação
+        instituicao.dataReprovacao = null;
+        instituicao.motivoReprovacao = null;
+
+        entityManager.merge(instituicao);
+
+        LOG.info("Instituição aprovada com sucesso por: {}", instituicao.usuarioAprovador);
+        return instituicao;
+    }
+
+    /**
+     * Reprovar a instituição (após análise de documentos)
+     */
+    @Transactional
+    public Institution reprovarInstituicao(String instituicaoId, String motivo) {
+        LOG.info("Reprovando instituição: {}", instituicaoId);
+
+        Institution instituicao = institutionRepository.findById(instituicaoId);
+        if (instituicao == null) {
+            throw new IllegalArgumentException("Instituição não encontrada: " + instituicaoId);
+        }
+
+        // Validar motivo
+        if (motivo == null || motivo.trim().isEmpty()) {
+            throw new IllegalArgumentException("Motivo da reprovação é obrigatório");
+        }
+
+        // Validar se está em análise
+        if (!"EM_ANALISE".equals(instituicao.statusAprovacao)) {
+            throw new IllegalStateException("Só é possível reprovar instituições que estão EM_ANALISE. Status atual: " + instituicao.statusAprovacao);
+        }
+
+        // Validar se já foi reprovada
+        if ("REPROVADA".equals(instituicao.statusAprovacao)) {
+            throw new IllegalStateException("Instituição já está reprovada");
+        }
+
+        // Atualizar campos de reprovação
+        instituicao.statusAprovacao = "REPROVADA";
+        instituicao.dataReprovacao = LocalDateTime.now();
+        instituicao.motivoReprovacao = motivo;
+        instituicao.usuarioAprovador = getCurrentUser();
+
+        // Limpar campos de aprovação
+        instituicao.dataAprovacao = null;
+        instituicao.observacoesAprovacao = null;
+
+        entityManager.merge(instituicao);
+
+        LOG.info("Instituição reprovada com sucesso por: {}", instituicao.usuarioAprovador);
+        return instituicao;
     }
 }
 

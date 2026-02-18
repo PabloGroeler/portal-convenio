@@ -17,6 +17,7 @@ public class UserAdminService {
     public static class UserAdminCreateRequest {
         public String nomeCompleto;
         public String cpf;
+        public String cnpj;
         public String email;
         public String telefone;
         public String cargoFuncao;
@@ -28,6 +29,7 @@ public class UserAdminService {
     public static class UserAdminUpdateRequest {
         public String nomeCompleto;
         public String cpf;
+        public String cnpj;
         public String email;
         public String telefone;
         public String cargoFuncao;
@@ -100,14 +102,37 @@ public class UserAdminService {
         if (u == null) throw new IllegalArgumentException("Usuário não encontrado");
 
         if (req.nomeCompleto != null) u.nomeCompleto = req.nomeCompleto.trim();
+
+        // Atualizar CPF
         if (req.cpf != null) {
             String cpf = normalizeCpf(req.cpf);
-            User other = User.findByCpf(cpf);
-            if (other != null && !other.id.equals(u.id)) {
-                throw new IllegalArgumentException("CPF já cadastrado");
+            if (!cpf.isEmpty()) {
+                User other = User.findByCpf(cpf);
+                if (other != null && !other.id.equals(u.id)) {
+                    throw new IllegalArgumentException("CPF já cadastrado");
+                }
+                u.cpf = cpf;
+                u.cnpj = null; // Limpar CNPJ se CPF foi fornecido
+            } else {
+                u.cpf = null;
             }
-            u.cpf = cpf;
         }
+
+        // Atualizar CNPJ
+        if (req.cnpj != null) {
+            String cnpj = normalizeCnpj(req.cnpj);
+            if (!cnpj.isEmpty()) {
+                User other = User.findByCnpj(cnpj);
+                if (other != null && !other.id.equals(u.id)) {
+                    throw new IllegalArgumentException("CNPJ já cadastrado");
+                }
+                u.cnpj = cnpj;
+                u.cpf = null; // Limpar CPF se CNPJ foi fornecido
+            } else {
+                u.cnpj = null;
+            }
+        }
+
         if (req.email != null) {
             String email = req.email.trim().toLowerCase(Locale.ROOT);
             User other = User.findByEmail(email);
@@ -141,6 +166,11 @@ public class UserAdminService {
     private static String normalizeCpf(String cpf) {
         if (cpf == null) return null;
         return cpf.replaceAll("\\D", "");
+    }
+
+    private static String normalizeCnpj(String cnpj) {
+        if (cnpj == null) return null;
+        return cnpj.replaceAll("\\D", "");
     }
 
     private static String blankToNull(String v) {

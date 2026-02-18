@@ -51,7 +51,7 @@ public class DocumentoInstitucionalService {
 
         // Gerar nome único para o arquivo
         String extensao = obterExtensao(nomeOriginal);
-        String nomeArquivo = UUID.randomUUID().toString() + extensao;
+        String nomeArquivo = UUID.randomUUID() + extensao;
         Path filePath = uploadPath.resolve(nomeArquivo);
 
         // Salvar arquivo no disco
@@ -109,9 +109,22 @@ public class DocumentoInstitucionalService {
             throw new RuntimeException("Documento não encontrado: " + id);
         }
 
+        // Validar se o documento já está aprovado
+        if ("APROVADO".equals(documento.getStatusDocumento())) {
+            throw new RuntimeException("Documento já está aprovado");
+        }
+
+        // Validar se o documento está reprovado (não pode aprovar um documento reprovado)
+        if ("REPROVADO".equals(documento.getStatusDocumento())) {
+            throw new RuntimeException("Não é possível aprovar um documento que foi reprovado. O documento precisa ser reenviado.");
+        }
+
         documento.setStatusDocumento("APROVADO");
         documento.setObservacoes(observacoes);
         documento.setDataAprovacao(LocalDateTime.now());
+        // Limpar campos de reprovação caso existam
+        documento.setMotivoReprovacao(null);
+        documento.setDataReprovacao(null);
         repository.persist(documento);
 
         return toDTO(documento);
@@ -124,9 +137,22 @@ public class DocumentoInstitucionalService {
             throw new RuntimeException("Documento não encontrado: " + id);
         }
 
+        // Validar se o documento já está reprovado
+        if ("REPROVADO".equals(documento.getStatusDocumento())) {
+            throw new RuntimeException("Documento já está reprovado");
+        }
+
+        // Validar se o documento está aprovado (não pode reprovar um documento aprovado)
+        if ("APROVADO".equals(documento.getStatusDocumento())) {
+            throw new RuntimeException("Não é possível reprovar um documento que foi aprovado. Se necessário, solicite novo envio.");
+        }
+
         documento.setStatusDocumento("REPROVADO");
         documento.setMotivoReprovacao(motivo);
         documento.setDataReprovacao(LocalDateTime.now());
+        // Limpar campos de aprovação caso existam
+        documento.setObservacoes(null);
+        documento.setDataAprovacao(null);
         repository.persist(documento);
 
         return toDTO(documento);

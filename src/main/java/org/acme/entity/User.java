@@ -131,4 +131,8 @@ public class User extends PanacheEntity {
     public static User findByCpf(String cpf) {
         return find("cpf", cpf).firstResult();
     }
+
+    public static User findByCnpj(String cnpj) {
+        return find("cnpj", cnpj).firstResult();
+    }
 }

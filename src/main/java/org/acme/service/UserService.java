@@ -21,16 +21,16 @@ public class UserService {
     @Transactional
     public UserDTO register(RegisterRequest request) {
         if (request == null) {
-            throw new RuntimeException("Request body is required");
+            throw new RuntimeException("Corpo da requisição é obrigatório");
         }
         if (request.username == null || request.username.isBlank()) {
-            throw new RuntimeException("Username is required");
+            throw new RuntimeException("Nome de usuário é obrigatório");
         }
         if (request.email == null || request.email.isBlank()) {
-            throw new RuntimeException("Email is required");
+            throw new RuntimeException("Email é obrigatório");
         }
         if (request.password == null || request.password.isBlank()) {
-            throw new RuntimeException("Password is required");
+            throw new RuntimeException("Senha é obrigatória");
         }
 
         // Validate password strength
@@ -38,12 +38,12 @@ public class UserService {
 
         // Check for duplicate username
         if (User.findByUsername(request.username) != null) {
-            throw new RuntimeException("Username already exists");
+            throw new RuntimeException("Nome de usuário já existe");
         }
 
         // Check for duplicate email - REQUIREMENT: Não permitir cadastro com e-mail duplicado
         if (User.findByEmail(request.email) != null) {
-            throw new RuntimeException("Email already in use");
+            throw new RuntimeException("Email já está em uso");
         }
 
         User user = new User();
@@ -117,7 +117,7 @@ public class UserService {
         } catch (Exception e) {
             // Log email error but don't fail the registration
             // User was created successfully, they can request a new verification email later
-            System.err.println("Warning: User registered successfully but email verification failed: " + e.getMessage());
+            System.err.println("Aviso: Usuário registrado com sucesso, mas o envio do email de verificação falhou: " + e.getMessage());
             // Don't throw - user is already created
         }
 

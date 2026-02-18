@@ -648,4 +648,79 @@ public class InstitutionResource {
         }
         return ip != null && !ip.isEmpty() ? ip : "unknown";
     }
+
+    // ===== Endpoints de Aprovação da Instituição =====
+
+    @POST
+    @Path("/{id}/aprovar")
+    @Transactional
+    public Response aprovarInstituicao(@PathParam("id") String id, Map<String, String> body) {
+        try {
+            String observacoes = body != null ? body.get("observacoes") : null;
+            Institution instituicao = statusOSCService.aprovarInstituicao(id, observacoes);
+
+            // AUDIT LOG
+            auditService.logAprovacao(
+                "Institution",
+                id,
+                observacoes,
+                getCurrentUserId(),
+                getCurrentUserName(),
+                getClientIP()
+            );
+
+            log.info("✅ Instituição aprovada: {} por {}", id, getCurrentUserName());
+            return Response.ok(instituicao).build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("❌ Erro ao aprovar instituição: {}", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", e.getMessage()))
+                    .build();
+        } catch (Exception e) {
+            log.error("💥 Erro inesperado ao aprovar instituição", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Map.of("error", "Erro interno ao aprovar instituição"))
+                    .build();
+        }
+    }
+
+    @POST
+    @Path("/{id}/reprovar")
+    @Transactional
+    public Response reprovarInstituicao(@PathParam("id") String id, Map<String, String> body) {
+        try {
+            String motivo = body != null ? body.get("motivo") : null;
+
+            if (motivo == null || motivo.trim().isEmpty()) {
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "Motivo da reprovação é obrigatório"))
+                        .build();
+            }
+
+            Institution instituicao = statusOSCService.reprovarInstituicao(id, motivo);
+
+            // AUDIT LOG
+            auditService.logReprovacao(
+                "Institution",
+                id,
+                motivo,
+                getCurrentUserId(),
+                getCurrentUserName(),
+                getClientIP()
+            );
+
+            log.info("❌ Instituição reprovada: {} por {} - Motivo: {}", id, getCurrentUserName(), motivo);
+            return Response.ok(instituicao).build();
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            log.warn("❌ Erro ao reprovar instituição: {}", e.getMessage());
+            return Response.status(Response.Status.BAD_REQUEST)
+                    .entity(Map.of("error", e.getMessage()))
+                    .build();
+        } catch (Exception e) {
+            log.error("💥 Erro inesperado ao reprovar instituição", e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(Map.of("error", "Erro interno ao reprovar instituição"))
+                    .build();
+        }
+    }
 }

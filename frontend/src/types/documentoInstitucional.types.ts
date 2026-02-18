@@ -26,6 +26,7 @@ export type TipoDocumentoInstitucional =
   | 'COMPROVANTE_ENDERECO_INSTITUICAO'
   // Certidões Negativas da Instituição
   | 'CERTIDAO_TRIBUTOS_FEDERAIS'
+  | 'CERTIDAO_TRIBUTOS_ESTADUAIS_PGE'
   | 'CERTIFICADO_FGTS'
   | 'CERTIDAO_DEBITOS_TRABALHISTAS'
   | 'CERTIDAO_DEBITOS_MUNICIPAIS'
@@ -56,11 +57,12 @@ export const TIPOS_DOCUMENTO_LABELS: Record<TipoDocumentoInstitucional, string> 
   COMPROVANTE_ENDERECO_INSTITUICAO: 'Comprovante de Endereço',
   // Certidões Negativas da Instituição
   CERTIDAO_TRIBUTOS_FEDERAIS: 'Certidão Negativa de Tributos Federais',
+  CERTIDAO_TRIBUTOS_ESTADUAIS_PGE: 'Certidão Negativa de Tributos Estaduais – PGE',
   CERTIFICADO_FGTS: 'Certificado de Regularidade do FGTS',
   CERTIDAO_DEBITOS_TRABALHISTAS: 'Certidão Negativa de Débitos Trabalhistas',
   CERTIDAO_DEBITOS_MUNICIPAIS: 'Certidão Negativa de Débitos Municipais',
   CERTIDAO_TCE_INSTITUICAO: 'Certidão Negativa do TCE/MT - Instituição',
-  // Documentos de Dirigente
+  // Documentos Pessoais
   RG_DIRIGENTE: 'RG',
   CPF_DIRIGENTE: 'CPF',
   COMPROVANTE_ENDERECO_DIRIGENTE: 'Comprovante de Endereço',
@@ -95,6 +97,7 @@ export const DOCUMENTOS_OBRIGATORIOS: TipoDocumentoInstitucional[] = [
   'COMPROVANTE_INSCRICAO_CONSELHO',
   'COMPROVANTE_ENDERECO_INSTITUICAO',
   'CERTIDAO_TRIBUTOS_FEDERAIS',
+  'CERTIDAO_TRIBUTOS_ESTADUAIS_PGE',
   'CERTIFICADO_FGTS',
   'CERTIDAO_DEBITOS_TRABALHISTAS',
   'CERTIDAO_DEBITOS_MUNICIPAIS',
@@ -110,6 +113,7 @@ export const DOCUMENTOS_INSTITUICAO: TipoDocumentoInstitucional[] = [
   'COMPROVANTE_INSCRICAO_CONSELHO',
   'COMPROVANTE_ENDERECO_INSTITUICAO',
   'CERTIDAO_TRIBUTOS_FEDERAIS',
+  'CERTIDAO_TRIBUTOS_ESTADUAIS_PGE',
   'CERTIFICADO_FGTS',
   'CERTIDAO_DEBITOS_TRABALHISTAS',
   'CERTIDAO_DEBITOS_MUNICIPAIS',

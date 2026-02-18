@@ -936,28 +936,30 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
 
     try {
       await documentoInstitucionalService.aprovar(id, observacoes || undefined);
-      alert('Documento aprovado!');
+      alert('Documento aprovado com sucesso!');
       await loadDocumentos();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao aprovar documento:', error);
-      alert('Erro ao aprovar documento');
+      const errorMessage = error?.response?.data?.error || error?.message || 'Erro ao aprovar documento';
+      alert(errorMessage);
     }
   };
 
   const handleReprovarDocumento = async (id: string) => {
     const motivo = prompt('Motivo da reprovação (obrigatório):');
-    if (!motivo) {
+    if (!motivo || motivo.trim() === '') {
       alert('É necessário informar o motivo da reprovação');
       return;
     }
 
     try {
       await documentoInstitucionalService.reprovar(id, motivo);
-      alert('Documento reprovado!');
+      alert('Documento reprovado com sucesso!');
       await loadDocumentos();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao reprovar documento:', error);
-      alert('Erro ao reprovar documento');
+      const errorMessage = error?.response?.data?.error || error?.message || 'Erro ao reprovar documento';
+      alert(errorMessage);
     }
   };
 
@@ -1990,34 +1992,87 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
             <form onSubmit={handleUploadDocumento} className="p-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Tipo de Documento * <span className="text-xs text-gray-500">(Selecione o tipo correto)</span>
-                  </label>
-                  <select
-                    required
-                    disabled={loadingConfigs}
-                    value={tipoDocumentoSelecionado}
-                    onChange={(e) => handleTipoDocumentoChange(e.target.value)}
-                    className="w-full border rounded px-3 py-2 disabled:bg-gray-100"
-                  >
-                    <option value="">{loadingConfigs ? 'Carregando...' : 'Selecione o tipo de documento'}</option>
-                    <optgroup label="📄 Documentos Institucionais">
-                      {DOCUMENTOS_INSTITUICAO.slice(0, 7).map((tipo) => (
-                        <option key={tipo} value={tipo}>
-                          {TIPOS_DOCUMENTO_LABELS[tipo]}
-                          {DOCUMENTOS_OBRIGATORIOS.includes(tipo) ? ' (Obrigatório)' : ''}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="✅ Certidões Negativas">
-                      {DOCUMENTOS_INSTITUICAO.slice(7).map((tipo) => (
-                        <option key={tipo} value={tipo}>
-                          {TIPOS_DOCUMENTO_LABELS[tipo]}
-                          {DOCUMENTOS_OBRIGATORIOS.includes(tipo) ? ' (Obrigatório)' : ''}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-sm font-medium text-gray-700">
+                      Tipo de Documento * <span className="text-xs text-gray-500">(Selecione o tipo correto)</span>
+                    </label>
+                    {dashboard.obrigatoriosFaltando > 0 && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-yellow-100 text-yellow-800 text-xs font-medium rounded-full border border-yellow-300">
+                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        {dashboard.obrigatoriosFaltando} faltando
+                      </span>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <select
+                      required
+                      disabled={loadingConfigs}
+                      value={tipoDocumentoSelecionado}
+                      onChange={(e) => handleTipoDocumentoChange(e.target.value)}
+                      className={`w-full border rounded px-3 py-2 disabled:bg-gray-100 ${
+                        dashboard.obrigatoriosFaltando > 0
+                          ? 'border-yellow-400 ring-2 ring-yellow-200 focus:ring-yellow-300'
+                          : 'border-gray-300 focus:ring-blue-500'
+                      }`}
+                    >
+                      <option value="">{loadingConfigs ? 'Carregando...' : 'Selecione o tipo de documento'}</option>
+                      <optgroup label="📄 Documentos Institucionais">
+                        {DOCUMENTOS_INSTITUICAO.slice(0, 7).map((tipo) => {
+                          const isObrigatorio = DOCUMENTOS_OBRIGATORIOS.includes(tipo);
+                          const jaEnviado = documentosInstitucionais.some(d => d.tipoDocumento === tipo);
+                          const faltaEnviar = isObrigatorio && !jaEnviado;
+
+                          return (
+                            <option
+                              key={tipo}
+                              value={tipo}
+                              style={faltaEnviar ? {
+                                backgroundColor: '#fef3c7',
+                                fontWeight: '600',
+                                color: '#92400e'
+                              } : {}}
+                            >
+                              {faltaEnviar ? '⚠️ ' : jaEnviado ? '✓ ' : ''}{TIPOS_DOCUMENTO_LABELS[tipo]}
+                              {isObrigatorio ? ' (Obrigatório)' : ''}
+                              {faltaEnviar ? ' - PENDENTE' : ''}
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                      <optgroup label="✅ Certidões Negativas">
+                        {DOCUMENTOS_INSTITUICAO.slice(7).map((tipo) => {
+                          const isObrigatorio = DOCUMENTOS_OBRIGATORIOS.includes(tipo);
+                          const jaEnviado = documentosInstitucionais.some(d => d.tipoDocumento === tipo);
+                          const faltaEnviar = isObrigatorio && !jaEnviado;
+
+                          return (
+                            <option
+                              key={tipo}
+                              value={tipo}
+                              style={faltaEnviar ? {
+                                backgroundColor: '#fef3c7',
+                                fontWeight: '600',
+                                color: '#92400e'
+                              } : {}}
+                            >
+                              {faltaEnviar ? '⚠️ ' : jaEnviado ? '✓ ' : ''}{TIPOS_DOCUMENTO_LABELS[tipo]}
+                              {isObrigatorio ? ' (Obrigatório)' : ''}
+                              {faltaEnviar ? ' - PENDENTE' : ''}
+                            </option>
+                          );
+                        })}
+                      </optgroup>
+                    </select>
+                    {dashboard.obrigatoriosFaltando > 0 && (
+                      <div className="absolute right-10 top-1/2 -translate-y-1/2 pointer-events-none">
+                        <svg className="w-5 h-5 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
                   {selectedDocConfig && (
                     <div className="mt-2 text-xs bg-blue-50 border border-blue-200 rounded p-2">
                       <p className="font-medium text-blue-900">Campos obrigatórios para este documento:</p>
@@ -2271,7 +2326,8 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                                 Baixar
                               </button>
 
-                              {doc.statusDocumento !== 'APROVADO' && (
+                              {/* Só mostrar Aprovar se não estiver APROVADO nem REPROVADO */}
+                              {doc.statusDocumento !== 'APROVADO' && doc.statusDocumento !== 'REPROVADO' && (
                                 <button
                                   onClick={() => handleAprovarDocumento(doc.id!)}
                                   className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 flex items-center gap-1.5 font-medium"
@@ -2283,7 +2339,8 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                                 </button>
                               )}
 
-                              {doc.statusDocumento !== 'REPROVADO' && (
+                              {/* Só mostrar Reprovar se não estiver REPROVADO nem APROVADO */}
+                              {doc.statusDocumento !== 'REPROVADO' && doc.statusDocumento !== 'APROVADO' && (
                                 <button
                                   onClick={() => handleReprovarDocumento(doc.id!)}
                                   className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 flex items-center gap-1.5 font-medium"
@@ -2295,15 +2352,18 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                                 </button>
                               )}
 
-                              <button
-                                onClick={() => handleDeleteDocumento(doc.id!)}
-                                className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1.5 font-medium"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Excluir
-                              </button>
+                              {/* Só permitir excluir se não estiver APROVADO */}
+                              {doc.statusDocumento !== 'APROVADO' && (
+                                <button
+                                  onClick={() => handleDeleteDocumento(doc.id!)}
+                                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1.5 font-medium"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Excluir
+                                  </button>
+                              )}
                             </div>
                           </div>
                         ))}
@@ -2391,15 +2451,44 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                                 Baixar
                               </button>
 
-                              <button
-                                onClick={() => handleDeleteDocumento(doc.id!)}
-                                className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1.5 font-medium"
-                              >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                Excluir
-                              </button>
+                              {/* Só mostrar Aprovar se não estiver APROVADO nem REPROVADO */}
+                              {doc.statusDocumento !== 'APROVADO' && doc.statusDocumento !== 'REPROVADO' && (
+                                <button
+                                  onClick={() => handleAprovarDocumento(doc.id!)}
+                                  className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 flex items-center gap-1.5 font-medium"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                  </svg>
+                                  Aprovar
+                                </button>
+                              )}
+
+                              {/* Só mostrar Reprovar se não estiver REPROVADO nem APROVADO */}
+                              {doc.statusDocumento !== 'REPROVADO' && doc.statusDocumento !== 'APROVADO' && (
+                                <button
+                                  onClick={() => handleReprovarDocumento(doc.id!)}
+                                  className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 flex items-center gap-1.5 font-medium"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                  </svg>
+                                  Reprovar
+                                </button>
+                              )}
+
+                              {/* Só permitir excluir se não estiver APROVADO */}
+                              {doc.statusDocumento !== 'APROVADO' && (
+                                <button
+                                  onClick={() => handleDeleteDocumento(doc.id!)}
+                                  className="px-3 py-1.5 bg-red-600 text-white text-xs rounded hover:bg-red-700 flex items-center gap-1.5 font-medium"
+                                >
+                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                    Excluir
+                                  </button>
+                              )}
                             </div>
                           </div>
                         ))}

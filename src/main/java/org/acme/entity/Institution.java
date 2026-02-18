@@ -123,6 +123,33 @@ public class Institution {
     @Column(name = "justificativa_suspensao", columnDefinition = "TEXT")
     public String justificativaSuspensao;
 
+    // ===== Status de Aprovação da Instituição =====
+
+    /**
+     * Status da aprovação cadastral da instituição
+     * PENDENTE: Ainda faltam documentos obrigatórios
+     * EM_ANALISE: Todos documentos obrigatórios enviados, aguardando análise
+     * APROVADA: Instituição aprovada pelo gestor
+     * REPROVADA: Instituição reprovada pelo gestor
+     */
+    @Column(name = "status_aprovacao", length = 50)
+    public String statusAprovacao = "PENDENTE"; // PENDENTE, EM_ANALISE, APROVADA, REPROVADA
+
+    @Column(name = "data_aprovacao")
+    public java.time.LocalDateTime dataAprovacao;
+
+    @Column(name = "data_reprovacao")
+    public java.time.LocalDateTime dataReprovacao;
+
+    @Column(name = "observacoes_aprovacao", columnDefinition = "TEXT")
+    public String observacoesAprovacao;
+
+    @Column(name = "motivo_reprovacao", columnDefinition = "TEXT")
+    public String motivoReprovacao;
+
+    @Column(name = "usuario_aprovador", length = 256)
+    public String usuarioAprovador;
+
     // ===== Auditoria =====
 
     @Column(name = "create_time")
