@@ -23,12 +23,12 @@ CREATE TABLE logs_auditoria (
 );
 
 -- Índices para melhor performance
-CREATE INDEX idx_audit_usuario ON logs_auditoria(usuario_id);
-CREATE INDEX idx_audit_data ON logs_auditoria(data_hora);
-CREATE INDEX idx_audit_acao ON logs_auditoria(acao);
-CREATE INDEX idx_audit_entidade ON logs_auditoria(entidade);
-CREATE INDEX idx_audit_registro ON logs_auditoria(entidade, registro_id);
-CREATE INDEX idx_audit_resultado ON logs_auditoria(resultado);
+CREATE INDEX IF NOT EXISTS idx_audit_usuario ON logs_auditoria(usuario_id);
+CREATE INDEX IF NOT EXISTS idx_audit_data ON logs_auditoria(data_hora);
+CREATE INDEX IF NOT EXISTS idx_audit_acao ON logs_auditoria(acao);
+CREATE INDEX IF NOT EXISTS idx_audit_entidade ON logs_auditoria(entidade);
+CREATE INDEX IF NOT EXISTS idx_audit_registro ON logs_auditoria(entidade, registro_id);
+CREATE INDEX IF NOT EXISTS idx_audit_resultado ON logs_auditoria(resultado);
 
 -- Comentários
 COMMENT ON TABLE logs_auditoria IS 'Tabela de logs de auditoria do sistema - RF-01.4';
