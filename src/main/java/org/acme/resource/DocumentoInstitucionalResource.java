@@ -208,6 +208,13 @@ public class DocumentoInstitucionalResource {
     @jakarta.transaction.Transactional
     public Response aprovar(@PathParam("id") String id, AprovarRequest request) {
         try {
+            // Validar se o usuário tem permissão (não pode ser OPERADOR)
+            if (isOperador()) {
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity(new ErrorResponse("Operadores não têm permissão para aprovar documentos"))
+                        .build();
+            }
+
             DocumentoInstitucional documento = service.obterDocumento(id);
             if (documento == null) {
                 return Response.status(Response.Status.NOT_FOUND)
@@ -246,6 +253,13 @@ public class DocumentoInstitucionalResource {
     @jakarta.transaction.Transactional
     public Response reprovar(@PathParam("id") String id, ReprovarRequest request) {
         try {
+            // Validar se o usuário tem permissão (não pode ser OPERADOR)
+            if (isOperador()) {
+                return Response.status(Response.Status.FORBIDDEN)
+                        .entity(new ErrorResponse("Operadores não têm permissão para reprovar documentos"))
+                        .build();
+            }
+
             if (request.motivo == null || request.motivo.trim().isEmpty()) {
                 return Response.status(Response.Status.BAD_REQUEST)
                         .entity(new ErrorResponse("Motivo da reprovação é obrigatório"))
@@ -339,6 +353,21 @@ public class DocumentoInstitucionalResource {
             ip = ip.split(",")[0].trim();
         }
         return ip != null && !ip.isEmpty() ? ip : "unknown";
+    }
+
+    private boolean isOperador() {
+        if (securityContext != null && securityContext.getUserPrincipal() != null) {
+            try {
+                String username = securityContext.getUserPrincipal().getName();
+                User user = User.find("username", username).firstResult();
+                if (user != null) {
+                    return user.role == User.UserRole.OPERADOR;
+                }
+            } catch (Exception e) {
+                log.warn("Erro ao verificar role do usuário: " + e.getMessage());
+            }
+        }
+        return false;
     }
 }
 

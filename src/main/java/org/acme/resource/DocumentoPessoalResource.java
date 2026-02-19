@@ -133,6 +133,13 @@ public class DocumentoPessoalResource {
         Map<String, String> body
     ) {
         try {
+            // Validar se o usuário tem permissão (não pode ser OPERADOR)
+            if (isOperador()) {
+                return Response.status(Response.Status.FORBIDDEN)
+                    .entity(Map.of("error", "Operadores não têm permissão para aprovar documentos"))
+                    .build();
+            }
+
             String observacoes = body != null ? body.get("observacoes") : null;
             String usuario = obterUsuarioLogado();
 
@@ -158,6 +165,13 @@ public class DocumentoPessoalResource {
         Map<String, String> body
     ) {
         try {
+            // Validar se o usuário tem permissão (não pode ser OPERADOR)
+            if (isOperador()) {
+                return Response.status(Response.Status.FORBIDDEN)
+                    .entity(Map.of("error", "Operadores não têm permissão para reprovar documentos"))
+                    .build();
+            }
+
             String motivo = body != null ? body.get("motivo") : null;
             String usuario = obterUsuarioLogado();
 
@@ -199,5 +213,20 @@ public class DocumentoPessoalResource {
             return securityContext.getUserPrincipal().getName();
         }
         return "system";
+    }
+
+    private boolean isOperador() {
+        if (securityContext != null && securityContext.getUserPrincipal() != null) {
+            try {
+                String username = securityContext.getUserPrincipal().getName();
+                org.acme.entity.User user = org.acme.entity.User.findByUsername(username);
+                if (user != null) {
+                    return user.role == org.acme.entity.User.UserRole.OPERADOR;
+                }
+            } catch (Exception e) {
+                log.error("Erro ao verificar role do usuário", e);
+            }
+        }
+        return false;
     }
 }

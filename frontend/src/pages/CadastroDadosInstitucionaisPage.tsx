@@ -76,7 +76,11 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   const editId = searchParams.get('id');
 
   // Check if user is OPERADOR (operators cannot approve/reject documents)
-  const isOperador = user?.role === 'OPERADOR';
+  const isOperador = useMemo(() => {
+    if (!user || !user.role) return false;
+    const roleString = typeof user.role === 'string' ? user.role : String(user.role);
+    return roleString === 'OPERADOR';
+  }, [user]);
 
   const [loadingExisting, setLoadingExisting] = useState(false);
 
@@ -1849,7 +1853,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
               <div className="flex">
                 <div className="flex-shrink-0">
                   <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
                   </svg>
                 </div>
                 <div className="ml-3">
@@ -2349,8 +2353,8 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                                 Baixar
                               </button>
 
-                              {/* Só mostrar Aprovar se não estiver APROVADO nem REPROVADO */}
-                              {doc.statusDocumento !== 'APROVADO' && doc.statusDocumento !== 'REPROVADO' && (
+                              {/* Só mostrar Aprovar se não estiver APROVADO nem REPROVADO E não for OPERADOR */}
+                              {!isOperador && doc.statusDocumento !== 'APROVADO' && doc.statusDocumento !== 'REPROVADO' && (
                                 <button
                                   onClick={() => handleAprovarDocumento(doc.id!)}
                                   className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 flex items-center gap-1.5 font-medium"
@@ -2362,8 +2366,8 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                                 </button>
                               )}
 
-                              {/* Só mostrar Reprovar se não estiver REPROVADO nem APROVADO */}
-                              {doc.statusDocumento !== 'REPROVADO' && doc.statusDocumento !== 'APROVADO' && (
+                              {/* Só mostrar Reprovar se não estiver REPROVADO nem APROVADO E não for OPERADOR */}
+                              {!isOperador && doc.statusDocumento !== 'REPROVADO' && doc.statusDocumento !== 'APROVADO' && (
                                 <button
                                   onClick={() => handleReprovarDocumento(doc.id!)}
                                   className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 flex items-center gap-1.5 font-medium"
@@ -2474,32 +2478,6 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                                 Baixar
                               </button>
 
-                              {/* Só mostrar Aprovar se não estiver APROVADO nem REPROVADO */}
-                              {doc.statusDocumento !== 'APROVADO' && doc.statusDocumento !== 'REPROVADO' && (
-                                <button
-                                  onClick={() => handleAprovarDocumento(doc.id!)}
-                                  className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 flex items-center gap-1.5 font-medium"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                  </svg>
-                                  Aprovar
-                                </button>
-                              )}
-
-                              {/* Só mostrar Reprovar se não estiver REPROVADO nem APROVADO */}
-                              {doc.statusDocumento !== 'REPROVADO' && doc.statusDocumento !== 'APROVADO' && (
-                                <button
-                                  onClick={() => handleReprovarDocumento(doc.id!)}
-                                  className="px-3 py-1.5 bg-orange-600 text-white text-xs rounded hover:bg-orange-700 flex items-center gap-1.5 font-medium"
-                                >
-                                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                  </svg>
-                                  Reprovar
-                                </button>
-                              )}
-
                               {/* Só permitir excluir se não estiver APROVADO */}
                               {doc.statusDocumento !== 'APROVADO' && (
                                 <button
@@ -2578,7 +2556,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                 >
                   <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                  </svg>
+                </svg>
                 </button>
 
                 {/* Close Button */}
