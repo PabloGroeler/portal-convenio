@@ -8,6 +8,7 @@ import {
   CARGO_OPTIONS,
   UF_OPTIONS
 } from '../types/dirigente.types';
+import DocumentosPessoaisUpload from '../components/DocumentosPessoaisUpload';
 
 const DiretoriaPage: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -18,8 +19,10 @@ const DiretoriaPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [showInativarModal, setShowInativarModal] = useState(false);
+  const [showDocumentosModal, setShowDocumentosModal] = useState(false);
   const [editingDirigente, setEditingDirigente] = useState<Dirigente | null>(null);
   const [inativandoDirigente, setInativandoDirigente] = useState<Dirigente | null>(null);
+  const [dirigenteDocumentos, setDirigenteDocumentos] = useState<Dirigente | null>(null);
   const [avisos, setAvisos] = useState<string[]>([]);
   const [apenasAtivos, setApenasAtivos] = useState(false);
 
@@ -56,7 +59,7 @@ const DiretoriaPage: React.FC = () => {
   useEffect(() => {
     if (!instituicaoId) {
       alert('ID da instituição não informado');
-      navigate('/dashboard/instituicoes');
+      navigate('/dashboard');
       return;
     }
     loadDirigentes();
@@ -148,6 +151,16 @@ const DiretoriaPage: React.FC = () => {
     setInativandoDirigente(dirigente);
     setInativarData({ dataTermino: '', motivo: '' });
     setShowInativarModal(true);
+  };
+
+  const handleOpenDocumentosModal = (dirigente: Dirigente) => {
+    setDirigenteDocumentos(dirigente);
+    setShowDocumentosModal(true);
+  };
+
+  const handleCloseDocumentosModal = () => {
+    setShowDocumentosModal(false);
+    setDirigenteDocumentos(null);
   };
 
   const handleInativar = async () => {
@@ -304,6 +317,13 @@ const DiretoriaPage: React.FC = () => {
                   className="flex-1 px-3 py-2 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
                 >
                   Editar
+                </button>
+                <button
+                  onClick={() => handleOpenDocumentosModal(dirigente)}
+                  className="flex-1 px-3 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                  title="Gerenciar documentos pessoais"
+                >
+                  📄 Documentos
                 </button>
                 {dirigente.statusCargo === 'Ativo' && (
                   <button
@@ -659,6 +679,50 @@ const DiretoriaPage: React.FC = () => {
                 className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
                 Inativar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Documentos Pessoais */}
+      {showDocumentosModal && dirigenteDocumentos && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+            <div className="flex justify-between items-center p-6 border-b">
+              <div>
+                <h2 className="text-xl font-bold">Documentos Pessoais</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {dirigenteDocumentos.nomeCompleto} - {dirigenteDocumentos.cargo}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseDocumentosModal}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <DocumentosPessoaisUpload
+                dirigenteId={dirigenteDocumentos.id!}
+                cargo={dirigenteDocumentos.cargo}
+                onDocumentosChange={() => {
+                  // Opcional: recarregar alguma informação se necessário
+                  console.log('Documentos atualizados');
+                }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+              <button
+                type="button"
+                onClick={handleCloseDocumentosModal}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Fechar
               </button>
             </div>
           </div>

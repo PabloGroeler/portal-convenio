@@ -109,20 +109,21 @@ public class InstitutionResource {
     @Transactional
     // TODO: Adicionar @RolesAllowed quando JWT estiver configurado
     public Response create(Institution institution, @HeaderParam("Authorization") String authHeader) {
-        log.info("🔵 CREATE INSTITUTION - Authorization Header: {}", authHeader != null ? "PRESENTE" : "AUSENTE");
+        log.info("🔵 CREATE/UPDATE INSTITUTION - CNPJ: {}", institution.cnpj);
 
         if (institution == null) {
             return badRequest("Payload inválido");
         }
 
+        // Normalizar campos
         institution.cnpj = onlyDigits(institution.cnpj);
         institution.cep = onlyDigits(institution.cep);
 
-        // Required fields validations
+        // Validações obrigatórias
         if (institution.razaoSocial == null || institution.razaoSocial.isBlank()) return badRequest("Razão Social é obrigatória");
         if (institution.razaoSocial.length() > 200) return badRequest("Razão Social deve ter no máximo 200 caracteres");
         if (institution.nomeFantasia != null && institution.nomeFantasia.length() > 200) return badRequest("Nome Fantasia deve ter no máximo 200 caracteres");
-        if (institution.cnpj == null || institution.cnpj.length() != 14) return badRequest("CNPJ inválido");
+        if (institution.cnpj == null || institution.cnpj.length() != 14) return badRequest("CNPJ inválido - deve conter 14 dígitos");
         if (institution.inscricaoMunicipal == null || institution.inscricaoMunicipal.isBlank()) return badRequest("Inscrição Municipal é obrigatória");
         if (institution.inscricaoMunicipal.length() > 20) return badRequest("Inscrição Municipal deve ter no máximo 20 caracteres");
         if (institution.inscricaoEstadual != null && institution.inscricaoEstadual.length() > 20) return badRequest("Inscrição Estadual deve ter no máximo 20 caracteres");
@@ -137,194 +138,75 @@ public class InstitutionResource {
         if (institution.uf == null || institution.uf.isBlank()) return badRequest("UF é obrigatória");
         if (institution.numeroRegistroConselhoMunicipal == null || institution.numeroRegistroConselhoMunicipal.isBlank()) return badRequest("Número de Registro no Conselho Municipal é obrigatório");
 
-        // Uniqueness checks
-        // Check if email already exists BUT allow if it belongs to institution with same CNPJ
-        // (this handles the case where user searches by CNPJ and updates the same institution)
-        Institution emailExisting = institutionRepository.find("emailInstitucional", institution.emailInstitucional).firstResult();
-        if (emailExisting != null) {
-            log.info("Email '{}' já existe na instituição ID: {} (CNPJ: {})",
-                     institution.emailInstitucional, emailExisting.institutionId, emailExisting.cnpj);
-            log.info("CNPJ recebido no request: '{}'", institution.cnpj);
+        // Usar createOrUpdate: cria nova instituição OU atualiza existente se CNPJ já existe
+        Institution result;
+        boolean isUpdate = false;
 
-            // Normalize CNPJs for comparison (remove any formatting)
-            String cnpjNormalized = institution.cnpj.replaceAll("\\D", "");
-            String emailExistingCnpjNormalized = emailExisting.cnpj.replaceAll("\\D", "");
-
-            log.info("CNPJ normalizado request: '{}', CNPJ normalizado DB: '{}'",
-                     cnpjNormalized, emailExistingCnpjNormalized);
-
-            // Allow if the email belongs to an institution with the SAME CNPJ (editing scenario)
-            if (!cnpjNormalized.equals(emailExistingCnpjNormalized)) {
-                log.warn("CNPJs diferentes! Bloqueando - Request: '{}', DB: '{}'",
-                         cnpjNormalized, emailExistingCnpjNormalized);
-                return Response.status(Response.Status.CONFLICT)
-                        .entity("{\"error\": \"E-mail institucional já cadastrado em outra instituição\"}")
-                        .build();
-            }
-            // Same CNPJ: this is an UPDATE, not a CREATE - redirect to update flow
-            log.info("✅ Mesmo CNPJ! Convertendo CREATE em UPDATE para ID: {}", emailExisting.institutionId);
-            Institution updated = institutionService.update(emailExisting.institutionId, institution);
-
-            // Try to link user to institution
-            try {
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                    String token = authHeader.substring(7);
-                    io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
-                    String username = claims.getSubject();
-                    User user = User.findByUsername(username);
-
-                    if (user != null) {
-                        UsuarioInstituicao vinculoExistente = UsuarioInstituicao.findByUsuarioAndInstituicao(
-                            user.id, updated.institutionId
-                        );
-
-                        if (vinculoExistente == null) {
-                            UsuarioInstituicao novoVinculo = new UsuarioInstituicao();
-                            novoVinculo.usuarioId = user.id;
-                            novoVinculo.instituicaoId = updated.institutionId;
-                            novoVinculo.persist();
-                            log.info("✅ Vínculo criado: usuário {} → instituição {}", user.username, updated.institutionId);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("Erro ao vincular usuário na atualização: {}", e.getMessage());
-            }
-
-            return Response.ok(updated).build();
-        }
-
-        // Check if institutionId already exists
-        if (institution.institutionId != null && !institution.institutionId.isBlank()) {
-            Institution existing = institutionService.findByInstitutionId(institution.institutionId);
-            if (existing != null) {
-                return Response.status(Response.Status.CONFLICT)
-                        .entity("{\"error\": \"ID da instituição já existe\"}")
-                        .build();
-            }
-        }
-
-        // Check if CNPJ already exists - if yes, this should be an UPDATE, not CREATE
-        Institution cnpjExisting = institutionService.findByCnpj(institution.cnpj);
-        if (cnpjExisting != null) {
-            log.info("CNPJ já cadastrado. Convertendo CREATE em UPDATE para instituição ID: {}", cnpjExisting.institutionId);
-            // This is an update of existing institution, not a new one
-            Institution updated = institutionService.update(cnpjExisting.institutionId, institution);
-
-            // Try to link user to institution (same logic as CREATE)
-            try {
-                if (authHeader != null && authHeader.startsWith("Bearer ")) {
-                    String token = authHeader.substring(7);
-                    io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
-                    String username = claims.getSubject();
-                    User user = User.findByUsername(username);
-
-                    if (user != null) {
-                        UsuarioInstituicao vinculoExistente = UsuarioInstituicao.findByUsuarioAndInstituicao(
-                            user.id, updated.institutionId
-                        );
-
-                        if (vinculoExistente == null) {
-                            UsuarioInstituicao novoVinculo = new UsuarioInstituicao();
-                            novoVinculo.usuarioId = user.id;
-                            novoVinculo.instituicaoId = updated.institutionId;
-                            novoVinculo.persist();
-                            log.info("✅ Vínculo criado: usuário {} → instituição {}", user.username, updated.institutionId);
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                log.warn("Erro ao vincular usuário na atualização: {}", e.getMessage());
-            }
-
-            return Response.ok(updated).build();
-        }
-
-        Institution created = institutionService.create(institution);
-        log.info("Instituição criada com ID: {}", created.institutionId);
-
-        // AUDIT LOG - Criação de instituição
-        auditService.logCreate(
-            "Institution",
-            created.institutionId,
-            created,
-            getCurrentUserId(),
-            getCurrentUserName(),
-            getClientIP()
-        );
-
-        // Vincular usuário logado à instituição criada
-        // Extrair username do token JWT manualmente
         try {
-            log.info("Tentando vincular usuário à instituição...");
+            Institution existing = institutionService.findByCnpj(institution.cnpj);
+            isUpdate = (existing != null);
 
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                log.warn("⚠️ Nenhum token JWT fornecido no header Authorization");
-                log.info("📝 Para vincular, use: POST /api/users/vincular-instituicao?instituicaoId=" + created.institutionId);
-                return Response.status(Response.Status.CREATED).entity(created).build();
-            }
+            result = institutionService.createOrUpdate(institution);
 
-            String token = authHeader.substring(7);
-            log.info("Token extraído: {}...", token.substring(0, Math.min(20, token.length())));
+            log.info("✅ Instituição {} - ID: {}, CNPJ: {}",
+                     isUpdate ? "ATUALIZADA" : "CRIADA",
+                     result.institutionId,
+                     result.cnpj);
+        } catch (Exception e) {
+            log.error("❌ Erro ao criar/atualizar instituição: {}", e.getMessage(), e);
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
+                    .build();
+        }
 
-            // Validar token e extrair username
-            io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
-            String username = claims.getSubject();
-            log.info("Username extraído do token: '{}'", username);
+        // Vincular usuário à instituição (se autenticado)
+        try {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                io.jsonwebtoken.Claims claims = jwtUtil.parseToken(token);
+                String username = claims.getSubject();
+                User user = User.findByUsername(username);
 
-            log.info("Buscando usuário com username: '{}'", username);
-            User user = User.findByUsername(username);
+                if (user != null) {
+                    UsuarioInstituicao vinculoExistente = UsuarioInstituicao.findByUsuarioAndInstituicao(
+                        user.id, result.institutionId
+                    );
 
-            if (user == null) {
-                log.error("❌ USUÁRIO NÃO ENCONTRADO! Username buscado: '{}'", username);
-                log.error("Verifique se o username no JWT corresponde ao campo 'nome_usuario' no banco!");
-                // Listar usuários cadastrados para debug
-                long totalUsers = User.count();
-                log.info("Total de usuários cadastrados: {}", totalUsers);
-            } else {
-                log.info("✅ Usuário encontrado: '{}' (ID: {})", user.username, user.id);
-            }
-
-            if (user != null && created.institutionId != null) {
-                log.info("Verificando vínculo existente entre usuário {} e instituição {}", user.id, created.institutionId);
-
-                // Verificar se já existe vínculo
-                UsuarioInstituicao vinculoExistente = UsuarioInstituicao.findByUsuarioAndInstituicao(
-                    user.id,
-                    created.institutionId
-                );
-
-                log.info("Vínculo existente: {}", vinculoExistente != null ? "SIM" : "NÃO");
-
-                if (vinculoExistente == null) {
-                    log.info("Criando novo vínculo...");
-                    // Criar vínculo
-                    UsuarioInstituicao novoVinculo = new UsuarioInstituicao();
-                    novoVinculo.usuarioId = user.id;
-                    novoVinculo.instituicaoId = created.institutionId;
-
-                    log.info("Persistindo vínculo - usuarioId: {}, instituicaoId: {}", novoVinculo.usuarioId, novoVinculo.instituicaoId);
-                    novoVinculo.persist();
-                    novoVinculo.flush(); // Força o INSERT imediato
-
-                    log.info("✅ Vínculo PERSISTIDO com sucesso! ID: {}", novoVinculo.id);
-
-                    // Verificar se foi realmente salvo
-                    long count = UsuarioInstituicao.count("usuarioId = ?1 and instituicaoId = ?2", user.id, created.institutionId);
-                    log.info("Confirmação: {} vínculo(s) encontrado(s) no banco", count);
-                } else {
-                    log.info("Vínculo já existe, pulando criação.");
+                    if (vinculoExistente == null) {
+                        UsuarioInstituicao novoVinculo = new UsuarioInstituicao();
+                        novoVinculo.usuarioId = user.id;
+                        novoVinculo.instituicaoId = result.institutionId;
+                        novoVinculo.persist();
+                        log.info("✅ Vínculo criado: usuário {} → instituição {}", user.username, result.institutionId);
+                    } else {
+                        log.info("ℹ️ Vínculo já existe: usuário {} → instituição {}", user.username, result.institutionId);
+                    }
                 }
-            } else {
-                log.warn("⚠️ Não foi possível criar vínculo - user: {}, institutionId: {}",
-                    user != null ? "OK" : "NULL",
-                    created.institutionId != null ? "OK" : "NULL");
             }
         } catch (Exception e) {
-            log.error("❌ Erro ao vincular usuário à instituição: {}", e.getMessage(), e);
+            log.warn("⚠️ Erro ao vincular usuário: {}", e.getMessage());
         }
 
-        return Response.status(Response.Status.CREATED).entity(created).build();
+        // Registrar auditoria
+        if (isUpdate) {
+            auditService.logUpdate(
+                "Institution",
+                result.institutionId,
+                null,
+                result,
+                getCurrentUserId(),
+                getCurrentUserName(),
+                getClientIP()
+            );
+        } else {
+            auditService.logCreate("Institution", result.institutionId, result,
+                getCurrentUserId(), getCurrentUserName(), getClientIP());
+        }
+
+        // Retornar resposta apropriada
+        return isUpdate
+            ? Response.ok(result).build()
+            : Response.status(Response.Status.CREATED).entity(result).build();
     }
 
     @PUT

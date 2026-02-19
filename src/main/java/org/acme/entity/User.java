@@ -40,16 +40,11 @@ public class User extends PanacheEntity {
     @Column(name = "nome_completo", nullable = false, length = 200)
     public String nomeCompleto;
 
-    // Store only digits. Validation + formatting handled in service/resource.
-    // Nullable during registration - user can complete profile later
-    @Pattern(regexp = "\\d{11}", message = "CPF deve conter 11 dígitos")
-    @Column(name = "cpf", length = 11)
-    public String cpf;
-
-    // CNPJ for legal entities (14 digits without formatting)
-    @Pattern(regexp = "\\d{14}", message = "CNPJ deve conter 14 dígitos")
-    @Column(name = "cnpj", length = 14)
-    public String cnpj;
+    // Documento: CPF (11 digits) or CNPJ (14 digits) - store only digits
+    // Validation + formatting handled in service/resource
+    @Pattern(regexp = "\\d{11,14}", message = "Documento deve conter 11 dígitos (CPF) ou 14 dígitos (CNPJ)")
+    @Column(name = "documento", length = 14, unique = true)
+    public String documento;
 
     @NotBlank
     @Email
@@ -128,11 +123,7 @@ public class User extends PanacheEntity {
         return find("email", email).firstResult();
     }
 
-    public static User findByCpf(String cpf) {
-        return find("cpf", cpf).firstResult();
-    }
-
-    public static User findByCnpj(String cnpj) {
-        return find("cnpj", cnpj).firstResult();
+    public static User findByDocumento(String documento) {
+        return find("documento", documento).firstResult();
     }
 }

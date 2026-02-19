@@ -69,7 +69,7 @@ public class UserService {
             if (User.find("cpf", cpfDigits).firstResult() != null) {
                 throw new RuntimeException("CPF já cadastrado");
             }
-            user.cpf = cpfDigits;
+            user.documento = cpfDigits;
         }
 
         // Set CNPJ if provided (14 digits without formatting)
@@ -82,7 +82,7 @@ public class UserService {
             if (User.find("cnpj", cnpjDigits).firstResult() != null) {
                 throw new RuntimeException("CNPJ já cadastrado");
             }
-            user.cnpj = cnpjDigits;
+            user.documento = cnpjDigits;
         }
 
         // REQUIREMENT: Usuário deve iniciar com status PENDENTE

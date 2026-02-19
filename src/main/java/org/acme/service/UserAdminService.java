@@ -16,25 +16,23 @@ public class UserAdminService {
     // Local request shapes (keeps service independent from IDE indexing glitches)
     public static class UserAdminCreateRequest {
         public String nomeCompleto;
-        public String cpf;
-        public String cnpj;
+        public String documento; // CPF (11 digits) or CNPJ (14 digits)
         public String email;
         public String telefone;
         public String cargoFuncao;
-        public String status; // ATIVO | INATIVO | BLOQUEADO
-        public String role;   // ADMIN | OPERADOR
+        public String status; // ATIVO | INATIVO | BLOQUEADO | PENDENTE
+        public String role;   // ADMIN | OPERADOR | GESTOR | JURIDICO
         public String password;
     }
 
     public static class UserAdminUpdateRequest {
         public String nomeCompleto;
-        public String cpf;
-        public String cnpj;
+        public String documento; // CPF (11 digits) or CNPJ (14 digits)
         public String email;
         public String telefone;
         public String cargoFuncao;
-        public String status; // ATIVO | INATIVO | BLOQUEADO
-        public String role;   // ADMIN | OPERADOR
+        public String status; // ATIVO | INATIVO | BLOQUEADO | PENDENTE
+        public String role;   // ADMIN | OPERADOR | GESTOR | JURIDICO
         public String password;
     }
 
@@ -60,10 +58,15 @@ public class UserAdminService {
     public UserAdminDTO create(UserAdminCreateRequest req) {
         if (req == null) throw new IllegalArgumentException("Body é obrigatório");
 
-        String cpf = normalizeCpf(req.cpf);
-        if (cpf == null || cpf.isBlank()) throw new IllegalArgumentException("CPF é obrigatório");
+        String documento = normalizeDocumento(req.documento);
+        if (documento.isBlank()) throw new IllegalArgumentException("Documento (CPF ou CNPJ) é obrigatório");
 
-        if (User.findByCpf(cpf) != null) throw new IllegalArgumentException("CPF já cadastrado");
+        // Validate documento length (11 for CPF, 14 for CNPJ)
+        if (documento.length() != 11 && documento.length() != 14) {
+            throw new IllegalArgumentException("Documento deve ter 11 dígitos (CPF) ou 14 dígitos (CNPJ)");
+        }
+
+        if (User.findByDocumento(documento) != null) throw new IllegalArgumentException("Documento já cadastrado");
         if (req.email == null || req.email.isBlank()) throw new IllegalArgumentException("E-mail é obrigatório");
         if (User.findByEmail(req.email) != null) throw new IllegalArgumentException("E-mail já cadastrado");
 
@@ -72,7 +75,7 @@ public class UserAdminService {
 
         User u = new User();
         u.nomeCompleto = req.nomeCompleto.trim();
-        u.cpf = cpf;
+        u.documento = documento;
         u.email = req.email.trim().toLowerCase(Locale.ROOT);
         u.telefone = blankToNull(req.telefone);
         u.cargoFuncao = blankToNull(req.cargoFuncao);
@@ -81,10 +84,10 @@ public class UserAdminService {
         u.role = parseRole(req.role, User.UserRole.OPERADOR);
 
         // Keep username for auth compatibility. Use email as username by default.
-        u.username = (req.email != null && !req.email.isBlank()) ? req.email.trim().toLowerCase(Locale.ROOT) : cpf;
+        u.username = (req.email != null && !req.email.isBlank()) ? req.email.trim().toLowerCase(Locale.ROOT) : documento;
         if (User.findByUsername(u.username) != null) {
-            // fallback to cpf
-            u.username = cpf;
+            // fallback to documento
+            u.username = documento;
         }
         if (User.findByUsername(u.username) != null) {
             throw new IllegalArgumentException("Username já cadastrado");
@@ -103,33 +106,22 @@ public class UserAdminService {
 
         if (req.nomeCompleto != null) u.nomeCompleto = req.nomeCompleto.trim();
 
-        // Atualizar CPF
-        if (req.cpf != null) {
-            String cpf = normalizeCpf(req.cpf);
-            if (!cpf.isEmpty()) {
-                User other = User.findByCpf(cpf);
-                if (other != null && !other.id.equals(u.id)) {
-                    throw new IllegalArgumentException("CPF já cadastrado");
+        // Atualizar documento (CPF ou CNPJ)
+        if (req.documento != null) {
+            String documento = normalizeDocumento(req.documento);
+            if (!documento.isEmpty()) {
+                // Validate documento length
+                if (documento.length() != 11 && documento.length() != 14) {
+                    throw new IllegalArgumentException("Documento deve ter 11 dígitos (CPF) ou 14 dígitos (CNPJ)");
                 }
-                u.cpf = cpf;
-                u.cnpj = null; // Limpar CNPJ se CPF foi fornecido
-            } else {
-                u.cpf = null;
-            }
-        }
 
-        // Atualizar CNPJ
-        if (req.cnpj != null) {
-            String cnpj = normalizeCnpj(req.cnpj);
-            if (!cnpj.isEmpty()) {
-                User other = User.findByCnpj(cnpj);
+                User other = User.findByDocumento(documento);
                 if (other != null && !other.id.equals(u.id)) {
-                    throw new IllegalArgumentException("CNPJ já cadastrado");
+                    throw new IllegalArgumentException("Documento já cadastrado");
                 }
-                u.cnpj = cnpj;
-                u.cpf = null; // Limpar CPF se CNPJ foi fornecido
+                u.documento = documento;
             } else {
-                u.cnpj = null;
+                u.documento = null;
             }
         }
 
@@ -163,14 +155,9 @@ public class UserAdminService {
         }
     }
 
-    private static String normalizeCpf(String cpf) {
-        if (cpf == null) return null;
-        return cpf.replaceAll("\\D", "");
-    }
-
-    private static String normalizeCnpj(String cnpj) {
-        if (cnpj == null) return null;
-        return cnpj.replaceAll("\\D", "");
+    private static String normalizeDocumento(String documento) {
+        if (documento == null || documento.isBlank()) return "";
+        return documento.replaceAll("\\D", "");
     }
 
     private static String blankToNull(String v) {

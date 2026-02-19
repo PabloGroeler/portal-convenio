@@ -22,6 +22,14 @@ export const dirigenteService = {
     return data;
   },
 
+  // Alias para buscarPorId (compatibilidade)
+  obter: async (id: string): Promise<Dirigente> => {
+    console.log('[dirigenteService] obter() chamado com ID:', id);
+    const { data } = await api.get(`/dirigentes/${id}`);
+    console.log('[dirigenteService] obter() retornou:', data);
+    return data;
+  },
+
   // Atualizar dirigente
   atualizar: async (id: string, dirigente: Dirigente): Promise<Dirigente> => {
     const { data } = await api.put(`/dirigentes/${id}`, dirigente);

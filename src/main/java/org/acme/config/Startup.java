@@ -24,7 +24,7 @@ public class Startup {
         if (User.findByEmail("admin@local.test") == null) {
             User admin = new User();
             admin.nomeCompleto = "Administrador";
-            admin.cpf = "00000000000";
+            admin.documento = "00000000000";
             admin.username = "admin";
             admin.email = "admin@local.test";
             admin.telefone = null;

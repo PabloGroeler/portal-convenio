@@ -6,8 +6,7 @@ export type UserRole = 'ADMIN' | 'OPERADOR' | 'GESTOR' | 'JURIDICO';
 export interface UserAdminDTO {
   id: number;
   nomeCompleto: string;
-  cpf?: string | null;
-  cnpj?: string | null;
+  documento?: string | null; // CPF (11 digits) or CNPJ (14 digits)
   email: string;
   telefone?: string | null;
   cargoFuncao?: string | null;
@@ -19,8 +18,7 @@ export interface UserAdminDTO {
 
 export interface UserAdminCreateRequest {
   nomeCompleto: string;
-  cpf?: string;
-  cnpj?: string;
+  documento?: string; // CPF (11 digits) or CNPJ (14 digits)
   email: string;
   telefone?: string;
   cargoFuncao?: string;
@@ -31,8 +29,7 @@ export interface UserAdminCreateRequest {
 
 export interface UserAdminUpdateRequest {
   nomeCompleto?: string;
-  cpf?: string;
-  cnpj?: string;
+  documento?: string; // CPF (11 digits) or CNPJ (14 digits)
   email?: string;
   telefone?: string;
   cargoFuncao?: string;

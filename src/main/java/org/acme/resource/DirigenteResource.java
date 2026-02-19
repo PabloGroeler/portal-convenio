@@ -51,15 +51,23 @@ public class DirigenteResource {
         try {
             log.info("GET /api/dirigentes/instituicao/{} - apenasAtivos: {}", instituicaoId, apenasAtivos);
 
+            if (instituicaoId == null || instituicaoId.trim().isEmpty()) {
+                log.error("ID da instituição é nulo ou vazio");
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "ID da instituição é obrigatório"))
+                        .build();
+            }
+
             List<DirigenteDTO> dirigentes = apenasAtivos
                 ? dirigenteService.listarAtivosPorInstituicao(instituicaoId)
                 : dirigenteService.listarPorInstituicao(instituicaoId);
 
+            log.info("Encontrados {} dirigentes para instituição {}", dirigentes.size(), instituicaoId);
             return Response.ok(dirigentes).build();
         } catch (Exception e) {
-            log.error("Erro ao listar dirigentes: {}", e.getMessage(), e);
+            log.error("Erro ao listar dirigentes da instituição {}: {}", instituicaoId, e.getMessage(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("error", e.getMessage()))
+                    .entity(Map.of("error", "Erro ao carregar lista de dirigentes: " + e.getMessage()))
                     .build();
         }
     }
@@ -70,18 +78,27 @@ public class DirigenteResource {
         try {
             log.info("GET /api/dirigentes/{}", id);
 
-            DirigenteDTO dirigente = dirigenteService.buscarPorId(id);
-            if (dirigente == null) {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity(Map.of("error", "Dirigente não encontrado"))
+            if (id == null || id.trim().isEmpty()) {
+                log.error("ID do dirigente é nulo ou vazio");
+                return Response.status(Response.Status.BAD_REQUEST)
+                        .entity(Map.of("error", "ID do dirigente é obrigatório"))
                         .build();
             }
 
+            DirigenteDTO dirigente = dirigenteService.buscarPorId(id);
+            if (dirigente == null) {
+                log.warn("Dirigente não encontrado com ID: {}", id);
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity(Map.of("error", "Dirigente não encontrado com ID: " + id))
+                        .build();
+            }
+
+            log.info("Dirigente encontrado: {}", dirigente.getNomeCompleto());
             return Response.ok(dirigente).build();
         } catch (Exception e) {
-            log.error("Erro ao buscar dirigente: {}", e.getMessage(), e);
+            log.error("Erro ao buscar dirigente ID {}: {}", id, e.getMessage(), e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(Map.of("error", e.getMessage()))
+                    .entity(Map.of("error", "Erro ao carregar dados do dirigente: " + e.getMessage()))
                     .build();
         }
     }

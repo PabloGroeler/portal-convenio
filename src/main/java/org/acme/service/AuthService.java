@@ -21,16 +21,8 @@ public class AuthService {
     public String login(String document, String password) {
         if (document == null || password == null) return null;
 
-        User user = null;
-
-        // Try to find by CPF (11 digits)
-        if (document.length() == 11) {
-            user = User.find("cpf", document).firstResult();
-        }
-        // Try to find by CNPJ (14 digits)
-        else if (document.length() == 14) {
-            user = User.find("cnpj", document).firstResult();
-        }
+        // Find user by documento (CPF or CNPJ)
+        User user = User.findByDocumento(document);
 
         if (user == null) return null;
 

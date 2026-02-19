@@ -42,6 +42,38 @@ public class InstitutionService {
         return institution;
     }
 
+    /**
+     * Cria uma nova instituição OU atualiza uma existente se o CNPJ já estiver cadastrado.
+     * Este método implementa a lógica "upsert" para evitar duplicatas de CNPJ.
+     */
+    @Transactional
+    public Institution createOrUpdate(Institution institution) {
+        // Normalizar CNPJ (apenas dígitos)
+        String cnpjNormalizado = institution.cnpj != null ? institution.cnpj.replaceAll("\\D", "") : null;
+
+        if (cnpjNormalizado == null || cnpjNormalizado.length() != 14) {
+            throw new IllegalArgumentException("CNPJ inválido - deve conter 14 dígitos");
+        }
+
+        // Buscar instituição existente por CNPJ
+        Institution existing = findByCnpj(cnpjNormalizado);
+
+        if (existing != null) {
+            // UPDATE: Atualizar instituição existente
+            applyUpdates(existing, institution);
+            existing.updateTime = OffsetDateTime.now();
+            return existing;
+        }
+
+        // CREATE: Criar nova instituição
+        institution.cnpj = cnpjNormalizado;
+        institution.createTime = OffsetDateTime.now();
+        institution.updateTime = OffsetDateTime.now();
+        institutionRepository.persist(institution);
+        institutionRepository.flush();
+        return institution;
+    }
+
     @Transactional
     public Institution update(String id, Institution updated) {
         Institution existing = institutionRepository.findById(id);

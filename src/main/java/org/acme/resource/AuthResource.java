@@ -61,15 +61,8 @@ public class AuthResource {
                 throw new Exception("Invalid credentials");
             }
 
-            // Find user by CPF or CNPJ
-            User user = null;
-            if (document.length() == 11) {
-                // CPF (11 digits)
-                user = User.find("cpf", document).firstResult();
-            } else if (document.length() == 14) {
-                // CNPJ (14 digits)
-                user = User.find("cnpj", document).firstResult();
-            }
+            // Find user by documento (CPF or CNPJ)
+            User user = User.findByDocumento(document);
 
             if (user == null) {
                 // AUDIT LOG - Login falhou (usuário não encontrado)

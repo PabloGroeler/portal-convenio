@@ -262,22 +262,57 @@ public class UserResource {
 
     @GET
     @Path("/me")
-    @RolesAllowed({"ADMIN", "OPERADOR", "ANALISTA", "JURIDICO"})
-    public Response getCurrentUser(@Context SecurityContext securityContext) {
+    public Response getCurrentUser(@HeaderParam("Authorization") String authHeader) {
         try {
-            String username = securityContext.getUserPrincipal().getName();
+            log.info("🔵 Endpoint /me chamado");
+
+            // Extrair e validar token manualmente
+            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+                log.warn("⚠️ Token não fornecido ou inválido");
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("{\"error\":\"Token não fornecido\"}")
+                        .build();
+            }
+
+            String token = authHeader.substring(7);
+            log.info("Token extraído: {}...", token.substring(0, Math.min(20, token.length())));
+
+            io.jsonwebtoken.Claims claims;
+            try {
+                claims = jwtUtil.parseToken(token);
+            } catch (io.jsonwebtoken.ExpiredJwtException e) {
+                log.warn("⚠️ Token expirado: {}", e.getMessage());
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("{\"error\":\"Token expirado\", \"expired\":true}")
+                        .build();
+            } catch (io.jsonwebtoken.JwtException e) {
+                log.error("❌ Token inválido: {}", e.getMessage());
+                return Response.status(Response.Status.UNAUTHORIZED)
+                        .entity("{\"error\":\"Token inválido\"}")
+                        .build();
+            }
+
+            String username = claims.getSubject();
+            log.info("Username do token: {}", username);
+
             User user = User.findByUsername(username);
 
             if (user == null) {
+                log.error("❌ Usuário não encontrado: {}", username);
                 return Response.status(Response.Status.NOT_FOUND)
                         .entity("{\"error\":\"User not found\"}")
                         .build();
             }
 
+            log.info("✅ Usuário encontrado: {} (ID: {}, Role: {}, Status: {})",
+                user.username, user.id, user.role, user.status);
+
             List<String> instituicoes = UsuarioInstituicao.findByUsuario(user.id)
                 .stream()
                 .map(vi -> vi.instituicaoId)
                 .collect(Collectors.toList());
+
+            log.info("📋 Instituições vinculadas: {}", instituicoes.size());
 
             UserDTO userDTO = new UserDTO(
                 user.id,
@@ -289,11 +324,14 @@ public class UserResource {
                 instituicoes
             );
 
+            log.info("✅ Retornando UserDTO com sucesso");
             return Response.ok(userDTO).build();
+
         } catch (Exception e) {
+            log.error("❌ Erro ao buscar usuário atual: {}", e.getMessage(), e);
             return Response
                     .status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity("{\"error\":\"" + e.getMessage() + "\"}")
+                    .entity("{\"error\":\"Erro ao buscar dados do usuário: " + e.getMessage() + "\"}")
                     .build();
         }
     }

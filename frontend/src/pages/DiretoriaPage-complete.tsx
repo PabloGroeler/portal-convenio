@@ -56,7 +56,7 @@ const DiretoriaPage: React.FC = () => {
   useEffect(() => {
     if (!instituicaoId) {
       alert('ID da instituição não informado');
-      navigate('/dashboard/instituicoes');
+      navigate('/dashboard');
       return;
     }
     loadDirigentes();

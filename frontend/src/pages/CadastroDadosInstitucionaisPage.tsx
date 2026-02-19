@@ -50,6 +50,7 @@ import {
 import { StatusOSCBadge, StatusOSCPanel } from '../components/StatusOSCComponents';
 import tipoDocumentoConfigService from '../services/tipoDocumentoConfigService';
 import type { TipoDocumentoConfig } from '../services/tipoDocumentoConfigService';
+import DocumentosPessoaisUpload from '../components/DocumentosPessoaisUpload';
 
 const UFS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
@@ -156,6 +157,10 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   const [showFileViewer, setShowFileViewer] = useState(false);
   const [currentViewingDoc, setCurrentViewingDoc] = useState<DocInstitucional | null>(null);
   const [currentViewingIndex, setCurrentViewingIndex] = useState(0);
+
+  // Modal de documentos pessoais do dirigente
+  const [showDocumentosPessoaisModal, setShowDocumentosPessoaisModal] = useState(false);
+  const [dirigenteDocumentosPessoais, setDirigenteDocumentosPessoais] = useState<Dirigente | null>(null);
 
   const [dirigenteFormData, setDirigenteFormData] = useState<Dirigente>({
     instituicaoId: editId || '',
@@ -611,6 +616,17 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
     } finally {
       setLoadingCepDirigente(false);
     }
+  };
+
+  // Funções para modal de documentos pessoais do dirigente
+  const handleOpenDocumentosPessoais = (dirigente: Dirigente) => {
+    setDirigenteDocumentosPessoais(dirigente);
+    setShowDocumentosPessoaisModal(true);
+  };
+
+  const handleCloseDocumentosPessoais = () => {
+    setShowDocumentosPessoaisModal(false);
+    setDirigenteDocumentosPessoais(null);
   };
 
   const formatCPF = (value: string) => {
@@ -1184,7 +1200,7 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
         }
 
         setSuccess('Cadastro atualizado com sucesso e vinculado ao seu usuário.');
-        setTimeout(() => navigate('/dashboard/instituicoes'), 500);
+        setTimeout(() => navigate('/dashboard'), 500);
       } else {
         await institutionService.create(payload);
         setSuccess('Cadastro realizado com sucesso e vinculado ao seu usuário.');
@@ -1918,6 +1934,13 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
                     >
                       Editar
                     </button>
+                    <button
+                      onClick={() => handleOpenDocumentosPessoais(dirigente)}
+                      className="flex-1 px-3 py-2 bg-purple-600 text-white rounded text-sm hover:bg-purple-700"
+                      title="Gerenciar documentos pessoais"
+                    >
+                      📄 Documentos
+                    </button>
                   </div>
                 </div>
               ))}
@@ -2625,6 +2648,49 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
 
                 return null;
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Documentos Pessoais do Dirigente */}
+      {showDocumentosPessoaisModal && dirigenteDocumentosPessoais && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-xl max-w-4xl w-full my-8">
+            <div className="flex justify-between items-center p-6 border-b">
+              <div>
+                <h2 className="text-xl font-bold">Documentos Pessoais</h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  {dirigenteDocumentosPessoais.nomeCompleto} - {dirigenteDocumentosPessoais.cargo}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleCloseDocumentosPessoais}
+                className="text-gray-400 hover:text-gray-600 text-2xl"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <DocumentosPessoaisUpload
+                dirigenteId={dirigenteDocumentosPessoais.id!}
+                cargo={dirigenteDocumentosPessoais.cargo}
+                onDocumentosChange={() => {
+                  console.log('Documentos atualizados');
+                }}
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 p-6 border-t bg-gray-50">
+              <button
+                type="button"
+                onClick={handleCloseDocumentosPessoais}
+                className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Fechar
+              </button>
             </div>
           </div>
         </div>

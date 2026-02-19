@@ -77,14 +77,12 @@ const UsersPage: React.FC = () => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
     return users.filter((u) => {
-      const cpf = (u.cpf ?? '').toLowerCase();
-      const cnpj = (u.cnpj ?? '').toLowerCase();
+      const documento = (u.documento ?? '').toLowerCase();
       return (
         (u.nomeCompleto ?? '').toLowerCase().includes(q) ||
         (u.email ?? '').toLowerCase().includes(q) ||
-        cpf.includes(q) ||
-        cnpj.includes(q) ||
-        formatCpf(cpf).toLowerCase().includes(q)
+        documento.includes(q) ||
+        maskDocument(documento).toLowerCase().includes(q)
       );
     });
   }, [users, search]);
@@ -185,7 +183,7 @@ const UsersPage: React.FC = () => {
                       {u.cargoFuncao && <div className="text-xs text-gray-500">{u.cargoFuncao}</div>}
                     </td>
                     <td className="px-4 py-3 text-gray-700">{u.email}</td>
-                    <td className="px-4 py-3 font-mono text-gray-700">{maskDocument(u.cpf || u.cnpj || '')}</td>
+                    <td className="px-4 py-3 font-mono text-gray-700">{maskDocument(u.documento || '')}</td>
                     <td className="px-4 py-3 text-gray-700">
                       {u.role === 'ADMIN'
                         ? 'Admin'

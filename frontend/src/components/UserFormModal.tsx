@@ -30,7 +30,7 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
     if (mode === 'edit' && user) {
       return {
         nomeCompleto: user.nomeCompleto ?? '',
-        document: user.cpf ?? user.cnpj ?? '',
+        document: user.documento ?? '',
         email: user.email ?? '',
         telefone: user.telefone ?? '',
         cargoFuncao: user.cargoFuncao ?? '',
@@ -81,6 +81,7 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
 
         const payload: UserAdminCreateRequest = {
           nomeCompleto: form.nomeCompleto.trim(),
+          documento: docDigits,
           email: form.email.trim(),
           telefone: (form.telefone || '').trim() || undefined,
           cargoFuncao: (form.cargoFuncao || '').trim() || undefined,
@@ -89,17 +90,11 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
           password: form.password,
         };
 
-        // Set CPF or CNPJ based on length
-        if (docDigits.length === 11) {
-          payload.cpf = docDigits;
-        } else {
-          payload.cnpj = docDigits;
-        }
-
         await onCreate(payload);
       } else if (mode === 'edit' && user) {
         const payload: UserAdminUpdateRequest = {
           nomeCompleto: form.nomeCompleto.trim(),
+          documento: docDigits,
           email: form.email.trim(),
           telefone: (form.telefone || '').trim() || undefined,
           cargoFuncao: (form.cargoFuncao || '').trim() || undefined,
@@ -107,14 +102,6 @@ const UserFormModal: React.FC<Props> = ({ open, mode, user, onClose, onCreate, o
           role: form.role,
         };
 
-        // Set CPF or CNPJ based on length
-        if (docDigits.length === 11) {
-          payload.cpf = docDigits;
-          payload.cnpj = undefined;
-        } else {
-          payload.cnpj = docDigits;
-          payload.cpf = undefined;
-        }
 
         if (form.password.trim()) payload.password = form.password;
         await onUpdate(user.id, payload);

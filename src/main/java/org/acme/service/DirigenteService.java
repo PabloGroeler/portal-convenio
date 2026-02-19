@@ -132,8 +132,27 @@ public class DirigenteService {
     }
 
     public DirigenteDTO buscarPorId(String id) {
-        Dirigente dirigente = dirigenteRepository.findById(id);
-        return dirigente != null ? mapEntityToDto(dirigente) : null;
+        log.info("Buscando dirigente por ID: {}", id);
+
+        if (id == null || id.trim().isEmpty()) {
+            log.error("ID do dirigente é nulo ou vazio");
+            return null;
+        }
+
+        try {
+            Dirigente dirigente = dirigenteRepository.findById(id);
+
+            if (dirigente == null) {
+                log.warn("Dirigente não encontrado com ID: {}", id);
+                return null;
+            }
+
+            log.info("Dirigente encontrado: {} (ID: {})", dirigente.getNomeCompleto(), dirigente.getId());
+            return mapEntityToDto(dirigente);
+        } catch (Exception e) {
+            log.error("Erro ao buscar dirigente por ID {}: {}", id, e.getMessage(), e);
+            return null;
+        }
     }
 
     /**

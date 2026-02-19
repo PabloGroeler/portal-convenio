@@ -54,6 +54,7 @@
             <artifactId>quarkus-rest-jackson</artifactId>
         </dependency>
 
+
         <!-- REST Client for external API calls (import emendas from external source) -->
         <dependency>
             <groupId>io.quarkus</groupId>

@@ -7,7 +7,7 @@ import java.time.OffsetDateTime;
 public record UserAdminDTO(
         Long id,
         String nomeCompleto,
-        String cpf,
+        String documento,
         String email,
         String telefone,
         String cargoFuncao,
@@ -20,7 +20,7 @@ public record UserAdminDTO(
         return new UserAdminDTO(
                 u.id,
                 u.nomeCompleto,
-                u.cpf,
+                u.documento,
                 u.email,
                 u.telefone,
                 u.cargoFuncao,
