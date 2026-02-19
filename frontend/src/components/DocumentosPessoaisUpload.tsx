@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import documentoPessoalService from '../services/documentoPessoalService';
 import type { DocumentoPessoalDTO } from '../types/documentoPessoal.types';
+import { useAuth } from '../context/AuthContext';
 
 interface DocumentosPessoaisUploadProps {
   dirigenteId: string;
@@ -22,6 +23,7 @@ const DocumentosPessoaisUpload: React.FC<DocumentosPessoaisUploadProps> = ({
   cargo,
   onDocumentosChange,
 }) => {
+  const { user } = useAuth();
   const [documentos, setDocumentos] = useState<DocumentoPessoalDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
@@ -34,6 +36,23 @@ const DocumentosPessoaisUpload: React.FC<DocumentosPessoaisUploadProps> = ({
     dataValidade: '',
     descricao: '',
   });
+
+  // Modal para aprovar
+  const [showAprovarModal, setShowAprovarModal] = useState(false);
+  const [documentoParaAprovar, setDocumentoParaAprovar] = useState<DocumentoPessoalDTO | null>(null);
+  const [observacoesAprovacao, setObservacoesAprovacao] = useState('');
+
+  // Modal para reprovar
+  const [showReprovarModal, setShowReprovarModal] = useState(false);
+  const [documentoParaReprovar, setDocumentoParaReprovar] = useState<DocumentoPessoalDTO | null>(null);
+  const [motivoReprovacao, setMotivoReprovacao] = useState('');
+
+  // Check if user is OPERADOR (operators cannot approve/reject documents)
+  const isOperador = useMemo(() => {
+    if (!user || !user.role) return false;
+    const roleString = typeof user.role === 'string' ? user.role : String(user.role);
+    return roleString === 'OPERADOR';
+  }, [user]);
 
   // Definir documentos obrigatórios baseado no cargo
   const isPresidente = cargo?.toLowerCase().includes('presidente');
@@ -176,13 +195,62 @@ const DocumentosPessoaisUpload: React.FC<DocumentosPessoaisUploadProps> = ({
       const a = document.createElement('a');
       a.href = url;
       a.download = doc.nomeOriginal;
-      document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
     } catch (error) {
       console.error('Erro ao baixar documento:', error);
       alert('Erro ao baixar documento');
+    }
+  };
+
+  const handleOpenAprovar = (doc: DocumentoPessoalDTO) => {
+    setDocumentoParaAprovar(doc);
+    setObservacoesAprovacao('');
+    setShowAprovarModal(true);
+  };
+
+  const handleAprovar = async () => {
+    if (!documentoParaAprovar) return;
+
+    try {
+      await documentoPessoalService.aprovar(documentoParaAprovar.id, observacoesAprovacao);
+      alert('Documento aprovado com sucesso!');
+      setShowAprovarModal(false);
+      setDocumentoParaAprovar(null);
+      setObservacoesAprovacao('');
+      await loadDocumentos();
+      if (onDocumentosChange) onDocumentosChange();
+    } catch (error: any) {
+      console.error('Erro ao aprovar documento:', error);
+      alert(error.response?.data?.error || 'Erro ao aprovar documento');
+    }
+  };
+
+  const handleOpenReprovar = (doc: DocumentoPessoalDTO) => {
+    setDocumentoParaReprovar(doc);
+    setMotivoReprovacao('');
+    setShowReprovarModal(true);
+  };
+
+  const handleReprovar = async () => {
+    if (!documentoParaReprovar) return;
+
+    if (!motivoReprovacao.trim()) {
+      alert('O motivo da reprovação é obrigatório');
+      return;
+    }
+
+    try {
+      await documentoPessoalService.reprovar(documentoParaReprovar.id, motivoReprovacao);
+      alert('Documento reprovado');
+      setShowReprovarModal(false);
+      setDocumentoParaReprovar(null);
+      setMotivoReprovacao('');
+      await loadDocumentos();
+      if (onDocumentosChange) onDocumentosChange();
+    } catch (error: any) {
+      console.error('Erro ao reprovar documento:', error);
+      alert(error.response?.data?.error || 'Erro ao reprovar documento');
     }
   };
 
@@ -281,14 +349,36 @@ const DocumentosPessoaisUpload: React.FC<DocumentosPessoaisUploadProps> = ({
                     </div>
                   </div>
 
-                  <div className="flex space-x-2">
+                  <div className="flex flex-wrap gap-2">
                     {hasDocumento && (
-                      <button
-                        onClick={() => handleDownload(doc)}
-                        className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
-                      >
-                        📥 Download
-                      </button>
+                      <>
+                        <button
+                          onClick={() => handleDownload(doc)}
+                          className="px-3 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 text-sm"
+                        >
+                          📥 Download
+                        </button>
+
+                        {/* Botão Aprovar - só mostrar se não for OPERADOR e documento estiver PENDENTE */}
+                        {!isOperador && doc.statusDocumento === 'PENDENTE' && (
+                          <button
+                            onClick={() => handleOpenAprovar(doc)}
+                            className="px-3 py-2 bg-green-600 text-white rounded hover:bg-green-700 text-sm"
+                          >
+                            ✅ Aprovar
+                          </button>
+                        )}
+
+                        {/* Botão Reprovar - só mostrar se não for OPERADOR e documento estiver PENDENTE */}
+                        {!isOperador && doc.statusDocumento === 'PENDENTE' && (
+                          <button
+                            onClick={() => handleOpenReprovar(doc)}
+                            className="px-3 py-2 bg-red-600 text-white rounded hover:bg-red-700 text-sm"
+                          >
+                            ❌ Reprovar
+                          </button>
+                        )}
+                      </>
                     )}
                     <button
                       onClick={() => handleOpenUpload(tipo)}
@@ -412,6 +502,100 @@ const DocumentosPessoaisUpload: React.FC<DocumentosPessoaisUploadProps> = ({
                 disabled={uploading || !uploadData.file}
               >
                 {uploading ? 'Enviando...' : 'Enviar Documento'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Aprovação */}
+      {showAprovarModal && documentoParaAprovar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">
+              Aprovar Documento
+            </h3>
+
+            <div className="mb-4">
+              <p>
+                Você está prestes a aprovar o documento de {documentoParaAprovar.nomeOriginal}.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Observações (opcional)
+                </label>
+                <textarea
+                  value={observacoesAprovacao}
+                  onChange={(e) => setObservacoesAprovacao(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                  rows={3}
+                  placeholder="Observações sobre a aprovação"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
+              <button
+                onClick={() => setShowAprovarModal(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleAprovar}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+              >
+                Aprovar Documento
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de Reprovação */}
+      {showReprovarModal && documentoParaReprovar && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">
+              Reprovar Documento
+            </h3>
+
+            <div className="mb-4">
+              <p>
+                Você está prestes a reprovar o documento de {documentoParaReprovar.nomeOriginal}.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Motivo da Reprovação <span className="text-red-500">*</span>
+                </label>
+                <textarea
+                  value={motivoReprovacao}
+                  onChange={(e) => setMotivoReprovacao(e.target.value)}
+                  className="w-full border rounded px-3 py-2"
+                  rows={3}
+                  placeholder="Motivo da reprovação"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-2 mt-6">
+              <button
+                onClick={() => setShowReprovarModal(false)}
+                className="px-4 py-2 border rounded hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={handleReprovar}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Reprovar Documento
               </button>
             </div>
           </div>
