@@ -43,19 +43,19 @@ BEGIN
       v_campos_alterados := array_append(v_campos_alterados, 'email');
     END IF;
 
-    IF OLD.role IS DISTINCT FROM NEW.role
+    IF OLD.perfil IS DISTINCT FROM NEW.perfil
        OR OLD.status IS DISTINCT FROM NEW.status THEN
       v_acao := 'UPDATE_CRITICAL';
       v_valores_antigos := jsonb_build_object(
-        'role', OLD.role,
+        'perfil', OLD.perfil,
         'status', OLD.status
       );
       v_valores_novos := jsonb_build_object(
-        'role', NEW.role,
+        'perfil', NEW.perfil,
         'status', NEW.status
       );
       v_usuario := NEW.nome_usuario;
-      v_campos_alterados := array_append(v_campos_alterados, 'role_ou_status');
+      v_campos_alterados := array_append(v_campos_alterados, 'perfil_ou_status');
     ELSIF array_length(v_campos_alterados, 1) > 0 THEN
       v_acao := 'UPDATE';
       v_valores_antigos := to_jsonb(OLD);
