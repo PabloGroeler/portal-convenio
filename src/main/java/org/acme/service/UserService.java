@@ -65,8 +65,8 @@ public class UserService {
             if (cpfDigits.length() != 11) {
                 throw new RuntimeException("CPF deve conter 11 dígitos");
             }
-            // Check for duplicate CPF
-            if (User.find("cpf", cpfDigits).firstResult() != null) {
+            // Check for duplicate CPF (documento field stores both CPF and CNPJ)
+            if (User.find("documento", cpfDigits).firstResult() != null) {
                 throw new RuntimeException("CPF já cadastrado");
             }
             user.documento = cpfDigits;
@@ -78,8 +78,8 @@ public class UserService {
             if (cnpjDigits.length() != 14) {
                 throw new RuntimeException("CNPJ deve conter 14 dígitos");
             }
-            // Check for duplicate CNPJ
-            if (User.find("cnpj", cnpjDigits).firstResult() != null) {
+            // Check for duplicate CNPJ (documento field stores both CPF and CNPJ)
+            if (User.find("documento", cnpjDigits).firstResult() != null) {
                 throw new RuntimeException("CNPJ já cadastrado");
             }
             user.documento = cnpjDigits;

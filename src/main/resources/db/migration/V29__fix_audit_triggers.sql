@@ -1,9 +1,12 @@
--- V27: Update audit trigger to use "documento" column instead of "cpf"/"cnpj"
+-- Migration: Fix audit triggers - correct column names
+-- Date: 2026-02-19
+-- Description: Remove triggers antigas com nomes de colunas errados e recria corretamente
 
--- Drop and recreate the audit trigger function for usuarios
-DROP TRIGGER IF EXISTS usuarios_audit_trigger ON usuarios;
+-- Drop triggers existentes que podem estar com problema
+DROP TRIGGER IF EXISTS usuarios_audit_trigger ON usuarios CASCADE;
 DROP FUNCTION IF EXISTS audit_usuarios_trigger() CASCADE;
 
+-- Recriar função de auditoria com nomes corretos
 CREATE OR REPLACE FUNCTION audit_usuarios_trigger()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -63,7 +66,7 @@ BEGIN
     END IF;
   END IF;
 
-  -- Inserir log de auditoria
+  -- Inserir log de auditoria com nomes de colunas corretos
   INSERT INTO logs_auditoria (
     entidade,
     registro_id,
