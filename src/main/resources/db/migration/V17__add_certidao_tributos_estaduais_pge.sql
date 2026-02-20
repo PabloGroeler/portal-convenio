@@ -32,7 +32,8 @@ INSERT INTO tipos_documento_config (
     5,
     NOW(),
     NOW()
-);
+)
+ON CONFLICT (codigo) DO NOTHING;
 
 -- Add comment
 COMMENT ON TABLE tipos_documento_config IS 'Configuração de tipos de documentos institucionais - Atualizado em 2026-02-16 com Certidão PGE';

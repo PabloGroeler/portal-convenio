@@ -20,9 +20,9 @@ CREATE TABLE IF NOT EXISTS usuarios (
     data_atualizacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_usuarios_username ON usuarios(nome_usuario);
-CREATE INDEX idx_usuarios_email ON usuarios(email);
-CREATE INDEX idx_usuarios_cpf ON usuarios(cpf);
+CREATE INDEX IF NOT EXISTS idx_usuarios_username ON usuarios(nome_usuario);
+CREATE INDEX IF NOT EXISTS idx_usuarios_email ON usuarios(email);
+CREATE INDEX IF NOT EXISTS idx_usuarios_cpf ON usuarios(cpf);
 
 -- Table: instituicoes (Institution entity)
 CREATE TABLE IF NOT EXISTS instituicoes (
@@ -54,9 +54,9 @@ CREATE TABLE IF NOT EXISTS instituicoes (
     update_time TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_instituicoes_id_instituicao ON instituicoes(id_instituicao);
-CREATE INDEX idx_instituicoes_cnpj ON instituicoes(cnpj);
-CREATE INDEX idx_instituicoes_email ON instituicoes(email_institucional);
+CREATE INDEX IF NOT EXISTS idx_instituicoes_id_instituicao ON instituicoes(id_instituicao);
+CREATE INDEX IF NOT EXISTS idx_instituicoes_cnpj ON instituicoes(cnpj);
+CREATE INDEX IF NOT EXISTS idx_instituicoes_email ON instituicoes(email_institucional);
 
 -- Table: instituicoes_areas_atuacao (ElementCollection for Institution)
 CREATE TABLE IF NOT EXISTS instituicoes_areas_atuacao (
@@ -73,7 +73,7 @@ CREATE TABLE IF NOT EXISTS parlamentares (
     data_atualizacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_parlamentares_id ON parlamentares(id_parlamentar);
+CREATE INDEX IF NOT EXISTS idx_parlamentares_id ON parlamentares(id_parlamentar);
 
 -- Table: tipos_emenda (TipoEmenda entity)
 CREATE TABLE IF NOT EXISTS tipos_emenda (
@@ -127,11 +127,11 @@ CREATE TABLE IF NOT EXISTS emendas (
     data_atualizacao TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_emendas_id ON emendas(id);
-CREATE INDEX idx_emendas_parlamentar ON emendas(councilor_id);
-CREATE INDEX idx_emendas_instituicao ON emendas(institution_id);
-CREATE INDEX idx_emendas_status ON emendas(status);
-CREATE INDEX idx_emendas_codigo_oficial ON emendas(official_code);
+CREATE INDEX IF NOT EXISTS idx_emendas_id ON emendas(id);
+CREATE INDEX IF NOT EXISTS idx_emendas_parlamentar ON emendas(councilor_id);
+CREATE INDEX IF NOT EXISTS idx_emendas_instituicao ON emendas(institution_id);
+CREATE INDEX IF NOT EXISTS idx_emendas_status ON emendas(status);
+CREATE INDEX IF NOT EXISTS idx_emendas_codigo_oficial ON emendas(official_code);
 
 -- Table: emendas_anexos (ElementCollection for Emenda attachments)
 CREATE TABLE IF NOT EXISTS emendas_anexos (
@@ -154,8 +154,8 @@ CREATE TABLE IF NOT EXISTS emendas_historico (
     data_hora TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_historico_emenda ON emendas_historico(emenda_id);
-CREATE INDEX idx_historico_data ON emendas_historico(data_hora);
+CREATE INDEX IF NOT EXISTS idx_historico_emenda ON emendas_historico(emenda_id);
+CREATE INDEX IF NOT EXISTS idx_historico_data ON emendas_historico(data_hora);
 
 -- Table: news (News entity)
 CREATE TABLE IF NOT EXISTS news (
@@ -174,9 +174,9 @@ CREATE TABLE IF NOT EXISTS news (
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
 
-CREATE INDEX idx_news_published_date ON news(published_date DESC);
-CREATE INDEX idx_news_status ON news(status);
-CREATE INDEX idx_news_category ON news(category);
+CREATE INDEX IF NOT EXISTS idx_news_published_date ON news(published_date DESC);
+CREATE INDEX IF NOT EXISTS idx_news_status ON news(status);
+CREATE INDEX IF NOT EXISTS idx_news_category ON news(category);
 
 COMMENT ON TABLE usuarios IS 'Usuários do sistema';
 COMMENT ON TABLE instituicoes IS 'Instituições beneficiárias';

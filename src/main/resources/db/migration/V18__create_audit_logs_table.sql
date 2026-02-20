@@ -2,7 +2,7 @@
 -- Date: 2026-02-16
 -- Description: RF-01.4 - Sistema de Logs de Auditoria
 
-CREATE TABLE logs_auditoria (
+CREATE TABLE IF NOT EXISTS logs_auditoria (
     id BIGSERIAL PRIMARY KEY,
     data_hora TIMESTAMP NOT NULL DEFAULT NOW(),
     usuario_id BIGINT,
@@ -19,7 +19,8 @@ CREATE TABLE logs_auditoria (
     mensagem_erro TEXT,
     user_agent VARCHAR(500),
     sessao_id VARCHAR(100),
-    duracao_ms BIGINT
+    duracao_ms BIGINT,
+    origem VARCHAR(50)
 );
 
 -- Índices para melhor performance
