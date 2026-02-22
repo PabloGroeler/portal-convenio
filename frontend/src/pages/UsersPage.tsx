@@ -109,11 +109,18 @@ const UsersPage: React.FC = () => {
     await load();
   };
 
-  const onDelete = async (u: UserAdminDTO) => {
-    const ok = window.confirm(`Excluir usuário "${u.nomeCompleto}"?`);
+  const onToggleStatus = async (u: UserAdminDTO) => {
+    const newStatus: UserStatus = u.status === 'ATIVO' ? 'INATIVO' : 'ATIVO';
+    const action = newStatus === 'INATIVO' ? 'desabilitar' : 'habilitar';
+    const ok = window.confirm(`Deseja ${action} o usuário "${u.nomeCompleto}"?`);
     if (!ok) return;
-    await userAdminService.remove(u.id);
-    await load();
+
+    try {
+      await userAdminService.update(u.id, { status: newStatus });
+      await load();
+    } catch (e: any) {
+      alert(e?.response?.data?.error || e?.message || `Erro ao ${action} usuário`);
+    }
   };
 
   return (

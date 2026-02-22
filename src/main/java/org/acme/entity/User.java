@@ -1,14 +1,8 @@
 // src/main/java/org/acme/entity/User.java
 package org.acme.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
@@ -18,7 +12,19 @@ import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "usuarios")
-public class User extends PanacheEntity {
+public class User extends PanacheEntityBase {
+
+    @Id
+    @SequenceGenerator(
+        name = "usuarios_seq_gen",
+        sequenceName = "usuarios_seq",
+        allocationSize = 1
+    )
+    @GeneratedValue(
+        strategy = GenerationType.SEQUENCE,
+        generator = "usuarios_seq_gen"
+    )
+    public Long id;
 
     public enum UserStatus {
         ATIVO,
