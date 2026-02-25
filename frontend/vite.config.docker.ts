@@ -13,6 +13,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: 3000,
     strictPort: true,
+    allowedHosts: ['intranet.sinop.mt.gov.br'],
     proxy: {
       '/api': {
         target: 'http://app:8080',
