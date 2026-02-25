@@ -24,7 +24,7 @@ public class DocumentoPessoalService {
 
     private static final String UPLOAD_DIR = System.getenv("UPLOAD_DIR") != null
         ? System.getenv("UPLOAD_DIR") + "/documentos-pessoais"
-        : "/var/uploads/documentos-pessoais";
+        : "/data2/app-emendas/documentos-pessoais";
 
     @Transactional
     public DocumentoPessoalDTO upload(

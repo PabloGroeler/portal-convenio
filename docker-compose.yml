@@ -14,10 +14,10 @@ services:
       - .env
     volumes:
       # Montar diretório de uploads do host no container
-      - /var/uploads:/var/uploads
+      - /data2/app-emendas:/data2/app-emendas
     environment:
       # Upload directory configuration
-      UPLOAD_DIR: /var/uploads
+      UPLOAD_DIR: /data2/app-emendas
       # Database connection - uses external PostgreSQL server
       # Configure these in .env file:
       # QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://your-server-ip:5432/app_emendas
@@ -59,4 +59,3 @@ services:
       - ./frontend:/app
       - /app/node_modules
     command: sh -c "npm run dev -- --config vite.config.docker.ts"
-

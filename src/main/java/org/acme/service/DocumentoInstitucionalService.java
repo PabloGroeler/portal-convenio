@@ -26,10 +26,10 @@ public class DocumentoInstitucionalService {
     DocumentoInstitucionalRepository repository;
 
     // Diretório base para armazenar arquivos (pode ser configurado via application.properties)
-    // Usa variável de ambiente UPLOAD_DIR se disponível, senão usa /var/uploads
+    // Usa variável de ambiente UPLOAD_DIR se disponível, senão usa /data2/app-emendas
     private static final String UPLOAD_DIR = System.getenv("UPLOAD_DIR") != null
         ? System.getenv("UPLOAD_DIR") + "/documentos-institucionais"
-        : "/var/uploads/documentos-institucionais";
+        : "/data2/app-emendas/documentos-institucionais";
 
     public List<DocumentoInstitucionalDTO> listarPorInstituicao(String idInstituicao) {
         return repository.findByInstituicao(idInstituicao).stream()
@@ -189,4 +189,3 @@ public class DocumentoInstitucionalService {
         return dto;
     }
 }
-
