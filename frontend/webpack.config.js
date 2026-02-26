@@ -13,7 +13,7 @@ module.exports = (env, argv) => {
       path: path.resolve(__dirname, 'dist'),
       filename: 'assets/[name].[contenthash:8].js',
       chunkFilename: 'assets/[name].[contenthash:8].chunk.js',
-      publicPath: '/',
+      publicPath: isProd ? '/emendas/' : '/',
       clean: true,
     },
 

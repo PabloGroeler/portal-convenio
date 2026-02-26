@@ -37,9 +37,11 @@ import TiposDocumentoConfigPage from './pages/TiposDocumentoConfigPage';
 const queryClient = new QueryClient();
 
 function App() {
+  const routerBasename = window.location.pathname.startsWith('/emendas') ? '/emendas' : '/';
+
   return (
     <QueryClientProvider client={queryClient}>
-      <Router>
+      <Router basename={routerBasename}>
         <AuthProvider>
           <Routes>
               {/* Email verification (public route) */}
