@@ -2,7 +2,8 @@ import axios from 'axios';
 
 // Prefer VITE_API_URL when provided (e.g. http://localhost:8080/api or http://app:8080/api in Docker).
 // Otherwise use a relative path so the Vite dev server proxy handles /api and avoids CORS.
-const API_URL = import.meta.env.VITE_API_URL ?? '/api';
+// In production nginx proxies /api to the backend on port 8085 - no env variable needed
+const API_URL = '/api';
 
 const api = axios.create({
   baseURL: API_URL,

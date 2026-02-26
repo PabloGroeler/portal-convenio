@@ -1,3 +1,0 @@
--- ESTE ARQUIVO FOI DELETADO
--- Migration duplicada - use V17__add_certidao_tributos_estaduais_pge.sql ao invés
--- DELETE ESTE ARQUIVO MANUALMENTE

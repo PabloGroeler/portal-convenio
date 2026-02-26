@@ -1,61 +1,57 @@
 version: '3.8'
 
+networks:
+  app-network:
+    driver: bridge
+
 services:
-  # Backend service
+  # Backend service — uses host network so it can reach external DB at 10.40.93.4
   app:
     container_name: portal-emendas-backend
     build:
       context: .
       dockerfile: src/main/docker/Dockerfile.jvm
     ports:
-      - "8080:8080"
-    restart: unless-stopped
+      - "8085:8080"
+    networks:
+      - app-network
+    restart: on-failure:5
     env_file:
       - .env
     volumes:
-      # Montar diretório de uploads do host no container
       - /data2/app-emendas:/data2/app-emendas
     environment:
-      # Upload directory configuration
       UPLOAD_DIR: /data2/app-emendas
-      # Database connection - uses external PostgreSQL server
-      # Configure these in .env file:
-      # QUARKUS_DATASOURCE_JDBC_URL=jdbc:postgresql://your-server-ip:5432/app_emendas
-      # QUARKUS_DATASOURCE_USERNAME=app
-      # QUARKUS_DATASOURCE_PASSWORD=app
       QUARKUS_DATASOURCE_DB_KIND: postgresql
-      # Disable Hibernate auto-generation - Flyway manages schema
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: none
-      # Flyway configuration
       QUARKUS_FLYWAY_MIGRATE_AT_START: "true"
       QUARKUS_FLYWAY_BASELINE_ON_MIGRATE: "true"
       QUARKUS_FLYWAY_BASELINE_VERSION: "0"
       QUARKUS_FLYWAY_LOCATIONS: "classpath:db/migration"
       QUARKUS_FLYWAY_CLEAN_AT_START: "false"
-      # Flyway repair - fixes checksum mismatches automatically
       QUARKUS_FLYWAY_REPAIR_AT_START: "true"
       QUARKUS_FLYWAY_IGNORE_MISSING_MIGRATIONS: "true"
       QUARKUS_FLYWAY_IGNORE_IGNORED_MIGRATIONS: "true"
       QUARKUS_HTTP_PORT: 8080
       QUARKUS_HTTP_HOST: 0.0.0.0
       QUARKUS_SWAGGER_UI_PATH: /swagger-ui
-      # Note: Email config (QUARKUS_MAILER_*) is loaded from .env file above
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8080/q/health/ready || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
 
-  # Frontend service
+  # Frontend service — bridge network, proxies /api to host:8085
   frontend:
     container_name: portal-emendas-frontend
     build:
       context: ./frontend
       dockerfile: Dockerfile.dev
     ports:
-      - "3000:3000"
+      - "3005:80"
+    networks:
+      - app-network
     depends_on:
       - app
     restart: unless-stopped
-    environment:
-      # Force axios to use the same-origin /api path so Vite proxy handles routing in Docker.
-      - VITE_API_URL=/api
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: sh -c "npm run dev -- --config vite.config.docker.ts"
