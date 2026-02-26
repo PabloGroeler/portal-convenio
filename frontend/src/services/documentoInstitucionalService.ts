@@ -37,17 +37,17 @@ export const documentoInstitucionalService = {
 
   // Baixar documento
   downloadUrl: (id: string): string => {
-    return `/api/documentos-institucionais/${id}/download`;
+    return `/api/api/documentos-institucionais/${id}/download`;
   },
 
   // Visualizar documento inline (para PDFs e imagens)
   viewUrl: (id: string): string => {
-    return `/api/documentos-institucionais/${id}/view`;
+    return `/api/api/documentos-institucionais/${id}/view`;
   },
 
   // Alias for backward compatibility
   visualizarUrl: (id: string): string => {
-    return `/api/documentos-institucionais/${id}/view`;
+    return `/api/api/documentos-institucionais/${id}/view`;
   },
 
   // Aprovar documento (para gestores)

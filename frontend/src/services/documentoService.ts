@@ -40,7 +40,7 @@ export const documentoService = {
 
   // Baixar documento
   downloadUrl: (id: string): string => {
-    return `/api/documentos-institucionais/${id}/download`;
+    return `/api/api/documentos-institucionais/${id}/download`;
   },
 };
 
