@@ -40,7 +40,7 @@ const DocumentosPessoaisUpload: React.FC<DocumentosPessoaisUploadProps> = ({
   // Modal para aprovar
   const [showAprovarModal, setShowAprovarModal] = useState(false);
   const [documentoParaAprovar, setDocumentoParaAprovar] = useState<DocumentoPessoalDTO | null>(null);
-  const [observacoesAprovacao, setObservacoesAprovacao] = useState('');
+  const [motivoAprovacao, setMotivoAprovacao] = useState('');
 
   // Modal para reprovar
   const [showReprovarModal, setShowReprovarModal] = useState(false);
@@ -205,19 +205,25 @@ const DocumentosPessoaisUpload: React.FC<DocumentosPessoaisUploadProps> = ({
 
   const handleOpenAprovar = (doc: DocumentoPessoalDTO) => {
     setDocumentoParaAprovar(doc);
-    setObservacoesAprovacao('');
+    setMotivoAprovacao('');
     setShowAprovarModal(true);
   };
 
   const handleAprovar = async () => {
     if (!documentoParaAprovar) return;
 
+    // Require motivo for approval as well
+    if (!motivoAprovacao.trim()) {
+      alert('O motivo da aprovação é obrigatório');
+      return;
+    }
+
     try {
-      await documentoPessoalService.aprovar(documentoParaAprovar.id, observacoesAprovacao);
+      await documentoPessoalService.aprovar(documentoParaAprovar.id, motivoAprovacao);
       alert('Documento aprovado com sucesso!');
       setShowAprovarModal(false);
       setDocumentoParaAprovar(null);
-      setObservacoesAprovacao('');
+      setMotivoAprovacao('');
       await loadDocumentos();
       if (onDocumentosChange) onDocumentosChange();
     } catch (error: any) {
@@ -525,14 +531,14 @@ const DocumentosPessoaisUpload: React.FC<DocumentosPessoaisUploadProps> = ({
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium mb-1">
-                  Observações (opcional)
+                  Motivo <span className="text-red-500">*</span>
                 </label>
                 <textarea
-                  value={observacoesAprovacao}
-                  onChange={(e) => setObservacoesAprovacao(e.target.value)}
+                  value={motivoAprovacao}
+                  onChange={(e) => setMotivoAprovacao(e.target.value)}
                   className="w-full border rounded px-3 py-2"
                   rows={3}
-                  placeholder="Observações sobre a aprovação"
+                  placeholder="Motivo para aprovar este documento"
                 />
               </div>
             </div>

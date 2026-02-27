@@ -29,6 +29,9 @@ const ProfilePage: React.FC = () => {
   const [loadingInstitutions, setLoadingInstitutions] = useState(false);
   const [savingInstitution, setSavingInstitution] = useState(false);
 
+  // Message state
+  const [infoMessage, setInfoMessage] = useState<string | null>(null);
+
   useEffect(() => {
     if (user) {
       setFormData(prev => ({
@@ -83,6 +86,12 @@ const ProfilePage: React.FC = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    if (!infoMessage) return;
+    const t = setTimeout(() => setInfoMessage(null), 4000);
+    return () => clearTimeout(t);
+  }, [infoMessage]);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData(prev => ({
       ...prev,
@@ -93,7 +102,7 @@ const ProfilePage: React.FC = () => {
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     // TODO: Implementar chamada ao backend para atualizar perfil
-    alert('Funcionalidade de atualização de perfil será implementada');
+    setInfoMessage('Funcionalidade de atualização de perfil será implementada');
     setIsEditingProfile(false);
   };
 
@@ -134,10 +143,10 @@ const ProfilePage: React.FC = () => {
 
       const institution = institutions.find(i => i.institutionId === selectedInstitutionId);
       setUserInstitution(institution || null);
-      alert('Instituição vinculada com sucesso! (TODO: integrar com backend)');
+      setInfoMessage('Instituição vinculada com sucesso!');
     } catch (err: any) {
       const errorMsg = err?.response?.data?.error || 'Erro ao vincular instituição';
-      alert(errorMsg);
+      setInfoMessage(errorMsg);
     } finally {
       setSavingInstitution(false);
     }
@@ -231,6 +240,7 @@ const ProfilePage: React.FC = () => {
             handleChangePassword={handleChangePassword}
             setFormData={setFormData}
             user={user}
+            infoMessage={infoMessage}
           />
         ) : (
           <InstitutionTabContent
@@ -242,6 +252,7 @@ const ProfilePage: React.FC = () => {
             handleUnlinkInstitution={handleUnlinkInstitution}
             loadingInstitutions={loadingInstitutions}
             savingInstitution={savingInstitution}
+            infoMessage={infoMessage}
           />
         )}
       </div>
@@ -261,6 +272,7 @@ const ProfileTabContent: React.FC<any> = ({
   handleChangePassword,
   setFormData,
   user,
+  infoMessage,
 }) => (
   <>
     {/* Profile Info Card */}
@@ -480,6 +492,7 @@ const InstitutionTabContent: React.FC<any> = ({
   handleUnlinkInstitution,
   loadingInstitutions,
   savingInstitution,
+  infoMessage,
 }) => (
   <>
     {/* Current Institution Card */}

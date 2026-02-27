@@ -32,6 +32,9 @@ import VerifyEmailPage from './pages/VerifyEmailPage';
 import ForgotPasswordPage from './pages/ForgotPasswordPage';
 import ResetPasswordPage from './pages/ResetPasswordPage';
 import TiposDocumentoConfigPage from './pages/TiposDocumentoConfigPage';
+import PlanoFullPage from './pages/PlanoFullPage';
+import PrestacaoContasPage from './pages/PrestacaoContasPage';
+import PlanoTrabalhoPage from './pages/PlanoTrabalhoPage';
 
 // Create a client
 const queryClient = new QueryClient();
@@ -62,6 +65,11 @@ function App() {
               >
               {/* default content */}
               <Route index element={<DashboardHomePage />} />
+              <Route path="plano/full/:id" element={<PlanoFullPage />} />
+              <Route path="plano/prestacao-contas" element={<PrestacaoContasPage />} />
+              <Route path="plano-trabalho" element={<PlanoTrabalhoPage />} />
+              <Route path="novo-plano" element={<PlanoFullPage />} />
+              <Route path="editar-plano" element={<PlanoFullPage />} />
               <Route path="emendas" element={<DashboardEmendasPage />} />
               <Route path="emendas/:id" element={<EmendaDetailPage />} />
               <Route path="cadastro-emenda" element={<CadastroEmendaPage />} />
@@ -75,6 +83,27 @@ function App() {
                 <Route path="tipos-documento-config" element={<TiposDocumentoConfigPage />} />
               </Route>
 
+              {/* Full-screen pages (no header/footer) */}
+              <Route
+                path="/emendas"
+                element={
+                  <ProtectedRoute>
+                    <EmendasPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/emendas/:id"
+                element={
+                  <ProtectedRoute>
+                    <EmendaDetailPage />
+                  </ProtectedRoute>
+                }
+              />
+              <Route path="/plano/full/:id" element={<PlanoFullPage />} />
+              <Route path="/plano/prestacao-contas" element={<PrestacaoContasPage />} />
+
+              {/* Full-screen admin pages */}
               {/* Redirect legacy routes to dashboard */}
               <Route path="/emendas" element={<Navigate to="/dashboard/emendas" replace />} />
               <Route path="/emendas/:id" element={<Navigate to="/dashboard/emendas" replace />} />

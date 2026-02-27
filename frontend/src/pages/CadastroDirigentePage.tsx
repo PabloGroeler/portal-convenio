@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import dirigenteService from '../services/dirigenteService';
 import type { Dirigente } from '../types/dirigente.types';
@@ -21,6 +21,7 @@ const CadastroDirigentePage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [loadingCep, setLoadingCep] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Dirigente>({
     instituicaoId: instituicaoId || '',
@@ -52,6 +53,12 @@ const CadastroDirigentePage: React.FC = () => {
       loadDirigente();
     }
   }, [dirigenteId]);
+
+  useEffect(() => {
+    if (!successMessage) return;
+    const t = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(t);
+  }, [successMessage]);
 
   const loadDirigente = async () => {
     try {
@@ -249,10 +256,10 @@ const CadastroDirigentePage: React.FC = () => {
       setLoading(true);
       if (isEditMode) {
         await dirigenteService.atualizar(dirigenteId!, formData);
-        alert('Dirigente atualizado com sucesso!');
+        setSuccessMessage('Dirigente atualizado com sucesso!');
       } else {
         await dirigenteService.criar(formData);
-        alert('Dirigente cadastrado com sucesso!');
+        setSuccessMessage('Dirigente cadastrado com sucesso!');
       }
       navigate(`/dashboard/cadastro-dados-institucionais?id=${instituicaoId}`);
     } catch (error: any) {
@@ -309,6 +316,8 @@ const CadastroDirigentePage: React.FC = () => {
           Preencha os dados do dirigente. Campos marcados com * são obrigatórios.
         </p>
       </header>
+
+      {successMessage && <div className="mb-4 p-2 bg-emerald-100 text-emerald-700 rounded">{successMessage}</div>}
 
       <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-lg border border-gray-200">
         <div className="p-6 space-y-6">

@@ -1,0 +1,56 @@
+package org.acme.entity;
+
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
+import java.util.UUID;
+
+@Entity
+@Table(name = "plano_trabalho")
+public class PlanoTrabalho extends PanacheEntityBase {
+
+    @Id
+    public String id;
+
+    @Column(name = "titulo", length = 200)
+    public String titulo;
+
+    @Column(name = "descricao", columnDefinition = "text")
+    public String descricao;
+
+    @Column(name = "instituicao_id", length = 64)
+    public String instituicaoId;
+
+    @Column(name = "emenda_id", length = 36)
+    public String emendaId;
+
+    @Column(name = "valor", precision = 18, scale = 2)
+    public BigDecimal valor;
+
+    @Column(name = "status", length = 50)
+    public String status;
+
+    @Column(name = "create_time")
+    public OffsetDateTime createTime;
+
+    @Column(name = "update_time")
+    public OffsetDateTime updateTime;
+
+    @PrePersist
+    void prePersist() {
+        if (this.id == null) this.id = UUID.randomUUID().toString();
+        this.createTime = OffsetDateTime.now();
+        this.updateTime = this.createTime;
+    }
+
+    @PreUpdate
+    void preUpdate() {
+        this.updateTime = OffsetDateTime.now();
+    }
+}

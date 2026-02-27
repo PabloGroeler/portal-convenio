@@ -84,6 +84,8 @@ const EmendasPage: React.FC = () => {
   const [despachoObservacao, setDespachoObservacao] = useState('');
   const [executingAction, setExecutingAction] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Track last action taken per emenda to prevent duplicate consecutive actions
   const [lastActionByEmenda, setLastActionByEmenda] = useState<Record<string, string>>({});
@@ -305,26 +307,28 @@ const EmendasPage: React.FC = () => {
     }
   };
 
-  const handleSave = async () => {
+  const validateAndSave = async () => {
     setSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
     try {
 
       if (!editForm.councilorId || editForm.councilorId.trim() === '') {
-        alert('Autor/Emenda (Parlamentar) é obrigatório');
+        setErrorMessage('Autor/Emenda (Parlamentar) é obrigatório');
         setSaving(false);
         return;
       }
 
       // 2. Número de Emenda deve ser > 0
       if (!editForm.numeroEmenda || editForm.numeroEmenda <= 0) {
-        alert('Número de Emenda deve ser maior que zero');
+        setErrorMessage('Número de Emenda deve ser maior que zero');
         setSaving(false);
         return;
       }
 
       // 3. Exercício (ano) é obrigatório
       if (!editForm.exercicio || editForm.exercicio <= 0) {
-        alert('Exercício (ano) é obrigatório');
+        setErrorMessage('Exercício (ano) é obrigatório');
         setSaving(false);
         return;
       }
@@ -341,14 +345,14 @@ const EmendasPage: React.FC = () => {
       }
 
       if (valorNum <= 0) {
-        alert('Valor da Emenda deve ser maior que R$ 0,00');
+        setErrorMessage('Valor da Emenda deve ser maior que R$ 0,00');
         setSaving(false);
         return;
       }
 
       // 5. Situação da Emenda é obrigatória
       if (!editForm.status || editForm.status.trim() === '') {
-        alert('Situação da Emenda é obrigatória');
+        setErrorMessage('Situação da Emenda é obrigatória');
         setSaving(false);
         return;
       }
@@ -356,7 +360,7 @@ const EmendasPage: React.FC = () => {
       // 6. Situação da Emenda deve ser válida
       const allowedStatus = ['Recebido', 'Iniciado', 'Em execução', 'Concluído', 'Devolvido'];
       if (!allowedStatus.includes(editForm.status)) {
-        alert('Situação da Emenda deve ser: Recebido, Iniciado, Em execução, Concluído ou Devolvido');
+        setErrorMessage('Situação da Emenda deve ser: Recebido, Iniciado, Em execução, Concluído ou Devolvido');
         setSaving(false);
         return;
       }
@@ -364,12 +368,12 @@ const EmendasPage: React.FC = () => {
       // 7. Justificativa: min 20, max 250 caracteres (se preenchida)
       if (editForm.justificativa) {
         if (editForm.justificativa.length < 20) {
-          alert('Justificativa deve ter no mínimo 20 caracteres');
+          setErrorMessage('Justificativa deve ter no mínimo 20 caracteres');
           setSaving(false);
           return;
         }
         if (editForm.justificativa.length > 250) {
-          alert('Justificativa deve ter no máximo 250 caracteres');
+          setErrorMessage('Justificativa deve ter no máximo 250 caracteres');
           setSaving(false);
           return;
         }
@@ -377,14 +381,14 @@ const EmendasPage: React.FC = () => {
 
       // 8. Tipo de emenda é obrigatório
       if (!(editForm.classification ?? '').trim()) {
-        alert('Selecione o tipo de emenda.');
+        setErrorMessage('Selecione o tipo de emenda.');
         setSaving(false);
         return;
       }
 
       // 9. Instituição é obrigatória
       if (!editForm.institutionId || editForm.institutionId.trim() === '') {
-        alert('Instituição é obrigatória');
+        setErrorMessage('Instituição é obrigatória');
         setSaving(false);
         return;
       }
@@ -494,9 +498,10 @@ const EmendasPage: React.FC = () => {
       }
 
       closeModal();
+      setSuccessMessage('Emenda salva com sucesso');
     } catch (err) {
       console.error('[EmendasPage] Error saving emenda:', err);
-      alert('Erro ao salvar emenda');
+      setErrorMessage(err?.response?.data?.error || 'Erro ao salvar emenda');
     } finally {
       setSaving(false);
     }
@@ -504,7 +509,7 @@ const EmendasPage: React.FC = () => {
 
   const handleAcao = async (acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR') => {
     if (!selectedEmenda || !selectedEmenda.id) {
-      alert('Emenda inválida ou não selecionada');
+      setErrorMessage('Emenda inválida ou não selecionada');
       return;
     }
 
@@ -512,7 +517,7 @@ const EmendasPage: React.FC = () => {
     const lastAction = lastActionByEmenda[selectedEmenda.id];
     if (lastAction === acao) {
       console.log(`[EmendasPage] Duplicate action ${acao} ignored for emenda ${selectedEmenda.id}`);
-      alert(`A ação "${acao}" já foi executada nesta emenda. Escolha uma ação diferente ou feche e reabra a emenda.`);
+      setErrorMessage(`A ação "${acao}" já foi executada nesta emenda. Escolha uma ação diferente ou feche e reabra a emenda.`);
       return;
     }
 
@@ -523,6 +528,8 @@ const EmendasPage: React.FC = () => {
     }
 
     setExecutingAction(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
     try {
       console.log(`[EmendasPage] Executing action ${acao} on emenda ID ${selectedEmenda.id}`);
       const updatedEmenda = await emendaService.executarAcao(selectedEmenda.id, {
@@ -556,11 +563,12 @@ const EmendasPage: React.FC = () => {
 
       // Clear observation
       setDespachoObservacao('');
+      setSuccessMessage('Ação executada com sucesso');
     } catch (err: any) {
       console.error('[EmendasPage] Error executing action:', err);
       const status = err?.response?.status;
       if (status === 404) {
-        alert('Emenda não encontrada no servidor. Ela pode ter sido excluída.');
+        setErrorMessage('Emenda não encontrada no servidor. Ela pode ter sido excluída.');
         // Refresh the list to get current data
         try {
           const data = await emendaService.list();
@@ -584,7 +592,7 @@ const EmendasPage: React.FC = () => {
         }
         closeModal();
       } else {
-        alert(`Erro ao executar ação: ${err?.response?.data?.error || err.message || 'Erro desconhecido'}`);
+        setErrorMessage(`Erro ao executar ação: ${err?.response?.data?.error || err.message || 'Erro desconhecido'}`);
       }
     } finally {
       setExecutingAction(false);
@@ -672,6 +680,12 @@ const EmendasPage: React.FC = () => {
   useEffect(() => {
     setCurrentPage(1);
   }, [query, year, statusFilter, detailFilter, myQueueOnly]);
+
+  // Clear messages on query/year/status/detail change
+  useEffect(() => {
+    setErrorMessage(null);
+    setSuccessMessage(null);
+  }, [query, year, statusFilter, detailFilter]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -1072,7 +1086,7 @@ const EmendasPage: React.FC = () => {
                    <>
                      <button
                        type="button"
-                       onClick={handleSave}
+                       onClick={validateAndSave}
                        disabled={saving}
                        className="px-3 py-1 bg-emerald-600 text-white rounded text-sm hover:bg-emerald-700 disabled:opacity-50"
                      >
@@ -1619,7 +1633,7 @@ const EmendasPage: React.FC = () => {
                      </button>
                      <button
                        type="button"
-                       onClick={handleSave}
+                       onClick={validateAndSave}
                        disabled={saving}
                        className="px-6 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 disabled:opacity-50 disabled:pointer-events-none"
                      >

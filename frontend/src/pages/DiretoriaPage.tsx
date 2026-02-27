@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import dirigenteService from '../services/dirigenteService';
 import type { Dirigente } from '../types/dirigente.types';
@@ -25,6 +25,7 @@ const DiretoriaPage: React.FC = () => {
   const [dirigenteDocumentos, setDirigenteDocumentos] = useState<Dirigente | null>(null);
   const [avisos, setAvisos] = useState<string[]>([]);
   const [apenasAtivos, setApenasAtivos] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const [formData, setFormData] = useState<Dirigente>({
     instituicaoId: instituicaoId || '',
@@ -65,6 +66,13 @@ const DiretoriaPage: React.FC = () => {
     loadDirigentes();
     loadAvisos();
   }, [instituicaoId, apenasAtivos]);
+
+  useEffect(() => {
+    // Auto-clear success messages after 4 seconds
+    if (!successMessage) return;
+    const t = setTimeout(() => setSuccessMessage(null), 4000);
+    return () => clearTimeout(t);
+  }, [successMessage]);
 
   const loadDirigentes = async () => {
     try {
@@ -132,10 +140,12 @@ const DiretoriaPage: React.FC = () => {
     try {
       if (editingDirigente) {
         await dirigenteService.atualizar(editingDirigente.id!, formData);
-        alert('Dirigente atualizado com sucesso!');
+        // alert('Dirigente atualizado com sucesso!');
+        setSuccessMessage('Dirigente atualizado com sucesso!');
       } else {
         await dirigenteService.criar(formData);
-        alert('Dirigente cadastrado com sucesso!');
+        // alert('Dirigente cadastrado com sucesso!');
+        setSuccessMessage('Dirigente cadastrado com sucesso!');
       }
 
       handleCloseModal();
@@ -177,7 +187,8 @@ const DiretoriaPage: React.FC = () => {
         inativarData.dataTermino,
         inativarData.motivo
       );
-      alert('Dirigente inativado com sucesso!');
+      // alert('Dirigente inativado com sucesso!');
+      setSuccessMessage('Dirigente inativado com sucesso!');
       setShowInativarModal(false);
       loadDirigentes();
       loadAvisos();
@@ -726,6 +737,13 @@ const DiretoriaPage: React.FC = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Mensagem de Sucesso */}
+      {successMessage && (
+        <div className="mb-4 p-2 bg-emerald-100 text-emerald-700 rounded">
+          {successMessage}
         </div>
       )}
     </div>

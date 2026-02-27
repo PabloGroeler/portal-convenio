@@ -53,6 +53,7 @@ const UsersPage: React.FC = () => {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selected, setSelected] = useState<UserAdminDTO | null>(null);
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
 
   const load = async () => {
     setError(null);
@@ -72,6 +73,12 @@ const UsersPage: React.FC = () => {
   useEffect(() => {
     void load();
   }, []);
+
+  useEffect(() => {
+    if (!message) return;
+    const t = setTimeout(() => setMessage(null), 4000);
+    return () => clearTimeout(t);
+  }, [message]);
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -101,11 +108,13 @@ const UsersPage: React.FC = () => {
 
   const onCreate = async (payload: UserAdminCreateRequest) => {
     await userAdminService.create(payload);
+    setMessage({ type: 'success', text: 'Usuário criado com sucesso' });
     await load();
   };
 
   const onUpdate = async (id: number, payload: UserAdminUpdateRequest) => {
     await userAdminService.update(id, payload);
+    setMessage({ type: 'success', text: 'Usuário atualizado com sucesso' });
     await load();
   };
 
@@ -117,9 +126,11 @@ const UsersPage: React.FC = () => {
 
     try {
       await userAdminService.update(u.id, { status: newStatus });
+      setMessage({ type: 'success', text: `Usuário ${action} com sucesso` });
       await load();
     } catch (e: any) {
-      alert(e?.response?.data?.error || e?.message || `Erro ao ${action} usuário`);
+      setMessage({ type: 'error', text: e?.response?.data?.error || `Erro ao ${action} usuário` });
+      console.error(e);
     }
   };
 
@@ -243,6 +254,12 @@ const UsersPage: React.FC = () => {
         onCreate={onCreate}
         onUpdate={onUpdate}
       />
+
+      {message && (
+        <div className={`fixed bottom-4 right-4 mb-4 mr-4 p-3 rounded shadow-md text-sm ${message.type === 'success' ? 'bg-emerald-100 text-emerald-700' : 'bg-red-100 text-red-700'}`}>
+          {message.text}
+        </div>
+      )}
     </div>
   );
 };

@@ -57,9 +57,9 @@ const documentoPessoalService = {
   /**
    * Aprovar documento
    */
-  async aprovar(id: string, observacoes?: string): Promise<DocumentoPessoalDTO> {
+  async aprovar(id: string, motivo?: string): Promise<DocumentoPessoalDTO> {
     const response = await api.post(`/documentos-pessoais/${id}/aprovar`, {
-      observacoes,
+      motivo,
     });
     return response.data;
   },
