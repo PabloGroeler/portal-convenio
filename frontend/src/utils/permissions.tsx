@@ -111,10 +111,16 @@ export const getRoleLabel = (role: UserRole | undefined): string => {
   if (!role) return 'Sem perfil';
 
   const labels: Record<UserRole, string> = {
-    [UserRole.ADMIN]: 'Administrador',
-    [UserRole.OPERADOR]: 'Operador',
-    [UserRole.ANALISTA]: 'Analista',
-    [UserRole.JURIDICO]: 'Jurídico',
+    // Emenda workflow
+    [UserRole.ADMIN]:      'Administrador',
+    [UserRole.ORCAMENTO]:  'Orçamento',
+    [UserRole.SECRETARIA]: 'Secretaria',
+    [UserRole.CONVENIOS]:  'Convênios',
+    // Institution / user management
+    [UserRole.OPERADOR]:   'Operador',
+    [UserRole.GESTOR]:     'Gestor',
+    [UserRole.ANALISTA]:   'Analista',
+    [UserRole.JURIDICO]:   'Jurídico',
   };
 
   return labels[role] || role;

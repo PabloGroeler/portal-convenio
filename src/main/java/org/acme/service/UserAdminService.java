@@ -16,23 +16,25 @@ public class UserAdminService {
     // Local request shapes (keeps service independent from IDE indexing glitches)
     public static class UserAdminCreateRequest {
         public String nomeCompleto;
-        public String documento; // CPF (11 digits) or CNPJ (14 digits)
+        public String documento;
         public String email;
         public String telefone;
         public String cargoFuncao;
-        public String status; // ATIVO | INATIVO | BLOQUEADO | PENDENTE
-        public String role;   // ADMIN | OPERADOR | GESTOR | JURIDICO
+        public String secretaria;
+        public String status;
+        public String role;
         public String password;
     }
 
     public static class UserAdminUpdateRequest {
         public String nomeCompleto;
-        public String documento; // CPF (11 digits) or CNPJ (14 digits)
+        public String documento;
         public String email;
         public String telefone;
         public String cargoFuncao;
-        public String status; // ATIVO | INATIVO | BLOQUEADO | PENDENTE
-        public String role;   // ADMIN | OPERADOR | GESTOR | JURIDICO
+        public String secretaria;
+        public String status;
+        public String role;
         public String password;
     }
 
@@ -79,8 +81,7 @@ public class UserAdminService {
         u.email = req.email.trim().toLowerCase(Locale.ROOT);
         u.telefone = blankToNull(req.telefone);
         u.cargoFuncao = blankToNull(req.cargoFuncao);
-
-        u.status = parseStatus(req.status, User.UserStatus.ATIVO);
+        u.secretaria = blankToNull(req.secretaria);
         u.role = parseRole(req.role, User.UserRole.OPERADOR);
 
         // Keep username for auth compatibility. Use email as username by default.
@@ -136,6 +137,7 @@ public class UserAdminService {
 
         if (req.telefone != null) u.telefone = blankToNull(req.telefone);
         if (req.cargoFuncao != null) u.cargoFuncao = blankToNull(req.cargoFuncao);
+        if (req.secretaria != null) u.secretaria = blankToNull(req.secretaria);
 
         if (req.status != null) u.status = parseStatus(req.status, u.status);
         if (req.role != null) u.role = parseRole(req.role, u.role);

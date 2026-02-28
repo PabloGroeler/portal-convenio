@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../services/api';
 
 interface TipoDocumentoConfig {
   id: string;
@@ -31,7 +31,7 @@ const TiposDocumentoConfigPage: React.FC = () => {
   const fetchConfigs = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/api/tipos-documento-config');
+      const response = await api.get('/tipos-documento-config');
       console.log('[fetchConfigs] Loaded configs:', response.data.length, 'items');
       console.log('[fetchConfigs] Sample config:', response.data[0]);
 
@@ -82,7 +82,7 @@ const TiposDocumentoConfigPage: React.FC = () => {
     console.log('[handleSave] Saving config:', editForm.codigo, editForm);
 
     try {
-      await axios.put(`/api/api/tipos-documento-config/${editForm.codigo}`, editForm);
+      await api.put(`/tipos-documento-config/${editForm.codigo}`, editForm);
       alert('Configuração atualizada com sucesso!');
       setEditingId(null);
       setEditForm(null);

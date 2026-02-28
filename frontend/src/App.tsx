@@ -63,6 +63,7 @@ function App() {
               {/* default content */}
               <Route index element={<DashboardHomePage />} />
               <Route path="emendas" element={<DashboardEmendasPage />} />
+              <Route path="emendas/:id" element={<EmendaDetailPage />} />
               <Route path="cadastro-emenda" element={<CadastroEmendaPage />} />
               <Route path="instituicoes" element={<InstitutionsPage />} />
               <Route path="cadastro-dados-institucionais" element={<CadastroDadosInstitucionaisPage />} />
@@ -74,32 +75,12 @@ function App() {
                 <Route path="tipos-documento-config" element={<TiposDocumentoConfigPage />} />
               </Route>
 
-              {/* Full-screen pages (no header/footer) */}
-              <Route
-                path="/emendas"
-                element={
-                  <ProtectedRoute>
-                    <EmendasPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/emendas/:id"
-                element={
-                  <ProtectedRoute>
-                    <EmendaDetailPage />
-                  </ProtectedRoute>
-                }
-              />
-
-              {/* Full-screen admin pages */}
+              {/* Redirect legacy routes to dashboard */}
+              <Route path="/emendas" element={<Navigate to="/dashboard/emendas" replace />} />
+              <Route path="/emendas/:id" element={<Navigate to="/dashboard/emendas" replace />} />
               <Route
                 path="/painel/emendas"
-                element={
-                  <ProtectedRoute>
-                    <EmendasPage />
-                  </ProtectedRoute>
-                }
+                element={<Navigate to="/dashboard/emendas" replace />}
               />
 
               {/* All other routes rendered inside Layout */}

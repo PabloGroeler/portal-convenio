@@ -38,7 +38,10 @@ public class User extends PanacheEntityBase {
         OPERADOR,
         GESTOR,
         ANALISTA,
-        JURIDICO
+        JURIDICO,
+        ORCAMENTO,
+        SECRETARIA,
+        CONVENIOS
     }
 
     @NotBlank
@@ -77,6 +80,10 @@ public class User extends PanacheEntityBase {
 
     @Column(name = "cargo_funcao", length = 120)
     public String cargoFuncao;
+
+    /** Secretaria vinculada — obrigatório quando role = SECRETARIA */
+    @Column(name = "secretaria", length = 300)
+    public String secretaria;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)

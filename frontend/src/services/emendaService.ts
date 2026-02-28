@@ -26,14 +26,19 @@ export interface EmendaDTO {
   attachments?: string[];
   description?: string;
   objectDetail?: string;
-  previsaoConclusao?: string; // Task-10
-  justificativa?: string; // Task-10
+  previsaoConclusao?: string;
+  justificativa?: string;
+  secretariaDestino?: string;
 }
 
 export interface EmendaAcaoDTO {
-  acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR' | 'SOLICITAR_APROVACAO' | 'AGUARDAR_DETALHAMENTO';
+  acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR' | 'SOLICITAR_APROVACAO' | 'AGUARDAR_DETALHAMENTO'
+      | 'INICIAR_ANALISE' | 'APROVAR_ADMISSIBILIDADE' | 'REPROVAR_ADMISSIBILIDADE'
+      | 'INICIAR_ANALISE_DEMANDA' | 'APROVAR_DEMANDA' | 'REPROVAR_DEMANDA'
+      | 'INICIAR_ANALISE_DOCUMENTAL' | 'APROVAR_DOCUMENTAL' | 'REPROVAR_DOCUMENTAL';
   observacao?: string;
   usuario?: string;
+  secretariaDestino?: string;
 }
 
 export interface EmendaHistoricoDTO {

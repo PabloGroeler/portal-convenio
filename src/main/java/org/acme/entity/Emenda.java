@@ -112,6 +112,9 @@ public class Emenda {
     @Column(name = "justificativa", length = 1000)
     public String justificativa;
 
+    @Column(name = "secretaria_destino", length = 255)
+    public String secretariaDestino;
+
     @Column(name = "data_criacao")
     public OffsetDateTime createTime;
 

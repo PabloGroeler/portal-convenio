@@ -54,8 +54,7 @@ public class EmendaService {
 
     @Transactional
     public List<Emenda> listAllInitialized() {
-        List<Emenda> emendas = emendaRepository.listAll();
-        // Force initialization of attachments while the session is open
+        List<Emenda> emendas = emendaRepository.listAllOrderedByDate();
         for (Emenda e : emendas) {
             if (e.attachments != null) {
                 int ignored = e.attachments.size();
@@ -310,8 +309,62 @@ public class EmendaService {
                 novoStatus = "Iniciado";
                 acaoRegistrada = "AGUARDANDO_DETALHAMENTO";
                 break;
+            case "INICIAR_ANALISE":
+                novoStatus = "Em análise de admissibilidade";
+                acaoRegistrada = "EM_ANALISE_ADMISSIBILIDADE";
+                break;
+            case "APROVAR_ADMISSIBILIDADE":
+                novoStatus = "Admissibilidade aprovada";
+                acaoRegistrada = "ADMISSIBILIDADE_APROVADA";
+                // Salvar secretaria de destino na emenda
+                if (acao.secretariaDestino != null && !acao.secretariaDestino.isBlank()) {
+                    emenda.secretariaDestino = acao.secretariaDestino;
+                }
+                // Texto da linha do tempo com nome da secretaria
+                String secNome = (acao.secretariaDestino != null && !acao.secretariaDestino.isBlank())
+                    ? acao.secretariaDestino : "secretaria não informada";
+                acao.observacao = "Admissibilidade aprovada, encaminhada a secretaria " + secNome +
+                    (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                break;
+            case "REPROVAR_ADMISSIBILIDADE":
+                novoStatus = "Devolvida ao legislativo";
+                acaoRegistrada = "DEVOLVIDA_LEGISLATIVO";
+                acao.observacao = "Inviabilidade de Admissibilidade, encaminhada ao legislativo" +
+                    (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                break;
+            case "INICIAR_ANALISE_DEMANDA":
+                novoStatus = "Em análise de demanda";
+                acaoRegistrada = "EM_ANALISE_DEMANDA";
+                break;
+            case "APROVAR_DEMANDA":
+                novoStatus = "Análise de demanda aprovada";
+                acaoRegistrada = "ANALISE_DEMANDA_APROVADA";
+                acao.observacao = "Viabilidade da demanda aprovada, encaminhado ao Setor de Convênios" +
+                    (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                break;
+            case "REPROVAR_DEMANDA":
+                novoStatus = "Devolvida por incompatibilidade de demanda";
+                acaoRegistrada = "DEVOLVIDA_INCOMPATIBILIDADE_DEMANDA";
+                acao.observacao = "Inviabilidade da demanda, encaminhada ao setor de Orçamento" +
+                    (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                break;
+            case "INICIAR_ANALISE_DOCUMENTAL":
+                novoStatus = "Em análise documental";
+                acaoRegistrada = "EM_ANALISE_DOCUMENTAL";
+                break;
+            case "APROVAR_DOCUMENTAL":
+                novoStatus = "Análise documental aprovada";
+                acaoRegistrada = "ANALISE_DOCUMENTAL_APROVADA";
+                acao.observacao = "Viabilidade documental aprovada, encaminhado para elaboração do termo de fomento e empenho" +
+                    (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                break;
+            case "REPROVAR_DOCUMENTAL":
+                novoStatus = "Devolvida por inviabilidade documental";
+                acaoRegistrada = "DEVOLVIDA_INVIABILIDADE_DOCUMENTAL";
+                acao.observacao = "Inviabilidade documental, encaminhada ao setor de Orçamento" +
+                    (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                break;
             default:
-                // Unknown action should be treated as a client error, not a server error.
                 throw new IllegalArgumentException("Ação inválida: " + acao.acao);
         }
 

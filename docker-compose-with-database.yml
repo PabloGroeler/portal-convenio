@@ -36,7 +36,10 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    volumes:
+      - app-uploads:/app/uploads
     environment:
+      UPLOAD_DIR: /app/uploads
       # Override database connection for Docker network
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/app_emendas
       QUARKUS_DATASOURCE_DB_KIND: postgresql
@@ -78,3 +81,5 @@ services:
 
 volumes:
   postgres_data:
+  app-uploads:
+    driver: local

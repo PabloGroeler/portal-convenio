@@ -6,8 +6,9 @@ public class UserAdminCreateRequest {
     public String email;
     public String telefone;
     public String cargoFuncao;
-    public String status; // ATIVO | INATIVO | BLOQUEADO
-    public String role;   // ADMIN | OPERADOR
+    public String secretaria;
+    public String status;
+    public String role;
     public String password;
 }
 
