@@ -1,16 +1,33 @@
 import api from './api';
-import type { DocumentoInstitucional } from '../types/documentoInstitucional.types';
+
+export interface DocumentoInstitucional {
+  id: string;
+  idInstituicao: string;
+  nomeArquivo: string;
+  nomeOriginal: string;
+  tipoDocumento: string;
+  tipoMime: string;
+  tamanhoBytes: number;
+  descricao?: string;
+  caminhoArquivo: string;
+  dataUpload: string;
+  usuarioUpload?: string;
+  dataCriacao?: string;
+  dataAtualizacao?: string;
+  statusDocumento: string;
+  observacoes?: string;
+  motivoReprovacao?: string;
+  dataAprovacao?: string;
+  dataReprovacao?: string;
+  numeroDocumento?: string;
+  dataEmissao?: string;
+  dataValidade?: string;
+}
 
 export const documentoInstitucionalService = {
   // Listar documentos de uma instituição
   listar: async (idInstituicao: string): Promise<DocumentoInstitucional[]> => {
     const { data } = await api.get(`/documentos-institucionais/instituicao/${idInstituicao}`);
-    return data;
-  },
-
-  // Obter um documento específico
-  obter: async (id: string): Promise<DocumentoInstitucional> => {
-    const { data } = await api.get(`/documentos-institucionais/${id}`);
     return data;
   },
 
@@ -24,30 +41,9 @@ export const documentoInstitucionalService = {
     return data;
   },
 
-  // Atualizar informações do documento (não o arquivo)
-  atualizar: async (id: string, documento: Partial<DocumentoInstitucional>): Promise<DocumentoInstitucional> => {
-    const { data } = await api.put(`/documentos-institucionais/${id}`, documento);
-    return data;
-  },
-
   // Deletar documento
   deletar: async (id: string): Promise<void> => {
     await api.delete(`/documentos-institucionais/${id}`);
-  },
-
-  // Baixar documento
-  downloadUrl: (id: string): string => {
-    return `/api/api/documentos-institucionais/${id}/download`;
-  },
-
-  // Visualizar documento inline (para PDFs e imagens)
-  viewUrl: (id: string): string => {
-    return `/api/api/documentos-institucionais/${id}/view`;
-  },
-
-  // Alias for backward compatibility
-  visualizarUrl: (id: string): string => {
-    return `/api/api/documentos-institucionais/${id}/view`;
   },
 
   // Aprovar documento (para gestores)
@@ -62,12 +58,16 @@ export const documentoInstitucionalService = {
     return data;
   },
 
-  // Obter dashboard de documentos
-  getDashboard: async (idInstituicao: string) => {
-    const { data } = await api.get(`/documentos-institucionais/instituicao/${idInstituicao}/dashboard`);
-    return data;
+  // URLs for direct browser access (view inline / force download)
+  viewUrl: (id: string): string => {
+    const base = (api.defaults.baseURL ?? '/api').replace(/\/$/, '');
+    return `${base}/documentos-institucionais/${id}/view`;
+  },
+
+  downloadUrl: (id: string): string => {
+    const base = (api.defaults.baseURL ?? '/api').replace(/\/$/, '');
+    return `${base}/documentos-institucionais/${id}/download`;
   },
 };
 
 export default documentoInstitucionalService;
-

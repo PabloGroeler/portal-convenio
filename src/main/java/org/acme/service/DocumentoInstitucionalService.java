@@ -6,9 +6,11 @@ import jakarta.transaction.Transactional;
 import org.acme.dto.DocumentoInstitucionalDTO;
 import org.acme.entity.DocumentoInstitucional;
 import org.acme.repository.DocumentoInstitucionalRepository;
+import org.jboss.logging.Logger;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -22,20 +24,25 @@ import java.util.stream.Collectors;
 @ApplicationScoped
 public class DocumentoInstitucionalService {
 
+    private static final Logger log = Logger.getLogger(DocumentoInstitucionalService.class);
+
     @Inject
     DocumentoInstitucionalRepository repository;
 
-    // Diretório base para armazenar arquivos (pode ser configurado via application.properties)
-    // Usa variável de ambiente UPLOAD_DIR se disponível, senão usa /data2/app-emendas
-    private static final String UPLOAD_DIR = System.getenv("UPLOAD_DIR") != null
-        ? System.getenv("UPLOAD_DIR") + "/documentos-institucionais"
-        : "/data2/app-emendas/documentos-institucionais";
+    // Base dir from .env UPLOAD_DIR — subdir appended here
+    private static final String BASE_DIR = System.getenv("UPLOAD_DIR") != null
+            ? System.getenv("UPLOAD_DIR") + "/documentos-institucionais"
+            : "/var/uploads/documentos-institucionais";
+
+    // ── LIST ─────────────────────────────────────────────────────────────────
 
     public List<DocumentoInstitucionalDTO> listarPorInstituicao(String idInstituicao) {
         return repository.findByInstituicao(idInstituicao).stream()
                 .map(this::toDTO)
                 .collect(Collectors.toList());
     }
+
+    // ── UPLOAD ────────────────────────────────────────────────────────────────
 
     @Transactional
     public DocumentoInstitucionalDTO upload(
@@ -48,144 +55,121 @@ public class DocumentoInstitucionalService {
             long tamanhoBytes,
             String usuarioUpload
     ) throws IOException {
-        // Criar diretório se não existir
-        Path uploadPath = Paths.get(UPLOAD_DIR, idInstituicao);
-        Files.createDirectories(uploadPath);
 
-        // Gerar nome único para o arquivo
-        String extensao = obterExtensao(nomeOriginal);
-        String nomeArquivo = UUID.randomUUID() + extensao;
-        Path filePath = uploadPath.resolve(nomeArquivo);
+        // Save file to disk
+        Path dir = Paths.get(BASE_DIR, idInstituicao);
+        Files.createDirectories(dir);
 
-        // Salvar arquivo no disco
-        Files.copy(fileInputStream, filePath, StandardCopyOption.REPLACE_EXISTING);
+        String ext = extensao(nomeOriginal);
+        String nomeArquivo = UUID.randomUUID() + ext;
+        Path dest = dir.resolve(nomeArquivo);
 
-        // Criar entidade
-        DocumentoInstitucional documento = new DocumentoInstitucional();
-        documento.setId(UUID.randomUUID().toString());
-        documento.setIdInstituicao(idInstituicao);
-        documento.setNomeArquivo(nomeArquivo);
-        documento.setNomeOriginal(nomeOriginal);
-        documento.setTipoDocumento(tipoDocumento);
-        documento.setTipoMime(tipoMime);
-        documento.setTamanhoBytes(tamanhoBytes);
-        documento.setDescricao(descricao);
-        documento.setCaminhoArquivo(idInstituicao + "/" + nomeArquivo);
-        documento.setDataUpload(LocalDateTime.now());
-        documento.setUsuarioUpload(usuarioUpload);
+        Files.copy(fileInputStream, dest, StandardCopyOption.REPLACE_EXISTING);
+        log.infof("✅ Arquivo salvo: %s", dest);
 
-        repository.persist(documento);
+        // Persist record
+        DocumentoInstitucional doc = new DocumentoInstitucional();
+        doc.setId(UUID.randomUUID().toString());
+        doc.setIdInstituicao(idInstituicao);
+        doc.setNomeArquivo(nomeArquivo);
+        doc.setNomeOriginal(nomeOriginal);
+        doc.setTipoDocumento(tipoDocumento);
+        doc.setTipoMime(tipoMime);
+        doc.setTamanhoBytes(tamanhoBytes);
+        doc.setDescricao(descricao);
+        doc.setCaminhoArquivo(idInstituicao + "/" + nomeArquivo);
+        doc.setDataUpload(LocalDateTime.now());
+        doc.setUsuarioUpload(usuarioUpload);
+        doc.setStatusDocumento("PENDENTE");
 
-        return toDTO(documento);
+        repository.persist(doc);
+        return toDTO(doc);
     }
 
-    @Transactional
-    public void deletar(String id) throws IOException {
-        DocumentoInstitucional documento = repository.findById(id);
-        if (documento != null) {
-            // Deletar arquivo físico
-            Path filePath = Paths.get(UPLOAD_DIR, documento.getCaminhoArquivo());
-            Files.deleteIfExists(filePath);
-
-            // Deletar do banco
-            repository.deleteByDocumentoId(id);
-        }
-    }
+    // ── GET FILE ──────────────────────────────────────────────────────────────
 
     public File obterArquivo(String id) {
-        DocumentoInstitucional documento = repository.findById(id);
-        if (documento == null) {
+        DocumentoInstitucional doc = repository.findById(id);
+        if (doc == null) {
+            log.warnf("Documento não encontrado no banco: %s", id);
             return null;
         }
-        Path filePath = Paths.get(UPLOAD_DIR, documento.getCaminhoArquivo());
-        return filePath.toFile();
+        Path p = Paths.get(BASE_DIR, doc.getCaminhoArquivo());
+        log.infof("🔍 Buscando arquivo: %s (existe: %s)", p, p.toFile().exists());
+        return p.toFile();
     }
 
     public DocumentoInstitucional obterDocumento(String id) {
         return repository.findById(id);
     }
 
+    // ── DELETE ────────────────────────────────────────────────────────────────
+
+    @Transactional
+    public void deletar(String id) throws IOException {
+        DocumentoInstitucional doc = repository.findById(id);
+        if (doc != null) {
+            Path p = Paths.get(BASE_DIR, doc.getCaminhoArquivo());
+            Files.deleteIfExists(p);
+            repository.deleteByDocumentoId(id);
+        }
+    }
+
+    // ── APPROVE / REJECT ─────────────────────────────────────────────────────
+
     @Transactional
     public DocumentoInstitucionalDTO aprovarDocumento(String id, String observacoes) {
-        DocumentoInstitucional documento = repository.findById(id);
-        if (documento == null) {
-            throw new RuntimeException("Documento não encontrado: " + id);
-        }
-
-        // Validar se o documento já está aprovado
-        if ("APROVADO".equals(documento.getStatusDocumento())) {
-            throw new RuntimeException("Documento já está aprovado");
-        }
-
-        // Validar se o documento está reprovado (não pode aprovar um documento reprovado)
-        if ("REPROVADO".equals(documento.getStatusDocumento())) {
-            throw new RuntimeException("Não é possível aprovar um documento que foi reprovado. O documento precisa ser reenviado.");
-        }
-
-        documento.setStatusDocumento("APROVADO");
-        documento.setObservacoes(observacoes);
-        documento.setDataAprovacao(LocalDateTime.now());
-        // Limpar campos de reprovação caso existam
-        documento.setMotivoReprovacao(null);
-        documento.setDataReprovacao(null);
-        repository.persist(documento);
-
-        return toDTO(documento);
+        DocumentoInstitucional doc = repository.findById(id);
+        if (doc == null) throw new RuntimeException("Documento não encontrado: " + id);
+        doc.setStatusDocumento("APROVADO");
+        doc.setObservacoes(observacoes);
+        doc.setDataAprovacao(LocalDateTime.now());
+        doc.setMotivoReprovacao(null);
+        doc.setDataReprovacao(null);
+        repository.persist(doc);
+        return toDTO(doc);
     }
 
     @Transactional
     public DocumentoInstitucionalDTO reprovarDocumento(String id, String motivo) {
-        DocumentoInstitucional documento = repository.findById(id);
-        if (documento == null) {
-            throw new RuntimeException("Documento não encontrado: " + id);
-        }
-
-        // Validar se o documento já está reprovado
-        if ("REPROVADO".equals(documento.getStatusDocumento())) {
-            throw new RuntimeException("Documento já está reprovado");
-        }
-
-        // Validar se o documento está aprovado (não pode reprovar um documento aprovado)
-        if ("APROVADO".equals(documento.getStatusDocumento())) {
-            throw new RuntimeException("Não é possível reprovar um documento que foi aprovado. Se necessário, solicite novo envio.");
-        }
-
-        documento.setStatusDocumento("REPROVADO");
-        documento.setMotivoReprovacao(motivo);
-        documento.setDataReprovacao(LocalDateTime.now());
-        // Limpar campos de aprovação caso existam
-        documento.setObservacoes(null);
-        documento.setDataAprovacao(null);
-        repository.persist(documento);
-
-        return toDTO(documento);
+        DocumentoInstitucional doc = repository.findById(id);
+        if (doc == null) throw new RuntimeException("Documento não encontrado: " + id);
+        doc.setStatusDocumento("REPROVADO");
+        doc.setMotivoReprovacao(motivo);
+        doc.setDataReprovacao(LocalDateTime.now());
+        doc.setObservacoes(null);
+        doc.setDataAprovacao(null);
+        repository.persist(doc);
+        return toDTO(doc);
     }
 
-    private String obterExtensao(String nomeArquivo) {
-        int lastDot = nomeArquivo.lastIndexOf('.');
-        return lastDot > 0 ? nomeArquivo.substring(lastDot) : "";
+    // ── HELPERS ───────────────────────────────────────────────────────────────
+
+    private String extensao(String nome) {
+        int i = nome.lastIndexOf('.');
+        return i > 0 ? nome.substring(i) : "";
     }
 
-    private DocumentoInstitucionalDTO toDTO(DocumentoInstitucional entity) {
+    private DocumentoInstitucionalDTO toDTO(DocumentoInstitucional e) {
         DocumentoInstitucionalDTO dto = new DocumentoInstitucionalDTO();
-        dto.setId(entity.getId());
-        dto.setIdInstituicao(entity.getIdInstituicao());
-        dto.setNomeArquivo(entity.getNomeArquivo());
-        dto.setNomeOriginal(entity.getNomeOriginal());
-        dto.setTipoDocumento(entity.getTipoDocumento());
-        dto.setTipoMime(entity.getTipoMime());
-        dto.setTamanhoBytes(entity.getTamanhoBytes());
-        dto.setDescricao(entity.getDescricao());
-        dto.setDataUpload(entity.getDataUpload());
-        dto.setUsuarioUpload(entity.getUsuarioUpload());
-        dto.setStatusDocumento(entity.getStatusDocumento());
-        dto.setObservacoes(entity.getObservacoes());
-        dto.setMotivoReprovacao(entity.getMotivoReprovacao());
-        dto.setDataAprovacao(entity.getDataAprovacao());
-        dto.setDataReprovacao(entity.getDataReprovacao());
-        dto.setNumeroDocumento(entity.getNumeroDocumento());
-        dto.setDataEmissao(entity.getDataEmissao());
-        dto.setDataValidade(entity.getDataValidade());
+        dto.setId(e.getId());
+        dto.setIdInstituicao(e.getIdInstituicao());
+        dto.setNomeArquivo(e.getNomeArquivo());
+        dto.setNomeOriginal(e.getNomeOriginal());
+        dto.setTipoDocumento(e.getTipoDocumento());
+        dto.setTipoMime(e.getTipoMime());
+        dto.setTamanhoBytes(e.getTamanhoBytes());
+        dto.setDescricao(e.getDescricao());
+        dto.setDataUpload(e.getDataUpload());
+        dto.setUsuarioUpload(e.getUsuarioUpload());
+        dto.setStatusDocumento(e.getStatusDocumento());
+        dto.setObservacoes(e.getObservacoes());
+        dto.setMotivoReprovacao(e.getMotivoReprovacao());
+        dto.setDataAprovacao(e.getDataAprovacao());
+        dto.setDataReprovacao(e.getDataReprovacao());
+        dto.setNumeroDocumento(e.getNumeroDocumento());
+        dto.setDataEmissao(e.getDataEmissao());
+        dto.setDataValidade(e.getDataValidade());
         return dto;
     }
 }

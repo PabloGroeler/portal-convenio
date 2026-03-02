@@ -8,7 +8,6 @@ volumes:
   app-uploads:
 
 services:
-  # Backend service — uses host network so it can reach external DB at 10.40.93.4
   app:
     container_name: portal-emendas-backend
     build:
@@ -44,7 +43,6 @@ services:
       retries: 5
       start_period: 30s
 
-  # Frontend service — bridge network, proxies /api to host:8085
   frontend:
     container_name: portal-emendas-frontend
     build:
@@ -54,6 +52,4 @@ services:
       - "3005:80"
     networks:
       - app-network
-    depends_on:
-      - app
-    restart: unless-stopped
+    restart: on-failure:3

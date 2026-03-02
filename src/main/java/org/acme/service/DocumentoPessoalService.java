@@ -24,7 +24,10 @@ public class DocumentoPessoalService {
 
     private static final String UPLOAD_DIR = System.getenv("UPLOAD_DIR") != null
         ? System.getenv("UPLOAD_DIR") + "/documentos-pessoais"
-        : "/data2/app-emendas/documentos-pessoais";
+        : "/deployments/uploads/documentos-pessoais";
+
+    // Path legado para compatibilidade com arquivos salvos antes da migração
+    private static final String LEGACY_UPLOAD_DIR = "/data2/app-emendas/documentos-pessoais";
 
     @Transactional
     public DocumentoPessoalDTO upload(
@@ -93,15 +96,21 @@ public class DocumentoPessoalService {
             throw new FileNotFoundException("Documento não encontrado: " + id);
         }
 
+        // Tenta no diretório atual
         Path filePath = Paths.get(UPLOAD_DIR, doc.getCaminhoArquivo());
-        File file = filePath.toFile();
-
-        if (!file.exists()) {
-            throw new FileNotFoundException("Arquivo físico não encontrado: " + filePath);
+        if (filePath.toFile().exists()) {
+            return filePath.toFile();
         }
 
-        return file;
+        // Fallback: tenta no diretório legado (/data2/app-emendas)
+        Path legacyPath = Paths.get(LEGACY_UPLOAD_DIR, doc.getCaminhoArquivo());
+        if (legacyPath.toFile().exists()) {
+            return legacyPath.toFile();
+        }
+
+        throw new FileNotFoundException("Arquivo físico não encontrado: " + filePath);
     }
+
 
     @Transactional
     public DocumentoPessoalDTO aprovar(String id, String observacoes, String usuarioAprovador) {

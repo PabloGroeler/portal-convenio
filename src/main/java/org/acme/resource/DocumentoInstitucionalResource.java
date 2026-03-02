@@ -2,7 +2,6 @@ package org.acme.resource;
 
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
-
 import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
@@ -10,10 +9,8 @@ import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.core.SecurityContext;
 import org.acme.dto.DocumentoInstitucionalDTO;
 import org.acme.entity.DocumentoInstitucional;
-import org.acme.entity.User;
 import org.acme.service.DocumentoInstitucionalService;
 import org.acme.service.StatusOSCService;
-import org.acme.service.AuditService;
 import org.jboss.logging.Logger;
 import org.jboss.resteasy.reactive.RestForm;
 import org.jboss.resteasy.reactive.multipart.FileUpload;
@@ -29,47 +26,43 @@ public class DocumentoInstitucionalResource {
 
     private static final Logger log = Logger.getLogger(DocumentoInstitucionalResource.class);
 
-    @Inject
-    DocumentoInstitucionalService service;
+    @Inject DocumentoInstitucionalService service;
+    @Inject StatusOSCService statusOSCService;
 
-    @Inject
-    StatusOSCService statusOSCService;
+    @Context ContainerRequestContext requestContext;
+    @Context SecurityContext securityContext;
 
-    @Inject
-    AuditService auditService;
-
-    @Context
-    ContainerRequestContext requestContext;
-
-    @Context
-    SecurityContext securityContext;
+    // ── LIST ─────────────────────────────────────────────────────────────────
 
     @GET
     @Path("/instituicao/{idInstituicao}")
     public Response listar(@PathParam("idInstituicao") String idInstituicao) {
         try {
-            List<DocumentoInstitucionalDTO> documentos = service.listarPorInstituicao(idInstituicao);
-            return Response.ok(documentos).build();
+            List<DocumentoInstitucionalDTO> docs = service.listarPorInstituicao(idInstituicao);
+            return Response.ok(docs).build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Erro ao listar documentos: " + e.getMessage()))
-                    .build();
+            log.errorf(e, "Erro ao listar documentos da instituição %s", idInstituicao);
+            return Response.serverError().entity(new Err(e.getMessage())).build();
         }
     }
+
+    // ── UPLOAD ────────────────────────────────────────────────────────────────
 
     @POST
     @Path("/upload")
     @Consumes(MediaType.MULTIPART_FORM_DATA)
-    @jakarta.transaction.Transactional
     public Response upload(
-            @RestForm("file") FileUpload file,
+            @RestForm("file")          FileUpload file,
             @RestForm("idInstituicao") String idInstituicao,
             @RestForm("tipoDocumento") String tipoDocumento,
-            @RestForm("descricao") String descricao,
+            @RestForm("descricao")     String descricao,
             @RestForm("usuarioUpload") String usuarioUpload
     ) {
         try {
-            DocumentoInstitucionalDTO documento = service.upload(
+            log.infof("📤 Upload: instituicao=%s tipo=%s arquivo=%s size=%d",
+                    idInstituicao, tipoDocumento, file.fileName(), file.size());
+
+            DocumentoInstitucionalDTO doc = service.upload(
                     idInstituicao,
                     file.fileName(),
                     tipoDocumento,
@@ -80,66 +73,39 @@ public class DocumentoInstitucionalResource {
                     usuarioUpload
             );
 
-            // RF-02.3 - Atualizar status da OSC automaticamente após upload
             statusOSCService.atualizarStatusAutomatico(idInstituicao);
-
-            // AUDIT LOG - Upload de documento (só registra se tudo foi bem)
-            auditService.logUpload(
-                tipoDocumento,
-                file.fileName(),
-                file.size(),
-                getCurrentUserId(),
-                getCurrentUserName(),
-                getClientIP()
-            );
-
-            return Response.ok(documento).build();
+            return Response.ok(doc).build();
         } catch (Exception e) {
-            log.error("Erro ao fazer upload", e);
-            // Transaction será revertida automaticamente, incluindo o audit log
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Erro ao fazer upload: " + e.getMessage()))
-                    .build();
+            log.errorf(e, "❌ Erro no upload");
+            return Response.serverError().entity(new Err(e.getMessage())).build();
         }
     }
 
-    @DELETE
-    @Path("/{id}")
-    @jakarta.transaction.Transactional
-    public Response deletar(@PathParam("id") String id) {
+    // ── VIEW (inline) ────────────────────────────────────────────────────────
+
+    @GET
+    @Path("/{id}/view")
+    @Produces(MediaType.APPLICATION_OCTET_STREAM)
+    public Response view(@PathParam("id") String id) {
         try {
-            // Buscar documento antes de deletar para pegar o idInstituicao e fazer audit
-            DocumentoInstitucional documento = service.obterDocumento(id);
-            String idInstituicao = documento != null ? documento.getIdInstituicao() : null;
-
-            service.deletar(id);
-
-            // RF-02.3 - Atualizar status da OSC automaticamente após deletar documento
-            if (idInstituicao != null) {
-                statusOSCService.atualizarStatusAutomatico(idInstituicao);
+            File file = service.obterArquivo(id);
+            if (file == null || !file.exists()) {
+                log.warnf("Arquivo não encontrado para documento %s", id);
+                return Response.status(Response.Status.NOT_FOUND)
+                        .entity(new Err("Arquivo não encontrado")).build();
             }
-
-            // AUDIT LOG - Deletar documento (só registra se tudo foi bem)
-            if (documento != null) {
-                auditService.logDelete(
-                    "DocumentoInstitucional",
-                    id,
-                    documento,
-                    getCurrentUserId(),
-                    getCurrentUserName(),
-                    getClientIP()
-                );
-            }
-
-            return Response.ok().build();
-        } catch (Exception e) {
-            log.error("Erro ao deletar documento", e);
-            // Transaction será revertida automaticamente, incluindo o audit log
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Erro ao deletar documento: " + e.getMessage()))
+            DocumentoInstitucional doc = service.obterDocumento(id);
+            return Response.ok(file)
+                    .header("Content-Disposition", "inline; filename=\"" + doc.getNomeOriginal() + "\"")
+                    .header("Content-Type", doc.getTipoMime())
                     .build();
+        } catch (Exception e) {
+            log.errorf(e, "Erro ao visualizar documento %s", id);
+            return Response.serverError().entity(new Err(e.getMessage())).build();
         }
     }
+
+    // ── DOWNLOAD ─────────────────────────────────────────────────────────────
 
     @GET
     @Path("/{id}/download")
@@ -149,225 +115,76 @@ public class DocumentoInstitucionalResource {
             File file = service.obterArquivo(id);
             if (file == null || !file.exists()) {
                 return Response.status(Response.Status.NOT_FOUND)
-                        .entity(new ErrorResponse("Arquivo não encontrado"))
-                        .build();
+                        .entity(new Err("Arquivo não encontrado")).build();
             }
-
-            DocumentoInstitucional documento = service.obterDocumento(id);
-
-            // AUDIT LOG - Download de documento
-            if (documento != null) {
-                auditService.logDownload(
-                    documento.getTipoDocumento(),
-                    documento.getNomeArquivo(),
-                    getCurrentUserId(),
-                    getCurrentUserName(),
-                    getClientIP()
-                );
-            }
-
+            DocumentoInstitucional doc = service.obterDocumento(id);
             return Response.ok(file)
-                    .header("Content-Disposition", "attachment; filename=\"" + documento.getNomeOriginal() + "\"")
-                    .header("Content-Type", documento.getTipoMime())
+                    .header("Content-Disposition", "attachment; filename=\"" + doc.getNomeOriginal() + "\"")
+                    .header("Content-Type", doc.getTipoMime())
                     .build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Erro ao baixar arquivo: " + e.getMessage()))
-                    .build();
+            log.errorf(e, "Erro ao baixar documento %s", id);
+            return Response.serverError().entity(new Err(e.getMessage())).build();
         }
     }
 
-    @GET
-    @Path("/{id}/view")
-    @Produces(MediaType.APPLICATION_OCTET_STREAM)
-    public Response view(@PathParam("id") String id) {
+    // ── DELETE ────────────────────────────────────────────────────────────────
+
+    @DELETE
+    @Path("/{id}")
+    public Response deletar(@PathParam("id") String id) {
         try {
-            File file = service.obterArquivo(id);
-            if (file == null || !file.exists()) {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity(new ErrorResponse("Arquivo não encontrado"))
-                        .build();
-            }
-
-            DocumentoInstitucional documento = service.obterDocumento(id);
-
-            // Use "inline" para visualizar no navegador em vez de forçar download
-            return Response.ok(file)
-                    .header("Content-Disposition", "inline; filename=\"" + documento.getNomeOriginal() + "\"")
-                    .header("Content-Type", documento.getTipoMime())
-                    .build();
+            DocumentoInstitucional doc = service.obterDocumento(id);
+            String idInstituicao = doc != null ? doc.getIdInstituicao() : null;
+            service.deletar(id);
+            if (idInstituicao != null) statusOSCService.atualizarStatusAutomatico(idInstituicao);
+            return Response.ok().build();
         } catch (Exception e) {
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Erro ao visualizar arquivo: " + e.getMessage()))
-                    .build();
+            log.errorf(e, "Erro ao deletar documento %s", id);
+            return Response.serverError().entity(new Err(e.getMessage())).build();
         }
     }
+
+    // ── APPROVE ───────────────────────────────────────────────────────────────
 
     @POST
     @Path("/{id}/aprovar")
-    @jakarta.transaction.Transactional
-    public Response aprovar(@PathParam("id") String id, AprovarRequest request) {
+    public Response aprovar(@PathParam("id") String id, AprovarReq req) {
         try {
-            // Validar se o usuário tem permissão (não pode ser OPERADOR)
-            if (isOperador()) {
-                return Response.status(Response.Status.FORBIDDEN)
-                        .entity(new ErrorResponse("Operadores não têm permissão para aprovar documentos"))
-                        .build();
-            }
-
-            DocumentoInstitucional documento = service.obterDocumento(id);
-            if (documento == null) {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity(new ErrorResponse("Documento não encontrado"))
-                        .build();
-            }
-
-            String idInstituicao = documento.getIdInstituicao();
-            DocumentoInstitucionalDTO result = service.aprovarDocumento(id, request.observacoes);
-
-            // RF-02.3 - Atualizar status da OSC automaticamente após aprovação
-            statusOSCService.atualizarStatusAutomatico(idInstituicao);
-
-            // AUDIT LOG - Aprovação de documento (só registra se tudo foi bem)
-            auditService.logAprovacao(
-                "DocumentoInstitucional",
-                id,
-                request.observacoes,
-                getCurrentUserId(),
-                getCurrentUserName(),
-                getClientIP()
-            );
-
+            DocumentoInstitucional doc = service.obterDocumento(id);
+            if (doc == null) return Response.status(404).entity(new Err("Documento não encontrado")).build();
+            DocumentoInstitucionalDTO result = service.aprovarDocumento(id, req != null ? req.observacoes : null);
+            statusOSCService.atualizarStatusAutomatico(doc.getIdInstituicao());
             return Response.ok(result).build();
         } catch (Exception e) {
-            log.error("Erro ao aprovar documento", e);
-            // Transaction será revertida automaticamente, incluindo o audit log
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Erro ao aprovar documento: " + e.getMessage()))
-                    .build();
+            log.errorf(e, "Erro ao aprovar documento %s", id);
+            return Response.serverError().entity(new Err(e.getMessage())).build();
         }
     }
+
+    // ── REJECT ────────────────────────────────────────────────────────────────
 
     @POST
     @Path("/{id}/reprovar")
-    @jakarta.transaction.Transactional
-    public Response reprovar(@PathParam("id") String id, ReprovarRequest request) {
+    public Response reprovar(@PathParam("id") String id, ReprovarReq req) {
         try {
-            // Validar se o usuário tem permissão (não pode ser OPERADOR)
-            if (isOperador()) {
-                return Response.status(Response.Status.FORBIDDEN)
-                        .entity(new ErrorResponse("Operadores não têm permissão para reprovar documentos"))
-                        .build();
-            }
-
-            if (request.motivo == null || request.motivo.trim().isEmpty()) {
-                return Response.status(Response.Status.BAD_REQUEST)
-                        .entity(new ErrorResponse("Motivo da reprovação é obrigatório"))
-                        .build();
-            }
-
-            DocumentoInstitucional documento = service.obterDocumento(id);
-            if (documento == null) {
-                return Response.status(Response.Status.NOT_FOUND)
-                        .entity(new ErrorResponse("Documento não encontrado"))
-                        .build();
-            }
-
-            String idInstituicao = documento.getIdInstituicao();
-            DocumentoInstitucionalDTO result = service.reprovarDocumento(id, request.motivo);
-
-            // RF-02.3 - Atualizar status da OSC automaticamente após reprovação
-            statusOSCService.atualizarStatusAutomatico(idInstituicao);
-
-            // AUDIT LOG - Reprovação de documento (só registra se tudo foi bem)
-            auditService.logReprovacao(
-                "DocumentoInstitucional",
-                id,
-                request.motivo,
-                getCurrentUserId(),
-                getCurrentUserName(),
-                getClientIP()
-            );
-
+            if (req == null || req.motivo == null || req.motivo.isBlank())
+                return Response.status(400).entity(new Err("Motivo é obrigatório")).build();
+            DocumentoInstitucional doc = service.obterDocumento(id);
+            if (doc == null) return Response.status(404).entity(new Err("Documento não encontrado")).build();
+            DocumentoInstitucionalDTO result = service.reprovarDocumento(id, req.motivo);
+            statusOSCService.atualizarStatusAutomatico(doc.getIdInstituicao());
             return Response.ok(result).build();
         } catch (Exception e) {
-            log.error("Erro ao reprovar documento", e);
-            // Transaction será revertida automaticamente, incluindo o audit log
-            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
-                    .entity(new ErrorResponse("Erro ao reprovar documento: " + e.getMessage()))
-                    .build();
+            log.errorf(e, "Erro ao reprovar documento %s", id);
+            return Response.serverError().entity(new Err(e.getMessage())).build();
         }
     }
 
-    // Classes internas para request e response
-    public static class AprovarRequest {
-        public String observacoes;
-    }
+    // ── INNER CLASSES ─────────────────────────────────────────────────────────
 
-    public static class ReprovarRequest {
-        public String motivo;
-    }
-
-    // Classes internas para response
-    public static class ErrorResponse {
-        public String error;
-
-        public ErrorResponse(String error) {
-            this.error = error;
-        }
-    }
-
-    private Long getCurrentUserId() {
-        if (securityContext != null && securityContext.getUserPrincipal() != null) {
-            try {
-                String username = securityContext.getUserPrincipal().getName();
-                User user = User.find("username", username).firstResult();
-                return user != null ? user.id : null;
-            } catch (Exception e) {
-                log.warn("Error getting current user ID: " + e.getMessage());
-            }
-        }
-        return null;
-    }
-
-    private String getCurrentUserName() {
-        if (securityContext != null && securityContext.getUserPrincipal() != null) {
-            try {
-                return securityContext.getUserPrincipal().getName();
-            } catch (Exception e) {
-                log.warn("Error getting current user name: " + e.getMessage());
-            }
-        }
-        return "system";
-    }
-
-    private String getClientIP() {
-        if (requestContext == null) {
-            return "unknown";
-        }
-        String ip = requestContext.getHeaderString("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = requestContext.getHeaderString("X-Real-IP");
-        }
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip != null && !ip.isEmpty() ? ip : "unknown";
-    }
-
-    private boolean isOperador() {
-        if (securityContext != null && securityContext.getUserPrincipal() != null) {
-            try {
-                String username = securityContext.getUserPrincipal().getName();
-                User user = User.find("username", username).firstResult();
-                if (user != null) {
-                    return user.role == User.UserRole.OPERADOR;
-                }
-            } catch (Exception e) {
-                log.warn("Erro ao verificar role do usuário: " + e.getMessage());
-            }
-        }
-        return false;
-    }
+    public static class AprovarReq  { public String observacoes; }
+    public static class ReprovarReq { public String motivo; }
+    public static class Err         { public String error; public Err(String e) { this.error = e; } }
 }
 
