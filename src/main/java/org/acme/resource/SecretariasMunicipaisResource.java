@@ -31,7 +31,7 @@ public class SecretariasMunicipaisResource {
 
     @GET
     @Path("/{id}")
-    public Response getById(@PathParam("id") String id) {
+    public Response getById(@PathParam("id") Long id) {
         SecretariaMunicipal s = service.findById(id);
         if (s == null) return Response.status(Response.Status.NOT_FOUND).build();
         return Response.ok(s).build();
@@ -42,24 +42,16 @@ public class SecretariasMunicipaisResource {
         if (s == null) return badRequest("Payload inválido");
         if (s.nome == null || s.nome.isBlank()) return badRequest("Nome é obrigatório");
         if (s.nome.length() > 200) return badRequest("Nome deve ter no máximo 200 caracteres");
-        if (s.sigla != null && s.sigla.length() > 20) return badRequest("Sigla deve ter no máximo 20 caracteres");
-        if (s.email != null && s.email.length() > 200) return badRequest("E-mail deve ter no máximo 200 caracteres");
-        if (s.telefone != null && s.telefone.length() > 20) return badRequest("Telefone deve ter no máximo 20 caracteres");
-
         SecretariaMunicipal created = service.create(s);
         return Response.status(Response.Status.CREATED).entity(created).build();
     }
 
     @PUT
     @Path("/{id}")
-    public Response update(@PathParam("id") String id, SecretariaMunicipal s) {
+    public Response update(@PathParam("id") Long id, SecretariaMunicipal s) {
         if (s == null) return badRequest("Payload inválido");
         if (s.nome == null || s.nome.isBlank()) return badRequest("Nome é obrigatório");
         if (s.nome.length() > 200) return badRequest("Nome deve ter no máximo 200 caracteres");
-        if (s.sigla != null && s.sigla.length() > 20) return badRequest("Sigla deve ter no máximo 20 caracteres");
-        if (s.email != null && s.email.length() > 200) return badRequest("E-mail deve ter no máximo 200 caracteres");
-        if (s.telefone != null && s.telefone.length() > 20) return badRequest("Telefone deve ter no máximo 20 caracteres");
-
         SecretariaMunicipal updated = service.update(id, s);
         if (updated == null) return Response.status(Response.Status.NOT_FOUND).build();
         return Response.ok(updated).build();
@@ -67,11 +59,10 @@ public class SecretariasMunicipaisResource {
 
     @PATCH
     @Path("/{id}/ativo")
-    public Response setAtivo(@PathParam("id") String id, AtivoDTO body) {
+    public Response setAtivo(@PathParam("id") Long id, AtivoDTO body) {
         if (body == null) return badRequest("Payload inválido");
         SecretariaMunicipal updated = service.setAtivo(id, body.ativo);
         if (updated == null) return Response.status(Response.Status.NOT_FOUND).build();
         return Response.ok(updated).build();
     }
 }
-

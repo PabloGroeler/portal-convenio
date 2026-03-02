@@ -1,9 +1,10 @@
 package org.acme.dto;
 
 public class EmendaAcaoDTO {
-    public String acao; // APROVAR, DEVOLVER, REPROVAR
+    public String acao;
     public String observacao;
     public String usuario;
+    public String secretariaDestino;
 
     public EmendaAcaoDTO() {
     }

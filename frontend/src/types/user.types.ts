@@ -1,14 +1,27 @@
 // Types for userService - separate file to avoid cache issues
 
 /**
- * User roles matching backend enum UserRole
+ * User roles matching backend enum UserRole.
+ *
+ * Roles used in the emenda workflow:
+ *   ADMIN     — full access
+ *   ORCAMENTO — admissibilidade analysis
+ *   SECRETARIA — demand analysis
+ *   CONVENIOS  — documental analysis
+ *
+ * Roles used in the institution/user management:
+ *   OPERADOR, GESTOR, ANALISTA, JURIDICO
  */
 export enum UserRole {
-  ADMIN = 'ADMIN',
-  OPERADOR = 'OPERADOR',
-  GESTOR = 'GESTOR',
-  ANALISTA = 'ANALISTA',
-  JURIDICO = 'JURIDICO'
+  ADMIN     = 'ADMIN',
+  ORCAMENTO = 'ORCAMENTO',
+  SECRETARIA = 'SECRETARIA',
+  CONVENIOS  = 'CONVENIOS',
+  // --- institution / user management ---
+  OPERADOR  = 'OPERADOR',
+  GESTOR    = 'GESTOR',
+  ANALISTA  = 'ANALISTA',
+  JURIDICO  = 'JURIDICO',
 }
 
 /**
@@ -52,6 +65,7 @@ export enum Permission {
   APPROVE_EMENDA = 'APPROVE_EMENDA',
   REJECT_EMENDA = 'REJECT_EMENDA',
   RETURN_EMENDA = 'RETURN_EMENDA',
+  APPROVE_ADMISSIBILIDADE = 'APPROVE_ADMISSIBILIDADE',
   SYNC_EXTERNAL_EMENDAS = 'SYNC_EXTERNAL_EMENDAS',
 
   // Instituições
@@ -89,14 +103,45 @@ export enum Permission {
 }
 
 /**
- * Role-based permissions mapping
+ * Role-based permissions mapping.
+ * Emenda workflow roles have precise permissions.
+ * Legacy roles (OPERADOR/GESTOR/ANALISTA/JURIDICO) keep minimal permissions
+ * so existing institution/user-management pages keep working.
  */
 export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
-  [UserRole.ADMIN]: Object.values(Permission), // Admin has all permissions
+  // ── Emenda workflow ──────────────────────────────────────────────────────
+  [UserRole.ADMIN]: Object.values(Permission),
 
+  [UserRole.ORCAMENTO]: [
+    Permission.VIEW_DASHBOARD,
+    Permission.VIEW_EMENDAS,
+    Permission.APPROVE_ADMISSIBILIDADE,
+    Permission.VIEW_INSTITUTIONS,
+    Permission.VIEW_COUNCILORS,
+    Permission.VIEW_REPORTS,
+    Permission.VIEW_PROFILE,
+    Permission.EDIT_PROFILE,
+  ],
+
+  [UserRole.SECRETARIA]: [
+    Permission.VIEW_DASHBOARD,
+    Permission.VIEW_EMENDAS,
+    Permission.VIEW_INSTITUTIONS,
+    Permission.VIEW_PROFILE,
+    Permission.EDIT_PROFILE,
+  ],
+
+  [UserRole.CONVENIOS]: [
+    Permission.VIEW_DASHBOARD,
+    Permission.VIEW_EMENDAS,
+    Permission.VIEW_INSTITUTIONS,
+    Permission.VIEW_PROFILE,
+    Permission.EDIT_PROFILE,
+  ],
+
+  // ── Institution / user management (legacy) ───────────────────────────────
   [UserRole.OPERADOR]: [
     Permission.VIEW_DASHBOARD,
-    // Can manage their own institution data directly
     Permission.EDIT_INSTITUTION,
     Permission.MANAGE_INSTITUTION_DOCS,
     Permission.MANAGE_INSTITUTION_DIRIGENTES,
@@ -107,22 +152,9 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.GESTOR]: [
     Permission.VIEW_DASHBOARD,
     Permission.VIEW_EMENDAS,
-    Permission.CREATE_EMENDA,
-    Permission.EDIT_EMENDA,
-    Permission.APPROVE_EMENDA,
-    Permission.REJECT_EMENDA,
-    Permission.RETURN_EMENDA,
     Permission.VIEW_INSTITUTIONS,
-    Permission.CREATE_INSTITUTION,
-    Permission.EDIT_INSTITUTION,
-    Permission.MANAGE_INSTITUTION_DOCS,
-    Permission.MANAGE_INSTITUTION_DIRIGENTES,
-    Permission.APPROVE_INSTITUTION,
     Permission.VIEW_COUNCILORS,
-    Permission.CREATE_COUNCILOR,
-    Permission.EDIT_COUNCILOR,
     Permission.VIEW_REPORTS,
-    Permission.EXPORT_DATA,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
   ],
@@ -130,14 +162,8 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.ANALISTA]: [
     Permission.VIEW_DASHBOARD,
     Permission.VIEW_EMENDAS,
-    Permission.APPROVE_EMENDA,
-    Permission.REJECT_EMENDA,
-    Permission.RETURN_EMENDA,
     Permission.VIEW_INSTITUTIONS,
-    Permission.APPROVE_INSTITUTION,
-    Permission.VIEW_COUNCILORS,
     Permission.VIEW_REPORTS,
-    Permission.EXPORT_DATA,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
   ],
@@ -145,15 +171,7 @@ export const ROLE_PERMISSIONS: Record<UserRole, Permission[]> = {
   [UserRole.JURIDICO]: [
     Permission.VIEW_DASHBOARD,
     Permission.VIEW_EMENDAS,
-    Permission.APPROVE_EMENDA,
-    Permission.REJECT_EMENDA,
-    Permission.RETURN_EMENDA,
     Permission.VIEW_INSTITUTIONS,
-    Permission.APPROVE_INSTITUTION,
-    Permission.MANAGE_INSTITUTION_DOCS,
-    Permission.VIEW_COUNCILORS,
-    Permission.VIEW_REPORTS,
-    Permission.EXPORT_DATA,
     Permission.VIEW_PROFILE,
     Permission.EDIT_PROFILE,
   ],

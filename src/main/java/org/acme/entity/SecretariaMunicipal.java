@@ -1,13 +1,7 @@
 package org.acme.entity;
 
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.Id;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.Table;
-
+import jakarta.persistence.*;
 import java.time.OffsetDateTime;
-import java.util.UUID;
 
 /**
  * JIRA 8 — Cadastro de Secretarias Municipais.
@@ -17,28 +11,27 @@ import java.util.UUID;
 public class SecretariaMunicipal {
 
     @Id
-    @Column(name = "secretaria_id", nullable = false, unique = true, length = 100)
-    public String secretariaId;
+    @SequenceGenerator(name = "secretarias_municipais_seq", sequenceName = "secretarias_municipais_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "secretarias_municipais_seq")
+    @Column(name = "id")
+    public Long id;
+
+    @Column(name = "codigo", nullable = false, unique = true, length = 50)
+    public String codigo;
 
     @Column(name = "nome", nullable = false, length = 200)
     public String nome;
 
-    @Column(name = "sigla", length = 20)
-    public String sigla;
-
-    @Column(name = "email", length = 200)
-    public String email;
-
-    @Column(name = "telefone", length = 20)
-    public String telefone;
+    @Column(name = "descricao", columnDefinition = "TEXT")
+    public String descricao;
 
     @Column(name = "ativo", nullable = false)
     public boolean ativo = true;
 
-    @Column(name = "data_criacao")
+    @Column(name = "create_time", nullable = false)
     public OffsetDateTime createTime;
 
-    @Column(name = "data_atualizacao")
+    @Column(name = "update_time", nullable = false)
     public OffsetDateTime updateTime;
 
     public SecretariaMunicipal() {
@@ -46,13 +39,9 @@ public class SecretariaMunicipal {
 
     @PrePersist
     public void onCreate() {
-        if (this.secretariaId == null || this.secretariaId.isBlank()) {
-            this.secretariaId = UUID.randomUUID().toString();
-        }
         if (this.createTime == null) {
             this.createTime = OffsetDateTime.now();
         }
         this.updateTime = OffsetDateTime.now();
     }
 }
-

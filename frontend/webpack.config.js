@@ -96,6 +96,21 @@ module.exports = (env, argv) => {
     // Source maps for debugging
     devtool: isProd ? 'source-map' : 'eval-cheap-module-source-map',
 
+    // Dev server: proxy /api to backend so relative API calls work locally
+    ...(!isProd && {
+      devServer: {
+        host: '0.0.0.0',
+        port: 3000,
+        historyApiFallback: true,
+        proxy: {
+          '/api': {
+            target: 'http://localhost:8085',
+            changeOrigin: true,
+          },
+        },
+      },
+    }),
+
     optimization: {
       splitChunks: {
         chunks: 'all',

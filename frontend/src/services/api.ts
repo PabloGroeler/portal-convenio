@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Keep compatibility with Apache rule: ProxyPass /api -> backend root.
-// Using /api/api here ensures backend still receives /api/* routes.
-const API_URL = '/api/api';
+// Relative base — nginx proxies /api/* straight to the backend (no prefix stripping locally).
+// In prod, Apache ProxyPass /api -> backend, so /api/auth/login reaches the backend correctly.
+const API_URL = '/api';
 
 const api = axios.create({
   baseURL: API_URL,

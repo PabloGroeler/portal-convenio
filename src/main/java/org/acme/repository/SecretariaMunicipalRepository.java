@@ -8,10 +8,9 @@ import org.acme.entity.SecretariaMunicipal;
 import java.util.List;
 
 @ApplicationScoped
-public class SecretariaMunicipalRepository implements PanacheRepositoryBase<SecretariaMunicipal, String> {
+public class SecretariaMunicipalRepository implements PanacheRepositoryBase<SecretariaMunicipal, Long> {
 
     public List<SecretariaMunicipal> listAllOrdered() {
-        return listAll(Sort.by("nome").and("secretariaId"));
+        return listAll(Sort.by("codigo"));
     }
 }
-

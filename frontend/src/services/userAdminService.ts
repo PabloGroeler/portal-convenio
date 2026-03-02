@@ -1,15 +1,16 @@
 import api from './api';
 
 export type UserStatus = 'ATIVO' | 'INATIVO' | 'BLOQUEADO' | 'PENDENTE';
-export type UserRole = 'ADMIN' | 'OPERADOR' | 'GESTOR' | 'JURIDICO';
+export type UserRole = 'ADMIN' | 'OPERADOR' | 'GESTOR' | 'JURIDICO' | 'ANALISTA' | 'ORCAMENTO' | 'SECRETARIA' | 'CONVENIOS';
 
 export interface UserAdminDTO {
   id: number;
   nomeCompleto: string;
-  documento?: string | null; // CPF (11 digits) or CNPJ (14 digits)
+  documento?: string | null;
   email: string;
   telefone?: string | null;
   cargoFuncao?: string | null;
+  secretaria?: string | null;
   status: UserStatus;
   role: UserRole;
   createTime?: string;
@@ -18,10 +19,11 @@ export interface UserAdminDTO {
 
 export interface UserAdminCreateRequest {
   nomeCompleto: string;
-  documento?: string; // CPF (11 digits) or CNPJ (14 digits)
+  documento?: string;
   email: string;
   telefone?: string;
   cargoFuncao?: string;
+  secretaria?: string;
   status?: UserStatus;
   role?: UserRole;
   password: string;
@@ -29,10 +31,11 @@ export interface UserAdminCreateRequest {
 
 export interface UserAdminUpdateRequest {
   nomeCompleto?: string;
-  documento?: string; // CPF (11 digits) or CNPJ (14 digits)
+  documento?: string;
   email?: string;
   telefone?: string;
   cargoFuncao?: string;
+  secretaria?: string;
   status?: UserStatus;
   role?: UserRole;
   password?: string;

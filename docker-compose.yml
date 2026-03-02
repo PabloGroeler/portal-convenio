@@ -4,6 +4,9 @@ networks:
   app-network:
     driver: bridge
 
+volumes:
+  app-uploads:
+
 services:
   # Backend service — uses host network so it can reach external DB at 10.40.93.4
   app:
@@ -19,9 +22,8 @@ services:
     env_file:
       - .env
     volumes:
-      - /data2/app-emendas:/data2/app-emendas
+      - app-uploads:/var/uploads
     environment:
-      UPLOAD_DIR: /data2/app-emendas
       QUARKUS_DATASOURCE_DB_KIND: postgresql
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: none
       QUARKUS_FLYWAY_MIGRATE_AT_START: "true"

@@ -198,7 +198,11 @@ const UsersPage: React.FC = () => {
                           ? 'Gestor'
                           : u.role === 'JURIDICO'
                             ? 'Jurídico'
-                            : 'Operador'}
+                            : u.role === 'ANALISTA'
+                              ? 'Analista'
+                              : u.role === 'ORCAMENTO'
+                                ? 'Orçamento'
+                                : 'Operador'}
                     </td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-semibold ${statusBadge(u.status)}`}>

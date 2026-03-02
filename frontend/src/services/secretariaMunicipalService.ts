@@ -1,11 +1,10 @@
 import api from './api';
 
 export interface SecretariaMunicipalDTO {
-  secretariaId: string;
+  id: number;
+  codigo: string;
   nome: string;
-  sigla?: string;
-  email?: string;
-  telefone?: string;
+  descricao?: string;
   ativo: boolean;
   createTime?: string;
   updateTime?: string;

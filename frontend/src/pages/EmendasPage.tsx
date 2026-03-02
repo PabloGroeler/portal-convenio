@@ -6,6 +6,8 @@ import institutionService, { type InstitutionDTO } from '../services/institution
 import councilorService, { type CouncilorDTO } from '../services/councilorService';
 import tipoEmendaService, { type TipoEmendaDTO } from '../services/tipoEmendaService';
 import type { EmendaHistoricoDTO } from '../services/emendaService';
+import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../types/user.types';
 
 interface Emenda {
   id: string;
@@ -32,12 +34,41 @@ interface Emenda {
 
 const EmendasPage: React.FC = () => {
   const navigate = useNavigate();
+  const { hasRole, user } = useAuth();
+
+  // Status pendentes por role — emendas que precisam de ação do usuário
+  const STATUS_POR_ROLE: Partial<Record<UserRole, string[]>> = {
+    [UserRole.ORCAMENTO]: [
+      'Recebido',
+      'Em análise de admissibilidade',
+      'Admissibilidade aprovada',
+      'Devolvida por incompatibilidade de demanda', // volta do orçamento
+    ],
+    [UserRole.SECRETARIA]: [
+      'Admissibilidade aprovada',
+      'Em análise de demanda',
+    ],
+    [UserRole.CONVENIOS]: [
+      'Análise de demanda aprovada',
+      'Em análise documental',
+    ],
+  };
+
+  // Status que pertencem à "fila" do role atual
+  const myQueueStatuses: string[] = (() => {
+    for (const role of [UserRole.ORCAMENTO, UserRole.SECRETARIA, UserRole.CONVENIOS]) {
+      if (hasRole(role)) return STATUS_POR_ROLE[role] ?? [];
+    }
+    return [];
+  })();
+
   const [emendas, setEmendas] = useState<Emenda[]>([]);
   const [loading, setLoading] = useState(true);
   const [query, setQuery] = useState('');
   const [year, setYear] = useState('');
   const [statusFilter, setStatusFilter] = useState('Todas');
   const [detailFilter, setDetailFilter] = useState('Todas');
+  const [myQueueOnly, setMyQueueOnly] = useState(false);
   const [selectedEmenda, setSelectedEmenda] = useState<Emenda | null>(null);
   const [isCreateMode, setIsCreateMode] = useState(false);
   const [isEditMode, setIsEditMode] = useState(false);
@@ -222,36 +253,11 @@ const EmendasPage: React.FC = () => {
     navigate('/dashboard/cadastro-emenda');
   };
 
-  const openViewModal = async (emenda: Emenda) => {
-    setSelectedEmenda(emenda);
-    setEditForm({ ...emenda });
-    setIsCreateMode(false);
-    setDespachoObservacao('');
-
-    // Fetch history for this emenda
-    if (emenda.id) {
-      setLoadingHistorico(true);
-      try {
-        const hist = await emendaService.getHistorico(emenda.id);
-        setHistorico(hist);
-      } catch (err) {
-        console.error('Error fetching history:', err);
-        setHistorico([]);
-      } finally {
-        setLoadingHistorico(false);
-      }
-    }
+  const openViewModal = (emenda: Emenda) => {
+    navigate(`/dashboard/emendas/${emenda.id}`);
   };
 
   const closeModal = () => {
-    // Clear last action tracking for the emenda being closed
-    if (selectedEmenda?.id) {
-      setLastActionByEmenda((prev) => {
-        const updated = { ...prev };
-        delete updated[selectedEmenda.id];
-        return updated;
-      });
-    }
 
     setSelectedEmenda(null);
     setIsCreateMode(false);
@@ -567,14 +573,6 @@ const EmendasPage: React.FC = () => {
 
   // Optimized filtering with useMemo to avoid recalculating on every render
   const filtered = useMemo(() => {
-    console.log('[EmendasPage] Filtering emendas...', {
-      total: emendas.length,
-      query,
-      statusFilter,
-      detailFilter,
-      year
-    });
-
     return emendas.filter((e) => {
       const q = query.trim().toLowerCase();
       if (q) {
@@ -596,9 +594,12 @@ const EmendasPage: React.FC = () => {
         if (!hay.includes(q)) return false;
       }
 
-      // NOTE: year filter is still based on the legacy data model; keep it until the API provides a year field.
       if (year && String((e as any).year) !== year) return false;
 
+      // "Minha Fila" — filtra apenas status relevantes para o role
+      if (myQueueOnly && myQueueStatuses.length > 0) {
+        if (!myQueueStatuses.includes(e.status)) return false;
+      }
       // status filter relies on the emenda "status" field with NEW lifecycle values
       if (statusFilter && statusFilter !== 'Todas') {
         const st = (e.status || '').trim().toLowerCase();
@@ -615,7 +616,7 @@ const EmendasPage: React.FC = () => {
 
       return true;
     });
-  }, [emendas, query, year, statusFilter, detailFilter]);
+  }, [emendas, query, year, statusFilter, detailFilter, myQueueOnly]);
 
   // Paginated results
   const paginatedEmendas = useMemo(() => {
@@ -626,10 +627,12 @@ const EmendasPage: React.FC = () => {
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
 
+  const myQueueCount = emendas.filter((e) => myQueueStatuses.includes(e.status)).length;
+
   // Reset to page 1 when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [query, year, statusFilter, detailFilter]);
+  }, [query, year, statusFilter, detailFilter, myQueueOnly]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -659,7 +662,7 @@ const EmendasPage: React.FC = () => {
 
            <div className="bg-white rounded shadow p-6">
            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-             <div className="flex items-center gap-3">
+             <div className="flex flex-wrap items-center gap-3">
                <input
                  type="text"
                  value={query}
@@ -668,16 +671,33 @@ const EmendasPage: React.FC = () => {
                  className="border rounded px-3 py-2 w-72"
                />
 
-               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className="border rounded px-3 py-2">
-                 <option>Todas</option>
-                 <option>Recebido</option>
-                 <option>Iniciado</option>
-                 <option>Em execução</option>
-                 <option>Concluído</option>
-                 <option>Devolvido</option>
+               <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setMyQueueOnly(false); }} className="border rounded px-3 py-2 text-sm">
+                 <option value="Todas">Todos os status</option>
+                 <optgroup label="── Ciclo de Admissibilidade ──">
+                   <option>Recebido</option>
+                   <option>Em análise de admissibilidade</option>
+                   <option>Admissibilidade aprovada</option>
+                   <option>Devolvida ao legislativo</option>
+                 </optgroup>
+                 <optgroup label="── Ciclo de Demanda ──">
+                   <option>Em análise de demanda</option>
+                   <option>Análise de demanda aprovada</option>
+                   <option>Devolvida por incompatibilidade de demanda</option>
+                 </optgroup>
+                 <optgroup label="── Ciclo Documental ──">
+                   <option>Em análise documental</option>
+                   <option>Análise documental aprovada</option>
+                   <option>Devolvida por inviabilidade documental</option>
+                 </optgroup>
+                 <optgroup label="── Execução ──">
+                   <option>Iniciado</option>
+                   <option>Em execução</option>
+                   <option>Concluído</option>
+                   <option>Devolvido</option>
+                 </optgroup>
                </select>
 
-               <select value={detailFilter} onChange={(e) => setDetailFilter(e.target.value)} className="border rounded px-3 py-2">
+               <select value={detailFilter} onChange={(e) => setDetailFilter(e.target.value)} className="border rounded px-3 py-2 text-sm">
                  <option>Todas</option>
                  <option>Com Detalhamento</option>
                  <option>Sem Detalhamento</option>
@@ -686,7 +706,7 @@ const EmendasPage: React.FC = () => {
                <select
                  value={year}
                  onChange={(e) => setYear(e.target.value)}
-                 className="border rounded px-3 py-2"
+                 className="border rounded px-3 py-2 text-sm"
                >
                  <option value="">Todos os anos</option>
                  <option value="2026">2026</option>
@@ -695,18 +715,40 @@ const EmendasPage: React.FC = () => {
                  <option value="2023">2023</option>
                  <option value="2022">2022</option>
                </select>
+
+               {/* Botão Minha Fila — só aparece para roles com fila definida */}
+               {myQueueStatuses.length > 0 && (
+                 <button
+                   onClick={() => { setMyQueueOnly((v) => !v); setStatusFilter('Todas'); }}
+                   className={`inline-flex items-center gap-2 px-3 py-2 rounded text-sm font-medium border transition-colors ${
+                     myQueueOnly
+                       ? 'bg-indigo-600 text-white border-indigo-600'
+                       : 'bg-white text-indigo-700 border-indigo-300 hover:bg-indigo-50'
+                   }`}
+                 >
+                   📋 Minha Fila
+                   {myQueueCount > 0 && (
+                     <span className={`inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold ${
+                       myQueueOnly ? 'bg-white text-indigo-600' : 'bg-indigo-600 text-white'
+                     }`}>
+                       {myQueueCount}
+                     </span>
+                   )}
+                 </button>
+               )}
              </div>
 
              <div className="flex gap-2">
-               <button className="px-4 py-2 bg-blue-600 text-white rounded">Pesquisar</button>
+               <button className="px-4 py-2 bg-blue-600 text-white rounded text-sm">Pesquisar</button>
                <button
                  onClick={() => {
                    setQuery('');
                    setYear('');
                    setStatusFilter('Todas');
                    setDetailFilter('Todas');
+                   setMyQueueOnly(false);
                  }}
-                 className="px-4 py-2 border rounded"
+                 className="px-4 py-2 border rounded text-sm"
                >
                  Limpar
                </button>
@@ -733,84 +775,96 @@ const EmendasPage: React.FC = () => {
                  )}
                </div>
               ) : (
-                <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-3 gap-4">
-                  {paginatedEmendas.map((e) => (
-                   <div key={e.id} className="border rounded-lg p-4 bg-white shadow-sm">
-                     {/* Status + Institution */}
-                     <div className="flex items-start justify-between gap-3">
-                       <div className="min-w-0">
-                         <div className="text-xs text-gray-500">Instituição</div>
-                         <div className="font-semibold text-gray-900 truncate">
-                           {e.institutionName || '—'}
-                         </div>
-                       </div>
+                <div className="space-y-2">
+                  {paginatedEmendas.map((e) => {
+                    const statusColor =
+                      ['concluído', 'admissibilidade aprovada', 'análise de demanda aprovada', 'análise documental aprovada']
+                        .includes((e.status || '').toLowerCase()) ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
+                      (e.status || '').toLowerCase().startsWith('devolvida') || (e.status || '').toLowerCase() === 'devolvido'
+                        ? 'bg-red-100 text-red-800 border-red-200' :
+                      (e.status || '').toLowerCase() === 'em análise de admissibilidade'
+                        ? 'bg-amber-100 text-amber-800 border-amber-200' :
+                      (e.status || '').toLowerCase() === 'em análise de demanda'
+                        ? 'bg-teal-100 text-teal-800 border-teal-200' :
+                      (e.status || '').toLowerCase() === 'em análise documental'
+                        ? 'bg-violet-100 text-violet-800 border-violet-200' :
+                      (e.status || '').toLowerCase() === 'recebido'
+                        ? 'bg-blue-100 text-blue-800 border-blue-200' :
+                      (e.status || '').toLowerCase() === 'em execução'
+                        ? 'bg-indigo-100 text-indigo-800 border-indigo-200' :
+                      'bg-gray-100 text-gray-700 border-gray-200';
 
-                       <span
-                         className={`shrink-0 px-2 py-1 text-xs rounded-full ${
-                           (e.status || '').toLowerCase() === 'concluído'
-                             ? 'bg-emerald-100 text-emerald-800'
-                             : (e.status || '').toLowerCase() === 'devolvido'
-                               ? 'bg-red-100 text-red-800'
-                               : (e.status || '').toLowerCase() === 'recebido'
-                                 ? 'bg-blue-100 text-blue-800'
-                                 : (e.status || '').toLowerCase() === 'iniciado'
-                                   ? 'bg-amber-100 text-amber-800'
-                                   : 'bg-gray-100 text-gray-800'
-                         }`}
-                       >
-                         {e.status}
-                       </span>
-                     </div>
+                    return (
+                      <div
+                        key={e.id}
+                        className="bg-white border border-slate-200 rounded-xl px-5 py-4 hover:border-indigo-300 hover:shadow-md transition-all cursor-pointer"
+                        onClick={() => openViewModal(e)}
+                      >
+                        {/* ── Linha 1: Status · Código · Categoria · Valor · Botão ── */}
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-start gap-4 flex-wrap">
+                            <div>
+                              <div className="text-xs text-slate-400 mb-0.5">Status</div>
+                              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
+                                {e.status || 'Recebido'}
+                              </span>
+                            </div>
+                            {e.officialCode && (
+                              <div>
+                                <div className="text-xs text-slate-400 mb-0.5">Código</div>
+                                <span className="font-mono text-xs font-semibold text-slate-600 bg-slate-100 px-2 py-1 rounded">
+                                  {e.officialCode}
+                                </span>
+                              </div>
+                            )}
+                            {e.category && (
+                              <div>
+                                <div className="text-xs text-slate-400 mb-0.5">Categoria</div>
+                                <span className="text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2 py-1 rounded">
+                                  {e.category}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex items-start gap-4 shrink-0">
+                            <div className="text-right">
+                              <div className="text-xs text-slate-400 mb-0.5">Valor</div>
+                              <span className="text-sm font-bold text-slate-800">{e.value}</span>
+                            </div>
+                            <div className="flex items-center h-full pt-4">
+                              <button
+                                type="button"
+                                onClick={(ev) => { ev.stopPropagation(); openViewModal(e); }}
+                                className="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
+                              >
+                                Ver detalhes →
+                              </button>
+                            </div>
+                          </div>
+                        </div>
 
-                     {/* Brief description */}
-                     <div className="mt-3">
-                       <div className="text-xs text-gray-500">Descrição</div>
-                       <p className="text-sm text-gray-700 line-clamp-2">
-                         {e.description || '—'}
-                       </p>
-                     </div>
+                        {/* ── Linha 2: Instituição · Parlamentar ── */}
+                        <div className="mt-3 pt-3 border-t border-slate-100 flex items-start justify-between gap-4">
+                          <div className="min-w-0">
+                            <div className="text-xs text-slate-400 mb-0.5">Instituição</div>
+                            <div className="text-sm font-semibold text-slate-800 truncate">{e.institutionName || '—'}</div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="text-xs text-slate-400 mb-0.5">Parlamentar</div>
+                            <div className="text-sm text-slate-600">{e.councilorName || e.councilorId || '—'}</div>
+                          </div>
+                        </div>
 
-                     {/* Category */}
-                     <div className="mt-3">
-                       <div className="text-xs text-gray-500">Categoria</div>
-                       <div className="text-sm font-medium text-gray-900">
-                         {e.category || '—'}
-                       </div>
-                     </div>
-
-                     <hr className="my-4 border-gray-200" />
-
-                     {/* Value + Parlamentar */}
-                     <div className="grid grid-cols-2 gap-4">
-                       <div>
-                         <div className="text-xs text-gray-500">Valor</div>
-                         <div className="text-sm font-semibold text-gray-900">{e.value}</div>
-                       </div>
-                       <div className="text-right">
-                         <div className="text-xs text-gray-500">Parlamentar</div>
-                         <div className="text-sm font-semibold text-gray-900 truncate">
-                           {e.councilorName || e.councilorId || '—'}
-                         </div>
-                       </div>
-                     </div>
-
-                     {/* Official code */}
-                     <div className="mt-3 text-sm text-gray-700">
-                       <span className="text-gray-500">Emenda:</span>{' '}
-                       <span className="font-mono font-medium">{e.officialCode || '—'}</span>
-                     </div>
-
-                     <div className="mt-4 flex gap-2">
-                       <button
-                         type="button"
-                         onClick={() => openViewModal(e)}
-                         className="px-3 py-1 border rounded text-sm hover:bg-gray-50"
-                       >
-                         Visualizar
-                       </button>
-                     </div>
-                   </div>
-                  ))}
+                        {/* ── Linha 3: Descrição ── */}
+                        {e.description && (
+                          <div className="mt-2.5">
+                            <div className="text-xs text-slate-400 mb-0.5">Descrição</div>
+                            <div className="text-sm text-slate-500 line-clamp-1">{e.description}</div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
 
@@ -935,7 +989,7 @@ const EmendasPage: React.FC = () => {
                    ? 'Criar Nova Emenda'
                    : (editForm.officialCode || 'Detalhes da Emenda')}
                </h2>
-               <div className="mt-2 flex gap-2">
+               <div className="mt-2 flex gap-2 flex-wrap justify-center">
                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium border ${
                    (editForm.status || '').toLowerCase() === 'concluído' ? 'bg-emerald-100 text-emerald-800 border-emerald-200' :
                    (editForm.status || '').toLowerCase() === 'devolvido' ? 'bg-red-100 text-red-800 border-red-200' :
@@ -945,6 +999,16 @@ const EmendasPage: React.FC = () => {
                  }`}>
                    Status: {editForm.status}
                  </span>
+                 {!isCreateMode && (
+                   <button
+                     type="button"
+                     onClick={() => navigate(`/emendas/${editForm.id}`)}
+                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium border bg-purple-600 text-white border-purple-700 hover:bg-purple-700"
+                   >
+                     <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                     Ver Detalhes Completos
+                   </button>
+                 )}
                </div>
              </div>
 
@@ -989,13 +1053,22 @@ const EmendasPage: React.FC = () => {
                      </button>
                    </>
                  ) : (
-                   <button
-                     type="button"
-                     onClick={() => setIsEditMode(true)}
-                     className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
-                   >
-                     Editar
-                   </button>
+                   <div className="flex gap-2">
+                     <button
+                       type="button"
+                       onClick={() => navigate(`/emendas/${editForm.id}`)}
+                       className="px-3 py-1 bg-slate-100 text-slate-700 border border-slate-300 rounded text-sm hover:bg-slate-200"
+                     >
+                       Ver Detalhes
+                     </button>
+                     <button
+                       type="button"
+                       onClick={() => setIsEditMode(true)}
+                       className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700"
+                     >
+                       Editar
+                     </button>
+                   </div>
                  )}
                </div>
              )}

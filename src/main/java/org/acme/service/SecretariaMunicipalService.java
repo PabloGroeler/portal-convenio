@@ -19,7 +19,7 @@ public class SecretariaMunicipalService {
         return repository.listAllOrdered();
     }
 
-    public SecretariaMunicipal findById(String id) {
+    public SecretariaMunicipal findById(Long id) {
         if (id == null) return null;
         return repository.findById(id);
     }
@@ -35,21 +35,20 @@ public class SecretariaMunicipalService {
     }
 
     @Transactional
-    public SecretariaMunicipal update(String id, SecretariaMunicipal input) {
+    public SecretariaMunicipal update(Long id, SecretariaMunicipal input) {
         SecretariaMunicipal existing = repository.findById(id);
         if (existing == null) return null;
 
         existing.nome = input.nome;
-        existing.sigla = input.sigla;
-        existing.email = input.email;
-        existing.telefone = input.telefone;
+        existing.codigo = input.codigo;
+        existing.descricao = input.descricao;
         existing.updateTime = OffsetDateTime.now();
 
         return existing;
     }
 
     @Transactional
-    public SecretariaMunicipal setAtivo(String id, boolean ativo) {
+    public SecretariaMunicipal setAtivo(Long id, boolean ativo) {
         SecretariaMunicipal existing = repository.findById(id);
         if (existing == null) return null;
         existing.ativo = ativo;
@@ -57,4 +56,3 @@ public class SecretariaMunicipalService {
         return existing;
     }
 }
-
