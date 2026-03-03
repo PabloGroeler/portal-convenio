@@ -9,6 +9,8 @@ import prestacaoService from '../services/prestacaoContaService';
 import type { PrestacaoConta } from '../services/prestacaoContaService';
 import emendaService from '../services/emendaService';
 import institutionService from '../services/institutionService';
+import { getMinhasInstituicoesDetalhadas } from '../services/userService';
+import type { InstituicaoDetalhada } from '../types/user.types';
 import { formatCurrency, parseCurrency } from '../utils/formatters';
 
 const currencyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -66,9 +68,7 @@ const PlanoFullPage: React.FC = () => {
   const emendaIdParam = searchParams.get('emendaId') || '';
 
   const isCreateMode = !id;
-  const backUrl = instituicaoIdParam
-    ? `/dashboard/cadastro-dados-institucionais?id=${instituicaoIdParam}&tab=planos`
-    : '/dashboard';
+  const backUrl = '/dashboard/planos';
 
   // ── Shared loading ────────────────────────────────────────────────────────
   const [pageLoading, setPageLoading] = useState(true);
@@ -81,6 +81,8 @@ const PlanoFullPage: React.FC = () => {
   const [planErrors, setPlanErrors] = useState<Record<string, string>>({});
   const [instituicaoNome, setInstituicaoNome] = useState('');
   const [emendas, setEmendas] = useState<any[]>([]);
+  const [instituicoes, setInstituicoes] = useState<InstituicaoDetalhada[]>([]);
+  const [selectedInstituicaoId, setSelectedInstituicaoId] = useState(instituicaoIdParam);
 
   // ── Tabs (only in view mode) ──────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState<Tab>('metas');
@@ -119,25 +121,33 @@ const PlanoFullPage: React.FC = () => {
 
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
-    const instituicaoId = instituicaoIdParam;
-
-    const loadSupportData = async () => {
-      if (instituicaoId) {
-        try {
-          const inst = await institutionService.getByInstitutionId(instituicaoId);
-          setInstituicaoNome(inst?.razaoSocial || inst?.nomeFantasia || instituicaoId);
-        } catch { setInstituicaoNome(instituicaoId); }
-        try {
-          const all = await emendaService.listWithDetails();
-          setEmendas(all.filter((e: any) => e.institutionId === instituicaoId || e.institution?.id === instituicaoId));
-        } catch { /* ignore */ }
-      }
+    const loadSupportData = async (instId: string) => {
+      try {
+        const inst = await institutionService.getByInstitutionId(instId);
+        setInstituicaoNome(inst?.razaoSocial || inst?.nomeFantasia || instId);
+      } catch { setInstituicaoNome(instId); }
+      try {
+        const all = await emendaService.listWithDetails();
+        setEmendas(all.filter((e: any) => e.institutionId === instId || e.institution?.id === instId));
+      } catch { /* ignore */ }
     };
 
     if (isCreateMode) {
       setPlanoForm({ ...emptyPlanoForm(), emendaId: emendaIdParam });
       setIsEditingHeader(true);
-      loadSupportData().finally(() => setPageLoading(false));
+      const initAsync = async () => {
+        try {
+          const insts = await getMinhasInstituicoesDetalhadas();
+          setInstituicoes(insts);
+          if (instituicaoIdParam) {
+            await loadSupportData(instituicaoIdParam);
+          } else if (insts.length === 1) {
+            setSelectedInstituicaoId(insts[0].id);
+            await loadSupportData(insts[0].id);
+          }
+        } catch { /* ignore */ }
+      };
+      initAsync().finally(() => setPageLoading(false));
     } else {
       const loadExisting = async () => {
         try {
@@ -145,7 +155,6 @@ const PlanoFullPage: React.FC = () => {
           const res = await planoService.getFull(id!);
           const p = res.data;
           setPlan(p);
-          // populate form for potential inline edit
           setPlanoForm({
             titulo: p.titulo || '',
             descricao: p.descricao || '',
@@ -153,17 +162,8 @@ const PlanoFullPage: React.FC = () => {
             valor: p.valor != null ? formatCurrency(String(p.valor)) : 'R$ 0,00',
             status: p.status || 'RASCUNHO',
           });
-          const inst = p.instituicaoId || instituicaoIdParam;
-          if (inst) {
-            await loadSupportData();
-            // Also load emendas for the plan's institution
-            if (!instituicaoIdParam && p.instituicaoId) {
-              try {
-                const instObj = await institutionService.getByInstitutionId(p.instituicaoId);
-                setInstituicaoNome(instObj?.razaoSocial || instObj?.nomeFantasia || p.instituicaoId);
-              } catch { setInstituicaoNome(p.instituicaoId); }
-            }
-          }
+          const instId = p.instituicaoId || instituicaoIdParam;
+          if (instId) await loadSupportData(instId);
           setMetas(await metaService.listByPlano(id!));
           await loadPrestacoes(p.id || id!);
         } catch (err) {
@@ -182,7 +182,8 @@ const PlanoFullPage: React.FC = () => {
     if (!planoForm.titulo.trim()) e.titulo = 'Título é obrigatório';
     if (planoForm.titulo.trim().length > 0 && planoForm.titulo.trim().length < 5)
       e.titulo = 'Título deve ter ao menos 5 caracteres';
-    if (isCreateMode && !instituicaoIdParam) e.instituicao = 'Instituição é obrigatória';
+    if (isCreateMode && !selectedInstituicaoId && !instituicaoIdParam)
+      e.instituicao = 'Selecione uma instituição';
     setPlanErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -193,10 +194,11 @@ const PlanoFullPage: React.FC = () => {
     try {
       setSavingPlan(true);
       const valorNum = parseCurrency(planoForm.valor);
+      const resolvedInstituicaoId = plan?.instituicaoId || selectedInstituicaoId || instituicaoIdParam || undefined;
       const payload: any = {
         titulo: planoForm.titulo.trim(),
         descricao: planoForm.descricao.trim() || undefined,
-        instituicaoId: plan?.instituicaoId || instituicaoIdParam || undefined,
+        instituicaoId: resolvedInstituicaoId,
         emendaId: planoForm.emendaId || undefined,
         valor: valorNum > 0 ? valorNum : undefined,
         status: planoForm.status,
@@ -204,8 +206,7 @@ const PlanoFullPage: React.FC = () => {
 
       if (isCreateMode) {
         const created = await planoService.create(payload);
-        // Navigate to view mode for the newly created plan
-        navigate(`/dashboard/plano/full/${created.id}?instituicaoId=${instituicaoIdParam}`, { replace: true });
+        navigate(`/dashboard/plano/full/${created.id}?instituicaoId=${resolvedInstituicaoId || ''}`, { replace: true });
       } else {
         const updated = await planoService.update(id!, payload);
         setPlan((prev: any) => ({ ...prev, ...updated }));
@@ -395,6 +396,44 @@ const PlanoFullPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSavePlan} className="bg-white border border-gray-200 rounded-xl shadow-sm p-6 space-y-5">
+
+          {/* Institution selector — shown when not pre-selected via URL param */}
+          {!instituicaoIdParam && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Instituição <span className="text-red-500">*</span>
+              </label>
+              {instituicoes.length === 0 ? (
+                <div className="bg-amber-50 border border-amber-200 rounded-lg px-3 py-2 text-sm text-amber-800">
+                  Nenhuma instituição vinculada. <button type="button" className="underline font-medium" onClick={() => navigate('/dashboard/instituicoes')}>Vincular agora</button>
+                </div>
+              ) : (
+                <select
+                  value={selectedInstituicaoId}
+                  onChange={e => {
+                    setSelectedInstituicaoId(e.target.value);
+                    // reload emendas for the newly selected institution
+                    if (e.target.value) {
+                      emendaService.listWithDetails().then(all => {
+                        setEmendas(all.filter((em: any) => em.institutionId === e.target.value));
+                        setPlanoForm(f => ({ ...f, emendaId: '' }));
+                      }).catch(() => {});
+                      institutionService.getByInstitutionId(e.target.value)
+                        .then(inst => setInstituicaoNome(inst?.razaoSocial || inst?.nomeFantasia || e.target.value))
+                        .catch(() => {});
+                    }
+                  }}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${planErrors.instituicao ? 'border-red-400' : 'border-gray-300'}`}
+                >
+                  <option value="">— Selecione uma instituição —</option>
+                  {instituicoes.map(i => (
+                    <option key={i.id} value={i.id}>{i.razaoSocial || i.nomeFantasia || i.cnpj}</option>
+                  ))}
+                </select>
+              )}
+              {planErrors.instituicao && <p className="text-xs text-red-500 mt-1">{planErrors.instituicao}</p>}
+            </div>
+          )}
           {/* Título */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Título <span className="text-red-500">*</span></label>

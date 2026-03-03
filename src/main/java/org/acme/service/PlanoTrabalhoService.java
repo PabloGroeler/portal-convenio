@@ -21,16 +21,19 @@ public class PlanoTrabalhoService {
     MetaService metaService;
 
     @Inject
-    ItemService itemService;
-
-    @Inject
-    CronogramaService cronogramaService;
-
-    @Inject
     EmendaRepository emendaRepository;
 
+    @Transactional
     public List<PlanoTrabalhoDTO> listByInstituicao(String instituicaoId) {
         return PlanoTrabalho.find("instituicaoId", instituicaoId).stream()
+                .map(o -> (PlanoTrabalho) o)
+                .map(this::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public List<PlanoTrabalhoDTO> listAll() {
+        return PlanoTrabalho.findAll().stream()
                 .map(o -> (PlanoTrabalho) o)
                 .map(this::toDto)
                 .collect(Collectors.toList());

@@ -3,6 +3,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getMinhasInstituicoesDetalhadas, getMinhasEmendas } from '../services/userService';
 import type { InstituicaoDetalhada, EmendaResumida } from '../types/user.types';
+import planoService from '../services/planoTrabalhoService';
+import type { PlanoTrabalho } from '../types/planoTrabalho.types';
 
 const DashboardHomePage: React.FC = () => {
   const { user } = useAuth();
@@ -14,16 +16,31 @@ const DashboardHomePage: React.FC = () => {
   const [instOpen, setInstOpen] = useState(true);
   const [emendaOpen, setEmendaOpen] = useState(true);
   const [planosOpen, setPlanosOpen] = useState(true);
+  const [planos, setPlanos] = useState<PlanoTrabalho[]>([]);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user) { setLoading(false); return; }
+      const isGestorOrAdmin = user.role === 'ADMIN' || user.role === 'GESTOR';
       try {
-        const dataInstituicoes = await getMinhasInstituicoesDetalhadas();
+        const [dataInstituicoes, allPlanos] = await Promise.all([
+          getMinhasInstituicoesDetalhadas().catch(() => [] as InstituicaoDetalhada[]),
+          planoService.listAll().catch(() => [] as PlanoTrabalho[]),
+        ]);
+
         setInstituicoes(dataInstituicoes);
         setHasInstituicoes(dataInstituicoes.length > 0);
-        if (dataInstituicoes.length > 0) {
-          const dataEmendas = await getMinhasEmendas();
+
+        if (isGestorOrAdmin) {
+          setPlanos(allPlanos);
+          if (dataInstituicoes.length > 0) {
+            const dataEmendas = await getMinhasEmendas().catch(() => [] as EmendaResumida[]);
+            setEmendas(dataEmendas);
+          }
+        } else if (dataInstituicoes.length > 0) {
+          const instIds = new Set(dataInstituicoes.map(i => i.id));
+          setPlanos(allPlanos.filter(p => !p.instituicaoId || instIds.has(p.instituicaoId)));
+          const dataEmendas = await getMinhasEmendas().catch(() => [] as EmendaResumida[]);
           setEmendas(dataEmendas);
         }
       } catch {
@@ -260,7 +277,7 @@ const DashboardHomePage: React.FC = () => {
       )}
 
       {/* ── Planos de Trabalho (collapsible) ── */}
-      {!loading && hasInstituicoes && (
+      {!loading && (user?.role === 'ADMIN' || user?.role === 'GESTOR' || hasInstituicoes) && (
         <div className="border border-slate-200 rounded-xl overflow-hidden">
           <div
             className="flex items-center justify-between px-5 py-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition-colors"
@@ -268,18 +285,89 @@ const DashboardHomePage: React.FC = () => {
           >
             <div className="flex items-center gap-2">
               <span className="text-sm font-semibold text-gray-800">Planos de Trabalho</span>
+              {planos.length > 0 && (
+                <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full font-medium">
+                  {planos.length}
+                </span>
+              )}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-3">
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); navigate('/dashboard/novo-plano'); }}
+                className="text-xs font-medium text-indigo-600 border border-indigo-300 px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
+              >
+                + Novo Plano
+              </button>
+              <button
+                type="button"
+                onClick={e => { e.stopPropagation(); navigate('/dashboard/planos'); }}
+                className="text-xs text-indigo-600 hover:text-indigo-800 font-medium"
+              >
+                Ver todos →
+              </button>
               <span className="text-slate-400 text-sm select-none">{planosOpen ? '▲' : '▼'}</span>
             </div>
           </div>
 
           {planosOpen && (
-            <div className="px-5 py-10 bg-white flex flex-col items-center justify-center text-center">
-              <div className="text-3xl mb-2">📋</div>
-              <p className="text-sm font-medium text-slate-500">Nenhum plano de trabalho cadastrado.</p>
-              <p className="text-xs text-slate-400 mt-1">Os planos de trabalho vinculados às suas emendas aparecerão aqui.</p>
-            </div>
+            planos.length === 0 ? (
+              <div className="px-5 py-10 bg-white flex flex-col items-center justify-center text-center">
+                <div className="text-3xl mb-2">📋</div>
+                <p className="text-sm font-medium text-slate-500">Nenhum plano de trabalho cadastrado.</p>
+                <p className="text-xs text-slate-400 mt-1">Os planos de trabalho vinculados às suas emendas aparecerão aqui.</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/dashboard/planos')}
+                  className="mt-3 text-xs text-indigo-600 hover:underline font-medium"
+                >
+                  + Criar Plano de Trabalho
+                </button>
+              </div>
+            ) : (
+              <div className="divide-y divide-slate-100 bg-white">
+                {planos.slice(0, 5).map(p => {
+                  const statusColor =
+                    p.status === 'APROVADO' ? 'bg-emerald-100 text-emerald-800'
+                    : p.status === 'REPROVADO' ? 'bg-red-100 text-red-800'
+                    : p.status === 'ENVIADO' ? 'bg-blue-100 text-blue-800'
+                    : 'bg-gray-100 text-gray-600';
+                  const statusLabel =
+                    p.status === 'APROVADO' ? '✅ Aprovado'
+                    : p.status === 'REPROVADO' ? '❌ Reprovado'
+                    : p.status === 'ENVIADO' ? '📤 Enviado'
+                    : '📝 Rascunho';
+                  return (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between px-5 py-3 hover:bg-slate-50 cursor-pointer transition-colors"
+                      onClick={() => navigate(`/dashboard/plano/full/${p.id}`)}
+                    >
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-slate-800 truncate">{p.titulo}</p>
+                        {p.emendaCodigo && (
+                          <p className="text-xs text-slate-400 mt-0.5">Emenda: {p.emendaCodigo}</p>
+                        )}
+                      </div>
+                      <span className={`ml-3 flex-shrink-0 text-xs px-2 py-0.5 rounded-full font-medium ${statusColor}`}>
+                        {statusLabel}
+                      </span>
+                    </div>
+                  );
+                })}
+                {planos.length > 5 && (
+                  <div className="px-5 py-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/dashboard/planos')}
+                      className="text-xs text-indigo-600 hover:underline font-medium"
+                    >
+                      Ver todos os {planos.length} planos →
+                    </button>
+                  </div>
+                )}
+              </div>
+            )
           )}
         </div>
       )}

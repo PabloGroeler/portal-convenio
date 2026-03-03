@@ -9,6 +9,7 @@ public record MetaDTO(
     String titulo,
     String descricao,
     BigDecimal valor,
+    String periodo,
     OffsetDateTime createTime,
     OffsetDateTime updateTime
 ) {}

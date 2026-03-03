@@ -68,6 +68,7 @@ function App() {
               <Route path="plano/full/:id" element={<PlanoFullPage />} />
               <Route path="plano/prestacao-contas" element={<PrestacaoContasPage />} />
               <Route path="plano-trabalho" element={<PlanoTrabalhoPage />} />
+              <Route path="planos" element={<PlanoTrabalhoPage />} />
               <Route path="novo-plano" element={<PlanoFullPage />} />
               <Route path="editar-plano" element={<PlanoFullPage />} />
               <Route path="emendas" element={<DashboardEmendasPage />} />

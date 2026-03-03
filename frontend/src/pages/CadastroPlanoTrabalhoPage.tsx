@@ -118,8 +118,8 @@ const CadastroPlanoTrabalhoPage: React.FC = () => {
         alert('Plano criado com sucesso!');
       }
 
-      // Navigate back to the institution page, planos tab
-      navigate(`/dashboard/cadastro-dados-institucionais?id=${instituicaoId}&tab=planos`);
+      // Navigate back to the planos dashboard
+      navigate(`/dashboard/planos`);
     } catch (err: any) {
       const msg = err?.response?.data?.error || 'Erro ao salvar plano';
       alert(msg);
@@ -152,7 +152,7 @@ const CadastroPlanoTrabalhoPage: React.FC = () => {
       <div className="flex items-center gap-3 mb-6">
         <button
           type="button"
-          onClick={() => navigate(`/dashboard/cadastro-dados-institucionais?id=${instituicaoId}&tab=planos`)}
+          onClick={() => navigate(`/dashboard/planos`)}
           className="p-2 rounded-lg hover:bg-gray-100 text-gray-600"
           title="Voltar"
         >
@@ -257,7 +257,7 @@ const CadastroPlanoTrabalhoPage: React.FC = () => {
         <div className="flex justify-end gap-3 pt-2 border-t border-gray-100">
           <button
             type="button"
-            onClick={() => navigate(`/dashboard/cadastro-dados-institucionais?id=${instituicaoId}&tab=planos`)}
+            onClick={() => navigate(`/dashboard/planos`)}
             className="px-4 py-2 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50"
           >
             Cancelar

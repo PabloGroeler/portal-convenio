@@ -21,9 +21,28 @@ public class PlanoTrabalhoResource {
     PlanoTrabalhoService service;
 
     @GET
+    public Response listAll() {
+        try {
+            List<PlanoTrabalhoDTO> list = service.listAll();
+            return Response.ok(list).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(java.util.Map.of("error", "Erro ao listar planos: " + e.getMessage()))
+                    .build();
+        }
+    }
+
+    @GET
     @Path("/instituicao/{id}")
-    public List<PlanoTrabalhoDTO> listByInstituicao(@PathParam("id") String id) {
-        return service.listByInstituicao(id);
+    public Response listByInstituicao(@PathParam("id") String id) {
+        try {
+            List<PlanoTrabalhoDTO> list = service.listByInstituicao(id);
+            return Response.ok(list).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
+                    .entity(java.util.Map.of("error", "Erro ao listar planos: " + e.getMessage()))
+                    .build();
+        }
     }
 
     @GET

@@ -2,6 +2,10 @@ import api from './api';
 import type { PlanoTrabalho } from '../types/planoTrabalho.types';
 
 const service = {
+  listAll: async (): Promise<PlanoTrabalho[]> => {
+    const res = await api.get('/plano-trabalho');
+    return res.data;
+  },
   listByInstituicao: async (instituicaoId: string): Promise<PlanoTrabalho[]> => {
     const res = await api.get(`/plano-trabalho/instituicao/${instituicaoId}`);
     return res.data;

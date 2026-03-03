@@ -51,8 +51,6 @@ import { StatusOSCBadge, StatusOSCPanel } from '../components/StatusOSCComponent
 import tipoDocumentoConfigService from '../services/tipoDocumentoConfigService';
 import type { TipoDocumentoConfig } from '../services/tipoDocumentoConfigService';
 import DocumentosPessoaisUpload from '../components/DocumentosPessoaisUpload';
-import planoService from '../services/planoTrabalhoService';
-import type { PlanoTrabalho } from '../types/planoTrabalho.types';
 
 const UFS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
@@ -177,15 +175,6 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   // Modal de documentos pessoais do dirigente
   const [showDocumentosPessoaisModal, setShowDocumentosPessoaisModal] = useState(false);
   const [dirigenteDocumentosPessoais, setDirigenteDocumentosPessoais] = useState<Dirigente | null>(null);
-
-  // Planos de Trabalho state
-  const [planos, setPlanos] = useState<PlanoTrabalho[]>([]);
-  const [loadingPlanos, setLoadingPlanos] = useState(false);
-  const [showAprovarPlanoModal, setShowAprovarPlanoModal] = useState(false);
-  const [showReprovarPlanoModal, setShowReprovarPlanoModal] = useState(false);
-  const [selectedPlanoId, setSelectedPlanoId] = useState<string | null>(null);
-  const [motivoPlano, setMotivoPlano] = useState('');
-  const [savingPlanoAcao, setSavingPlanoAcao] = useState(false);
 
   const [dirigenteFormData, setDirigenteFormData] = useState<Dirigente>({
     instituicaoId: editId || '',
@@ -675,58 +664,11 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       .replace(/(\d{5})(\d)/, '$1-$2');
   };
 
-  // Carregar planos de trabalho da instituição
-  const loadPlanos = async () => {
-    if (!editId) return;
-    try {
-      setLoadingPlanos(true);
-      const data = await planoService.listByInstituicao(editId);
-      setPlanos(data);
-    } catch (error) {
-      console.error('Erro ao carregar planos:', error);
-    } finally {
-      setLoadingPlanos(false);
-    }
-  };
-
-  const handleAprovarPlano = async () => {
-    if (!selectedPlanoId || !motivoPlano.trim()) return;
-    try {
-      setSavingPlanoAcao(true);
-      await planoService.aprovar(selectedPlanoId, motivoPlano);
-      setShowAprovarPlanoModal(false);
-      setMotivoPlano('');
-      setSelectedPlanoId(null);
-      loadPlanos();
-    } catch (err: any) {
-      alert(err?.response?.data?.error || 'Erro ao aprovar plano');
-    } finally {
-      setSavingPlanoAcao(false);
-    }
-  };
-
-  const handleReprovarPlano = async () => {
-    if (!selectedPlanoId || !motivoPlano.trim()) return;
-    try {
-      setSavingPlanoAcao(true);
-      await planoService.reprovar(selectedPlanoId, motivoPlano);
-      setShowReprovarPlanoModal(false);
-      setMotivoPlano('');
-      setSelectedPlanoId(null);
-      loadPlanos();
-    } catch (err: any) {
-      alert(err?.response?.data?.error || 'Erro ao reprovar plano');
-    } finally {
-      setSavingPlanoAcao(false);
-    }
-  };
-
   // Carregar dirigentes, documentos e planos imediatamente (eager load) quando editId estiver disponível
   useEffect(() => {
     if (editId) {
       loadDirigentes();
       loadDocumentos();
-      loadPlanos();
     }
   }, [editId, apenasAtivos]);
 
@@ -1423,17 +1365,6 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
               }`}
             >
               📄 Documentos ({documentosInstitucionais.length})
-            </button>
-            <button
-              type="button"
-              onClick={() => setActiveTab('planos')}
-              className={`py-4 px-1 border-b-2 font-medium text-sm transition-colors ${
-                activeTab === 'planos'
-                  ? 'border-blue-500 text-blue-600'
-                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-              }`}
-            >
-              📁 Planos de Trabalho ({planos.length})
             </button>
           </nav>
         </div>
@@ -2707,248 +2638,6 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
               })()}
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Aba 4: Planos de Trabalho */}
-      {activeTab === 'planos' && editId && (
-        <div className="space-y-6">
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900">Planos de Trabalho</h2>
-              <p className="text-sm text-gray-500 mt-1">
-                Planos vinculados a emendas desta instituição
-              </p>
-            </div>
-            {!isOperador && (
-              <button
-                type="button"
-                onClick={() => navigate(`/dashboard/novo-plano?instituicaoId=${editId}`)}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
-              >
-                <svg className="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                </svg>
-                Novo Plano
-              </button>
-            )}
-          </div>
-
-          {loadingPlanos ? (
-            <div className="flex justify-center items-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
-              <span className="ml-3 text-gray-600">Carregando planos...</span>
-            </div>
-          ) : planos.length === 0 ? (
-            <div className="bg-white border border-gray-200 rounded-lg p-10 text-center">
-              <div className="text-4xl mb-3">📁</div>
-              <p className="text-gray-500 font-medium">Nenhum plano de trabalho cadastrado</p>
-              <p className="text-gray-400 text-sm mt-1">
-                Os planos de trabalho são vinculados às emendas desta instituição.
-              </p>
-              {!isOperador && (
-                <button
-                  type="button"
-                  onClick={() => navigate(`/dashboard/novo-plano?instituicaoId=${editId}`)}
-                  className="mt-4 inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700"
-                >
-                  + Criar Primeiro Plano
-                </button>
-              )}
-            </div>
-          ) : (
-            <div className="bg-white border border-gray-200 rounded-lg overflow-hidden shadow-sm">
-              <table className="min-w-full text-sm">
-                <thead className="bg-gray-50 border-b border-gray-200">
-                  <tr>
-                    <th className="text-left font-semibold text-gray-700 px-4 py-3 w-2/5">Título</th>
-                    <th className="text-left font-semibold text-gray-700 px-4 py-3 w-1/5">Emenda Vinculada</th>
-                    <th className="text-right font-semibold text-gray-700 px-4 py-3 w-1/6">Valor</th>
-                    <th className="text-center font-semibold text-gray-700 px-4 py-3 w-1/6">Status</th>
-                    <th className="text-right font-semibold text-gray-700 px-4 py-3 w-1/6">Ações</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {planos.map((p) => {
-                    const statusColor =
-                      p.status === 'APROVADO'
-                        ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
-                        : p.status === 'REPROVADO'
-                        ? 'bg-red-100 text-red-800 border-red-200'
-                        : p.status === 'ENVIADO'
-                        ? 'bg-blue-100 text-blue-800 border-blue-200'
-                        : 'bg-gray-100 text-gray-700 border-gray-200';
-
-                    const statusLabel =
-                      p.status === 'APROVADO' ? '✅ Aprovado'
-                      : p.status === 'REPROVADO' ? '❌ Reprovado'
-                      : p.status === 'ENVIADO' ? '📤 Enviado'
-                      : '📝 Rascunho';
-
-                    const valorExibir = p.emendaValor ?? p.valor;
-
-                    return (
-                      <tr key={p.id} className="border-b last:border-b-0 hover:bg-gray-50 transition-colors">
-                        <td className="px-4 py-3">
-                          <div className="font-medium text-gray-900">{p.titulo}</div>
-                          {p.descricao && (
-                            <div className="text-xs text-gray-500 mt-0.5 truncate max-w-xs">
-                              {p.descricao}
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-400 mt-1">
-                            Criado em {p.createTime ? new Date(p.createTime).toLocaleDateString('pt-BR') : '—'}
-                          </div>
-                        </td>
-                        <td className="px-4 py-3">
-                          {p.emendaId ? (
-                            <span className="font-mono text-xs bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded border border-indigo-200">
-                              {p.emendaCodigo || p.emendaId}
-                            </span>
-                          ) : (
-                            <span className="text-gray-400 text-xs italic">Sem emenda</span>
-                          )}
-                        </td>
-                        <td className="px-4 py-3 text-right font-mono text-gray-700">
-                          {valorExibir != null
-                            ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(valorExibir))
-                            : '—'}
-                        </td>
-                        <td className="px-4 py-3 text-center">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusColor}`}>
-                            {statusLabel}
-                          </span>
-                        </td>
-                        <td className="px-4 py-3 text-right">
-                          <div className="inline-flex gap-2 justify-end flex-wrap">
-                            <button
-                              type="button"
-                              onClick={() => navigate(`/dashboard/plano/full/${p.id}`)}
-                              className="px-3 py-1.5 text-xs rounded border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 font-medium"
-                            >
-                              Visualizar
-                            </button>
-                            {!isOperador && p.status !== 'APROVADO' && (
-                              <button
-                                type="button"
-                                onClick={() => navigate(`/dashboard/editar-plano?editId=${p.id}&instituicaoId=${editId}`)}
-                                className="px-3 py-1.5 text-xs rounded border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-700 font-medium"
-                              >
-                                Editar
-                              </button>
-                            )}
-                            {(hasRole('GESTOR') || hasRole('ADMIN')) && p.status === 'ENVIADO' && (
-                              <>
-                                <button
-                                  type="button"
-                                  onClick={() => { setSelectedPlanoId(p.id); setMotivoPlano(''); setShowAprovarPlanoModal(true); }}
-                                  className="px-3 py-1.5 text-xs rounded border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 font-medium"
-                                >
-                                  Aprovar
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => { setSelectedPlanoId(p.id); setMotivoPlano(''); setShowReprovarPlanoModal(true); }}
-                                  className="px-3 py-1.5 text-xs rounded border border-red-300 bg-red-50 hover:bg-red-100 text-red-700 font-medium"
-                                >
-                                  Reprovar
-                                </button>
-                              </>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          )}
-
-          {/* Aprovar Plano Modal */}
-          {showAprovarPlanoModal && selectedPlanoId && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-xl">
-                <h3 className="text-lg font-semibold mb-4">Aprovar Plano de Trabalho</h3>
-                <textarea
-                  className="w-full border rounded-lg p-2 text-sm"
-                  rows={4}
-                  value={motivoPlano}
-                  onChange={(e) => setMotivoPlano(e.target.value)}
-                  placeholder="Motivo da aprovação (obrigatório)"
-                />
-                <div className="flex justify-end mt-4 gap-3">
-                  <button
-                    type="button"
-                    className="px-4 py-2 border rounded-lg text-sm"
-                    onClick={() => setShowAprovarPlanoModal(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={savingPlanoAcao}
-                    className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm disabled:opacity-50"
-                    onClick={async () => {
-                      if (!motivoPlano.trim()) { alert('Informe o motivo'); return; }
-                      try {
-                        setSavingPlanoAcao(true);
-                        await planoService.aprovar(selectedPlanoId, motivoPlano);
-                        setShowAprovarPlanoModal(false);
-                        loadPlanos();
-                      } catch (err) { console.error(err); alert('Erro ao aprovar'); }
-                      finally { setSavingPlanoAcao(false); }
-                    }}
-                  >
-                    {savingPlanoAcao ? 'Aprovando...' : 'Aprovar'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Reprovar Plano Modal */}
-          {showReprovarPlanoModal && selectedPlanoId && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="bg-white p-6 rounded-xl max-w-md w-full shadow-xl">
-                <h3 className="text-lg font-semibold mb-4">Reprovar Plano de Trabalho</h3>
-                <textarea
-                  className="w-full border rounded-lg p-2 text-sm"
-                  rows={4}
-                  value={motivoPlano}
-                  onChange={(e) => setMotivoPlano(e.target.value)}
-                  placeholder="Motivo da reprovação (obrigatório)"
-                />
-                <div className="flex justify-end mt-4 gap-3">
-                  <button
-                    type="button"
-                    className="px-4 py-2 border rounded-lg text-sm"
-                    onClick={() => setShowReprovarPlanoModal(false)}
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    disabled={savingPlanoAcao}
-                    className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm disabled:opacity-50"
-                    onClick={async () => {
-                      if (!motivoPlano.trim()) { alert('Informe o motivo'); return; }
-                      try {
-                        setSavingPlanoAcao(true);
-                        await planoService.reprovar(selectedPlanoId, motivoPlano);
-                        setShowReprovarPlanoModal(false);
-                        loadPlanos();
-                      } catch (err) { console.error(err); alert('Erro ao reprovar'); }
-                      finally { setSavingPlanoAcao(false); }
-                    }}
-                  >
-                    {savingPlanoAcao ? 'Reprovando...' : 'Reprovar'}
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 

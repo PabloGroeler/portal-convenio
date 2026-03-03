@@ -24,6 +24,7 @@ public class ItemService {
         it.titulo = dto.titulo();
         it.descricao = dto.descricao();
         it.valor = dto.valor();
+        it.periodo = dto.periodo();
         it.persist();
         return toDto(it);
     }
@@ -35,6 +36,7 @@ public class ItemService {
         it.titulo = dto.titulo();
         it.descricao = dto.descricao();
         it.valor = dto.valor();
+        it.periodo = dto.periodo();
         return toDto(it);
     }
 
@@ -47,6 +49,6 @@ public class ItemService {
     }
 
     private ItemDTO toDto(Item it) {
-        return new ItemDTO(it.id, it.metaId, it.titulo, it.descricao, it.valor, it.createTime, it.updateTime);
+        return new ItemDTO(it.id, it.metaId, it.titulo, it.descricao, it.valor, it.periodo, it.createTime, it.updateTime);
     }
 }

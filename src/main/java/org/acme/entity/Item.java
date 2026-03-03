@@ -29,6 +29,9 @@ public class Item extends PanacheEntityBase {
     @Column(precision = 18, scale = 2)
     public BigDecimal valor;
 
+    @Column(name = "periodo", length = 20)
+    public String periodo;
+
     @Column(name = "create_time")
     public OffsetDateTime createTime;
 

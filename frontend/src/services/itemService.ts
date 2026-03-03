@@ -6,6 +6,7 @@ export type Item = {
   titulo?: string;
   descricao?: string;
   valor?: number;
+  periodo?: string;
   createTime?: string;
   updateTime?: string;
 };

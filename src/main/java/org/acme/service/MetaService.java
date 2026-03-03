@@ -24,6 +24,7 @@ public class MetaService {
         m.titulo = dto.titulo();
         m.descricao = dto.descricao();
         m.valor = dto.valor();
+        m.periodo = dto.periodo();
         m.persist();
         return toDto(m);
     }
@@ -35,6 +36,7 @@ public class MetaService {
         m.titulo = dto.titulo();
         m.descricao = dto.descricao();
         m.valor = dto.valor();
+        m.periodo = dto.periodo();
         return toDto(m);
     }
 
@@ -47,6 +49,6 @@ public class MetaService {
     }
 
     private MetaDTO toDto(Meta m) {
-        return new MetaDTO(m.id, m.planoTrabalhoId, m.titulo, m.descricao, m.valor, m.createTime, m.updateTime);
+        return new MetaDTO(m.id, m.planoTrabalhoId, m.titulo, m.descricao, m.valor, m.periodo, m.createTime, m.updateTime);
     }
 }
