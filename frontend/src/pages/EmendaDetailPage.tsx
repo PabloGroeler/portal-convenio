@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import emendaService, { type EmendaHistoricoDTO } from '../services/emendaService';
 import tipoEmendaService, { type TipoEmendaDTO } from '../services/tipoEmendaService';
+import funcaoOrcamentariaService, { type FuncaoOrcamentariaDTO } from '../services/funcaoOrcamentariaService';
 import AdmissibilidadePanel from '../components/AnalistaOrcamentoPanel';
 import SecretariaDemandaPanel from '../components/SecretariaDemandaPanel';
 import ConveniosDocumentalPanel from '../components/ConveniosDocumentalPanel';
@@ -17,10 +18,12 @@ interface Emenda {
   councilorId?: string;
   councilorName?: string;
   date?: string;
-  value?: string;
+  value?: number | string;
   classification?: string;
+  tipoTransferencia?: string;
   esfera?: string;
   category?: string;
+  funcaoCodigo?: string;
   status?: string;
   statusCicloVida?: string;
   institutionId?: string;
@@ -45,6 +48,9 @@ const EmendaDetailPage: React.FC = () => {
   const canActOnAdmissibilidade = hasRole(UserRole.ORCAMENTO) || hasRole(UserRole.ADMIN);
   const isAdmin = hasRole(UserRole.ADMIN);
   const isSecretaria = hasRole(UserRole.SECRETARIA);
+  const isConvenios = hasRole(UserRole.CONVENIOS);
+  // Can edit Tipo de Emenda and Tipo de Execução
+  const canEditTipos = isAdmin || hasRole(UserRole.ORCAMENTO);
 
   const [emenda, setEmenda] = useState<Emenda | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,29 +58,64 @@ const EmendaDetailPage: React.FC = () => {
   const [historico, setHistorico] = useState<EmendaHistoricoDTO[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [tiposEmenda, setTiposEmenda] = useState<TipoEmendaDTO[]>([]);
+  const [funcoesOrcamentarias, setFuncoesOrcamentarias] = useState<FuncaoOrcamentariaDTO[]>([]);
   const [despachoObservacao, setDespachoObservacao] = useState('');
   const [executingAction, setExecutingAction] = useState(false);
+
+  // Inline edit state for Tipo de Emenda + Tipo de Execução
+  const [editingTipos, setEditingTipos] = useState(false);
+  const [editClassification, setEditClassification] = useState('');
+  const [editTipoTransferencia, setEditTipoTransferencia] = useState('Direta');
+  const [savingTipos, setSavingTipos] = useState(false);
 
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    api.get<Emenda>(`/emendas/${id}`)
+    // Use /with-details to get enriched data including councilorName and institutionName
+    api.get<Emenda>(`/emendas/${id}/with-details`)
       .then(({ data }) => {
         setEmenda(data);
-        // load historico and tipos in parallel
+        setEditClassification(data.classification || '');
+        setEditTipoTransferencia(data.tipoTransferencia || 'Direta');
         setLoadingHistorico(true);
         Promise.all([
           emendaService.getHistorico(id).catch(() => [] as EmendaHistoricoDTO[]),
           tipoEmendaService.list().catch(() => [] as TipoEmendaDTO[]),
-        ]).then(([hist, tipos]) => {
+          funcaoOrcamentariaService.list().catch(() => [] as FuncaoOrcamentariaDTO[]),
+        ]).then(([hist, tipos, funcoes]) => {
           setHistorico(hist);
           setTiposEmenda(tipos);
+          setFuncoesOrcamentarias(funcoes);
           setLoadingHistorico(false);
         });
       })
       .catch(() => setError('Falha ao carregar a emenda'))
       .finally(() => setLoading(false));
   }, [id]);
+
+  const handleSaveTipos = async () => {
+    if (!id || !emenda) return;
+    setSavingTipos(true);
+    try {
+      // PATCH only the two fields via the general update endpoint
+      const payload = {
+        ...emenda,
+        classification: editClassification,
+        tipoTransferencia: editTipoTransferencia,
+      };
+      const { data } = await api.put<Emenda>(`/emendas/${id}`, payload);
+      setEmenda((prev) => prev ? {
+        ...prev,
+        classification: data.classification ?? editClassification,
+        tipoTransferencia: data.tipoTransferencia ?? editTipoTransferencia,
+      } : prev);
+      setEditingTipos(false);
+    } catch (err: any) {
+      alert(`Erro ao salvar: ${err?.response?.data?.error || err.message || 'Erro desconhecido'}`);
+    } finally {
+      setSavingTipos(false);
+    }
+  };
 
   const handleAcao = async (acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR') => {
     if (!id || !emenda) return;
@@ -104,6 +145,10 @@ const EmendaDetailPage: React.FC = () => {
       <button onClick={() => navigate('/dashboard/emendas')} className="text-blue-600 underline text-sm">Voltar para lista</button>
     </div>
   );
+
+  // Helper: label for tipoTransferencia
+  const tipoTransferenciaLabel = (v?: string) =>
+    v === 'Indireta' ? 'Indireta' : v === 'Direta' ? 'Direta' : '—';
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -167,7 +212,11 @@ const EmendaDetailPage: React.FC = () => {
                 </div>
                 <div>
                   <span className="text-xs text-slate-500 uppercase block">Valor</span>
-                  <span className="font-mono text-slate-700 font-medium">{emenda.value || '—'}</span>
+                  <span className="font-mono text-slate-700 font-medium">
+                    {emenda.value != null
+                      ? Number(emenda.value).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                      : '—'}
+                  </span>
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 uppercase block">Exercício (Ano)</label>
@@ -198,18 +247,115 @@ const EmendaDetailPage: React.FC = () => {
                   <span className="text-xs text-slate-500 uppercase block">Esfera</span>
                   <span className="text-slate-700 text-sm">{emenda.esfera || '—'}</span>
                 </div>
-                <div>
-                  <span className="text-xs text-slate-500 uppercase block">Tipo de Emenda</span>
-                  <span className="text-slate-700 text-sm">
-                    {tiposEmenda.find((t) => t.codigo === emenda.classification)?.nome || emenda.classification || '—'}
-                  </span>
+              </div>
+
+              {/* Tipo de Emenda + Tipo de Execução — inline editable for ADMIN/ORCAMENTO */}
+              <div className="bg-white border border-slate-200 rounded-xl p-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-slate-800">Tipo de Emenda e Execução</h4>
+                  {canEditTipos && !editingTipos && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditClassification(emenda.classification || '');
+                        setEditTipoTransferencia(emenda.tipoTransferencia || 'Direta');
+                        setEditingTipos(true);
+                      }}
+                      className="text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded px-2 py-1 hover:bg-indigo-50"
+                    >
+                      ✏️ Editar
+                    </button>
+                  )}
+                  {editingTipos && (
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        onClick={handleSaveTipos}
+                        disabled={savingTipos}
+                        className="text-xs bg-emerald-600 text-white rounded px-3 py-1 hover:bg-emerald-700 disabled:opacity-50"
+                      >
+                        {savingTipos ? 'Salvando...' : 'Salvar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setEditingTipos(false)}
+                        className="text-xs border border-slate-300 rounded px-3 py-1 hover:bg-slate-50"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* Auto-fill notice when classification matches the canonical import value */}
+                {emenda.classification === 'EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA' && !editingTipos && (
+                  <div className="mb-3 flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
+                    Preenchido automaticamente na importação (status "Aprovada pelo Gestor")
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-xs text-slate-500 uppercase block mb-1">Tipo de Emenda</span>
+                    {editingTipos ? (
+                      <select
+                        value={editClassification}
+                        onChange={(e) => setEditClassification(e.target.value)}
+                        className="w-full border rounded px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="">Selecione...</option>
+                        {/* Always ensure the canonical type appears first */}
+                        {!tiposEmenda.find(t => t.codigo === 'EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA') && (
+                          <option value="EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA">
+                            Emenda Individual - Transferência com Finalidade Definida
+                          </option>
+                        )}
+                        {tiposEmenda.map((t) => (
+                          <option key={t.codigo} value={t.codigo}>{t.nome}</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <span className="text-slate-700 text-sm">
+                        {tiposEmenda.find((t) => t.codigo === emenda.classification)?.nome
+                          || (emenda.classification === 'EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA'
+                              ? 'Emenda Individual - Transferência com Finalidade Definida'
+                              : emenda.classification || '—')}
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <span className="text-xs text-slate-500 uppercase block mb-1">Tipo de Execução</span>
+                    {editingTipos ? (
+                      <select
+                        value={editTipoTransferencia}
+                        onChange={(e) => setEditTipoTransferencia(e.target.value)}
+                        className="w-full border rounded px-3 py-2 text-sm bg-white"
+                      >
+                        <option value="Direta">Direta</option>
+                        <option value="Indireta">Indireta</option>
+                      </select>
+                    ) : (
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-medium ${
+                        emenda.tipoTransferencia === 'Indireta'
+                          ? 'bg-purple-100 text-purple-800'
+                          : 'bg-blue-100 text-blue-800'
+                      }`}>
+                        {tipoTransferenciaLabel(emenda.tipoTransferencia)}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <span className="text-xs text-slate-500 uppercase block">Categoria</span>
-                  <span className="text-slate-700 text-sm">{emenda.category || '—'}</span>
+                  <span className="text-xs text-slate-500 uppercase block">Função</span>
+                  <span className="text-slate-700 text-sm">
+                    {emenda.funcaoCodigo
+                      ? `${emenda.funcaoCodigo} - ${funcoesOrcamentarias.find(f => f.codigo === emenda.funcaoCodigo)?.descricao || emenda.funcaoCodigo}`
+                      : '—'}
+                  </span>
                 </div>
                 <div>
                   <label className="text-xs text-slate-500 uppercase block">Previsão de Conclusão</label>
@@ -383,7 +529,7 @@ const EmendaDetailPage: React.FC = () => {
             )}
           </div>
 
-          {/* Admissibilidade — visível para todos, ações só para ORCAMENTO/ADMIN */}
+          {/* Admissibilidade */}
           {id && (
             <AdmissibilidadePanel
               emendaId={id}
@@ -396,7 +542,7 @@ const EmendaDetailPage: React.FC = () => {
             />
           )}
 
-          {/* Análise de Demanda — visível para todos, ações só para SECRETARIA/ADMIN */}
+          {/* Análise de Demanda */}
           {id && [
             'Admissibilidade aprovada',
             'Em análise de demanda',
@@ -409,6 +555,7 @@ const EmendaDetailPage: React.FC = () => {
             <SecretariaDemandaPanel
               emendaId={id}
               emendaStatus={emenda.status}
+              tipoTransferencia={emenda.tipoTransferencia}
               canAct={isAdmin || isSecretaria}
               onStatusChange={(newStatus) => {
                 setEmenda((prev) => prev ? { ...prev, status: newStatus } : prev);
@@ -417,7 +564,7 @@ const EmendaDetailPage: React.FC = () => {
             />
           )}
 
-          {/* Análise Documental — visível para todos, ações só para CONVENIOS/ADMIN */}
+          {/* Análise Documental — somente para Indireta (Story 5: Direta shows closure notice) */}
           {id && [
             'Análise de demanda aprovada',
             'Em análise documental',
@@ -427,7 +574,8 @@ const EmendaDetailPage: React.FC = () => {
             <ConveniosDocumentalPanel
               emendaId={id}
               emendaStatus={emenda.status}
-              canAct={isAdmin || isConvenios}
+              tipoTransferencia={emenda.tipoTransferencia}
+              canAct={(isAdmin || isConvenios) && emenda.tipoTransferencia === 'Indireta'}
               onStatusChange={(newStatus) => {
                 setEmenda((prev) => prev ? { ...prev, status: newStatus } : prev);
                 emendaService.getHistorico(id).then(setHistorico).catch(() => {});

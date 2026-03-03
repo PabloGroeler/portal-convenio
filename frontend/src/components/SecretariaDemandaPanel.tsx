@@ -5,6 +5,7 @@ import emendaService from '../services/emendaService';
 interface Props {
   emendaId: string;
   emendaStatus?: string;
+  tipoTransferencia?: string;
   canAct?: boolean;
   onStatusChange?: (newStatus: string) => void;
 }
@@ -12,12 +13,15 @@ interface Props {
 const SecretariaDemandaPanel: React.FC<Props> = ({
   emendaId,
   emendaStatus,
+  tipoTransferencia,
   canAct = false,
   onStatusChange,
 }) => {
   const queryClient = useQueryClient();
   const [parecer, setParecer] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  const isIndireta = tipoTransferencia === 'Indireta';
 
   const acaoMutation = useMutation({
     mutationFn: (payload: { acao: string; observacao?: string }) =>
@@ -37,8 +41,8 @@ const SecretariaDemandaPanel: React.FC<Props> = ({
   const isEmAnaliseDemanda = emendaStatus === 'Em análise de demanda';
   const isDemandaAprovada = emendaStatus === 'Análise de demanda aprovada';
   const isDevolvida = emendaStatus === 'Devolvida por incompatibilidade de demanda';
-  // Fases posteriores — demanda já foi concluída, análise documental em andamento
-  const isFaseDocumental = [
+  // Fases posteriores — só existem para Indireta (fluxo Convênios)
+  const isFaseDocumental = isIndireta && [
     'Em análise documental',
     'Análise documental aprovada',
     'Devolvida por inviabilidade documental',
@@ -57,11 +61,23 @@ const SecretariaDemandaPanel: React.FC<Props> = ({
 
   if (!isRelevant) return null;
 
+  // Label for approval outcome based on execution type
+  const approveOutcomeLabel = isIndireta
+    ? 'encaminhado ao Setor de Convênios'
+    : 'encaminhado para execução direta';
+
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4">
       <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
         <span className="inline-block w-2 h-2 rounded-full bg-teal-500" />
         Análise de Demanda
+        {tipoTransferencia && (
+          <span className={`ml-auto text-xs px-2 py-0.5 rounded-full font-medium ${
+            isIndireta ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'
+          }`}>
+            {tipoTransferencia}
+          </span>
+        )}
       </h3>
 
       {(isEmAnaliseDemanda || isDemandaAprovada || isDevolvida || isFaseDocumental) && (
@@ -104,6 +120,15 @@ const SecretariaDemandaPanel: React.FC<Props> = ({
                   className="w-full text-sm border border-slate-200 rounded-md px-2 py-1.5 resize-none focus:outline-none focus:ring-2 focus:ring-teal-300"
                   placeholder="Descreva o parecer técnico da análise de demanda..."
                 />
+                {isIndireta ? (
+                  <p className="text-xs text-purple-600 mt-1">
+                    ℹ️ Aprovando: <strong>viabilidade da demanda aprovada, {approveOutcomeLabel}.</strong>
+                  </p>
+                ) : (
+                  <p className="text-xs text-blue-600 mt-1">
+                    ℹ️ Aprovando: <strong>viabilidade da demanda aprovada, {approveOutcomeLabel}.</strong> Não haverá análise documental (execução direta).
+                  </p>
+                )}
               </div>
               <div className="flex gap-2">
                 <button

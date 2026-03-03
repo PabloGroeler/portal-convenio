@@ -11,6 +11,7 @@ export type User = {
   role?: UserRole | string;
   status?: UserStatus | string;
   instituicoes?: string[];
+  secretaria?: string;
 };
 
 interface LoginResponse {

@@ -72,16 +72,11 @@ public class EmendasResource {
     @GET
     @Path("/with-details")
     public List<EmendaDetailDTO> listWithDetails() {
-        log.info("🔍 GET /api/emendas/with-details - Listing all emendas with details");
+        log.info("🔍 GET /api/emendas/with-details - Listing emendas for user: " + getCurrentUser());
         try {
-            List<EmendaDetailDTO> result = emendaService.listAllWithDetails();
-            log.info("✅ Found " + (result != null ? result.size() : 0) + " emendas with details");
-            if (result != null && !result.isEmpty()) {
-                EmendaDetailDTO first = result.get(0);
-                log.info("📋 First emenda: id=" + first.id + ", officialCode=" + first.officialCode + ", institutionName=" + first.institutionName);
-            } else {
-                log.warn("⚠️ No emendas found in database!");
-            }
+            // Story 4: apply role-based visibility filter
+            List<EmendaDetailDTO> result = emendaService.listWithDetailsForUser(getCurrentUser());
+            log.info("✅ Found " + (result != null ? result.size() : 0) + " emendas for user");
             return result;
         } catch (Exception e) {
             log.error("❌ Error listing emendas with details", e);

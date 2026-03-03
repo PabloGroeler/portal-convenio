@@ -1,10 +1,18 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import emendaService from '../services/emendaService';
 import institutionService, { type InstitutionDTO } from '../services/institutionService';
 import councilorService, { type CouncilorDTO } from '../services/councilorService';
 import tipoEmendaService, { type TipoEmendaDTO } from '../services/tipoEmendaService';
 import { formatCurrency, parseCurrency } from '../utils/formatters';
+import api from '../services/api';
+
+interface DotacaoOrcamentaria {
+  id: number;
+  codigoReduzido: string;
+  dotacao: string;
+  descricao?: string;
+}
 
 interface EmendaForm {
   id?: string;
@@ -27,6 +35,9 @@ interface EmendaForm {
   exercicio?: number;
   justificativa?: string;
   previsaoConclusao?: string;
+  tipoTransferencia: string;
+  dotacaoOrcamentariaId?: number;
+  dotacaoOrcamentariaTexto?: string;
 }
 
 const CadastroEmendaPage: React.FC = () => {
@@ -57,6 +68,9 @@ const CadastroEmendaPage: React.FC = () => {
     exercicio: new Date().getFullYear(),
     justificativa: '',
     previsaoConclusao: '',
+    tipoTransferencia: 'Direta',
+    dotacaoOrcamentariaId: undefined,
+    dotacaoOrcamentariaTexto: '',
   });
 
   const [institutions, setInstitutions] = useState<InstitutionDTO[]>([]);
@@ -70,6 +84,13 @@ const CadastroEmendaPage: React.FC = () => {
   // Search states for autocomplete
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [councilorSearch, setCouncilorSearch] = useState('');
+
+  // Dotação orçamentária search
+  const [dotacaoSearch, setDotacaoSearch] = useState('');
+  const [dotacaoResults, setDotacaoResults] = useState<DotacaoOrcamentaria[]>([]);
+  const [dotacaoLoading, setDotacaoLoading] = useState(false);
+  const [showDotacaoDropdown, setShowDotacaoDropdown] = useState(false);
+  const dotacaoRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     loadInitialData();
@@ -122,7 +143,13 @@ const CadastroEmendaPage: React.FC = () => {
         exercicio: data.exercicio,
         justificativa: data.justificativa || '',
         previsaoConclusao: data.previsaoConclusao || '',
+        tipoTransferencia: data.tipoTransferencia || 'Direta',
+        dotacaoOrcamentariaId: data.dotacaoOrcamentariaId,
+        dotacaoOrcamentariaTexto: data.dotacaoOrcamentariaTexto || '',
       });
+      if (data.dotacaoOrcamentariaTexto) {
+        setDotacaoSearch(data.dotacaoOrcamentariaTexto);
+      }
     } catch (err) {
       console.error('Erro ao carregar emenda:', err);
       setError('Erro ao carregar emenda');
@@ -429,6 +456,96 @@ const CadastroEmendaPage: React.FC = () => {
                 <option value="Estadual">Estadual</option>
                 <option value="Federal">Federal</option>
               </select>
+            </div>
+
+            {/* Tipo de Transferência */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Tipo de Transferência
+              </label>
+              <div className="flex gap-6 mt-1">
+                {['Direta', 'Indireta'].map(tipo => (
+                  <label key={tipo} className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="tipoTransferencia"
+                      value={tipo}
+                      checked={form.tipoTransferencia === tipo}
+                      onChange={() => handleChange('tipoTransferencia', tipo)}
+                      className="accent-blue-600"
+                    />
+                    <span className="text-sm text-gray-700">{tipo}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Dotação Orçamentária — full width */}
+          <div className="mt-4" ref={dotacaoRef}>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Dotação Orçamentária
+              <span className="text-xs text-gray-400 ml-2">Digite o código reduzido (ex: 1363) ou parte da descrição</span>
+            </label>
+            <div className="relative">
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <input
+                    type="text"
+                    value={dotacaoSearch}
+                    onChange={e => searchDotacao(e.target.value)}
+                    onFocus={() => dotacaoResults.length > 0 && setShowDotacaoDropdown(true)}
+                    placeholder="🔍 Buscar por código reduzido ou descrição..."
+                    className="w-full border rounded px-3 py-2 pr-10 text-sm"
+                  />
+                  {dotacaoLoading && (
+                    <span className="absolute right-3 top-2.5 text-gray-400 text-xs">...</span>
+                  )}
+                </div>
+                {form.dotacaoOrcamentariaId && (
+                  <button type="button" onClick={clearDotacao}
+                    className="px-3 py-2 text-xs text-red-600 border border-red-200 rounded hover:bg-red-50">
+                    ✕ Limpar
+                  </button>
+                )}
+              </div>
+
+              {/* Selected badge */}
+              {form.dotacaoOrcamentariaId && (
+                <div className="mt-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
+                  ✅ Dotação selecionada (ID: {form.dotacaoOrcamentariaId})
+                </div>
+              )}
+
+              {/* Dropdown results */}
+              {showDotacaoDropdown && dotacaoResults.length > 0 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
+                  {dotacaoResults.map(d => (
+                    <button
+                      key={d.id}
+                      type="button"
+                      onClick={() => selectDotacao(d)}
+                      className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 last:border-0"
+                    >
+                      <div className="flex items-start gap-3">
+                        <span className="shrink-0 text-xs font-mono font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded mt-0.5">
+                          {d.codigoReduzido}
+                        </span>
+                        <div>
+                          <div className="text-xs text-gray-800 font-medium line-clamp-2">{d.descricao}</div>
+                          <div className="text-xs text-gray-400 font-mono mt-0.5 truncate">{d.dotacao}</div>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {showDotacaoDropdown && !dotacaoLoading && dotacaoResults.length === 0 && dotacaoSearch.length > 1 && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow px-4 py-3 text-sm text-gray-500">
+                  Nenhuma dotação encontrada para "{dotacaoSearch}"
+                </div>
+              )}
             </div>
           </div>
 

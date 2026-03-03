@@ -45,6 +45,7 @@ export interface User {
   role?: UserRole;
   status?: UserStatus;
   instituicoes?: string[];
+  secretaria?: string;
 }
 
 // Explicit export to ensure module recognition

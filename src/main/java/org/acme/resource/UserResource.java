@@ -199,7 +199,8 @@ public class UserResource {
                 user.nomeCompleto,
                 user.role.name(),
                 user.status.name(),
-                instituicoes
+                instituicoes,
+                user.secretaria
             );
 
             return Response.ok(userDTO).build();
@@ -248,7 +249,8 @@ public class UserResource {
                 user.nomeCompleto,
                 user.role.name(),
                 user.status.name(),
-                instituicoes
+                instituicoes,
+                user.secretaria
             );
 
             return Response.ok(userDTO).build();
@@ -321,7 +323,8 @@ public class UserResource {
                 user.nomeCompleto,
                 user.role.name(),
                 user.status.name(),
-                instituicoes
+                instituicoes,
+                user.secretaria
             );
 
             log.info("✅ Retornando UserDTO com sucesso");

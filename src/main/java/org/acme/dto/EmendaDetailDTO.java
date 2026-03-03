@@ -36,6 +36,11 @@ public class EmendaDetailDTO {
     public String objectDetail;
     public LocalDate previsaoConclusao; // Task-10
     public String justificativa; // Task-10
+    public String secretariaDestino;
+    public String tipoTransferencia;
+    public Long dotacaoOrcamentariaId;
+    public String dotacaoOrcamentariaTexto;
+    public String funcaoCodigo;
 
     public EmendaDetailDTO() {
     }
@@ -66,6 +71,11 @@ public class EmendaDetailDTO {
         this.objectDetail = emenda.objectDetail;
         this.previsaoConclusao = emenda.previsaoConclusao;
         this.justificativa = emenda.justificativa;
+        this.secretariaDestino = emenda.secretariaDestino;
+        this.tipoTransferencia = emenda.tipoTransferencia;
+        this.dotacaoOrcamentariaId = emenda.dotacaoOrcamentariaId;
+        this.dotacaoOrcamentariaTexto = emenda.dotacaoOrcamentariaTexto;
+        this.funcaoCodigo = emenda.funcaoCodigo;
     }
 
     public static EmendaDetailDTO fromEmenda(Emenda emenda) {
@@ -98,6 +108,11 @@ public class EmendaDetailDTO {
         dto.objectDetail = emenda.objectDetail;
         dto.previsaoConclusao = emenda.previsaoConclusao;
         dto.justificativa = emenda.justificativa;
+        dto.secretariaDestino = emenda.secretariaDestino;
+        dto.tipoTransferencia = emenda.tipoTransferencia;
+        dto.dotacaoOrcamentariaId = emenda.dotacaoOrcamentariaId;
+        dto.dotacaoOrcamentariaTexto = emenda.dotacaoOrcamentariaTexto;
+        dto.funcaoCodigo = emenda.funcaoCodigo;
         return dto;
     }
 }

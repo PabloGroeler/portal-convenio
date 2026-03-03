@@ -82,4 +82,8 @@ public class ExternalEmendaDTO {
 
     @JsonProperty("objectDetail")
     public String objectDetail;
+
+    /** Tipo de transferência: Direta ou Indireta */
+    @JsonProperty("tipoTransferencia")
+    public String tipoTransferencia;
 }

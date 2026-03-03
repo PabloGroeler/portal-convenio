@@ -34,13 +34,41 @@ public class EmendaImportMapper {
         e.anoConvenio = src.anoConvenio;
 
         // JIRA 6: esfera (best-effort)
-        // Prefer explicit esfera; otherwise infer from federalStatus.
         if (src.esfera != null && !src.esfera.isBlank()) {
             e.esfera = src.esfera.trim();
         } else if (src.federalStatus != null && !src.federalStatus.isBlank()) {
             e.esfera = "Federal";
         } else {
             e.esfera = "Municipal";
+        }
+
+        // Auto-fill: when external status is "Aprovada pelo Gestor",
+        // set Tipo de Emenda and Tipo de Execução automatically.
+        String rawStatus = blankToNull(src.status);
+        if (rawStatus == null) rawStatus = blankToNull(src.state);
+        if (rawStatus == null) rawStatus = blankToNull(src.situation);
+        boolean isAprovadaPeloGestor = rawStatus != null &&
+            (rawStatus.equalsIgnoreCase("Aprovada pelo Gestor") ||
+             rawStatus.equalsIgnoreCase("Aprovado pelo Gestor"));
+
+        if (isAprovadaPeloGestor) {
+            // Always set the canonical Tipo de Emenda
+            e.classification = "EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA";
+            // Tipo de Execução: use API value if present, otherwise default to Direta
+            String tipoApi = blankToNull(src.tipoTransferencia);
+            if (tipoApi != null) {
+                String tipoNorm = tipoApi.trim().toLowerCase();
+                e.tipoTransferencia = tipoNorm.contains("indireta") ? "Indireta" : "Direta";
+            } else {
+                e.tipoTransferencia = "Direta";
+            }
+        } else {
+            // For other statuses, use API value if present
+            String tipoApi = blankToNull(src.tipoTransferencia);
+            if (tipoApi != null) {
+                String tipoNorm = tipoApi.trim().toLowerCase();
+                e.tipoTransferencia = tipoNorm.contains("indireta") ? "Indireta" : "Direta";
+            }
         }
 
         return e;

@@ -5,6 +5,7 @@ import emendaService from '../services/emendaService';
 import institutionService, { type InstitutionDTO } from '../services/institutionService';
 import councilorService, { type CouncilorDTO } from '../services/councilorService';
 import tipoEmendaService, { type TipoEmendaDTO } from '../services/tipoEmendaService';
+import funcaoOrcamentariaService, { type FuncaoOrcamentariaDTO } from '../services/funcaoOrcamentariaService';
 import type { EmendaHistoricoDTO } from '../services/emendaService';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/user.types';
@@ -22,6 +23,9 @@ interface Emenda {
   numeroConvenio?: string;
   anoConvenio?: number;
   category?: string;
+  funcaoCodigo?: string;
+  tipoTransferencia?: string;
+  secretariaDestino?: string;
   status: string;
   institutionId?: string;
   institutionName?: string;
@@ -37,19 +41,22 @@ const EmendasPage: React.FC = () => {
   const { hasRole, user } = useAuth();
 
   // Status pendentes por role — emendas que precisam de ação do usuário
+  // Story 4: SECRETARIA sees "Análise de demanda aprovada" only for Direta
+  //          CONVENIOS sees "Análise de demanda aprovada" only for Indireta
   const STATUS_POR_ROLE: Partial<Record<UserRole, string[]>> = {
     [UserRole.ORCAMENTO]: [
       'Recebido',
       'Em análise de admissibilidade',
       'Admissibilidade aprovada',
-      'Devolvida por incompatibilidade de demanda', // volta do orçamento
+      'Devolvida por incompatibilidade de demanda',
     ],
     [UserRole.SECRETARIA]: [
       'Admissibilidade aprovada',
       'Em análise de demanda',
+      'Análise de demanda aprovada', // only Direta — filtered below in useMemo
     ],
     [UserRole.CONVENIOS]: [
-      'Análise de demanda aprovada',
+      'Análise de demanda aprovada', // only Indireta — filtered below in useMemo
       'Em análise documental',
     ],
   };
@@ -94,6 +101,7 @@ const EmendasPage: React.FC = () => {
     numeroConvenio: '',
     anoConvenio: undefined,
     category: '',
+    funcaoCodigo: '',
     status: 'Recebido',
     institutionId: '',
     signedLink: '',
@@ -106,6 +114,7 @@ const EmendasPage: React.FC = () => {
   const [institutions, setInstitutions] = useState<InstitutionDTO[]>([]);
   const [councilors, setCouncilors] = useState<CouncilorDTO[]>([]);
   const [tiposEmenda, setTiposEmenda] = useState<TipoEmendaDTO[]>([]);
+  const [funcoesOrcamentarias, setFuncoesOrcamentarias] = useState<FuncaoOrcamentariaDTO[]>([]);
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [councilorSearch, setCouncilorSearch] = useState('');
 
@@ -142,6 +151,9 @@ const EmendasPage: React.FC = () => {
             numeroConvenio: (e as any).numeroConvenio,
             anoConvenio: (e as any).anoConvenio,
             category: e.category,
+            funcaoCodigo: (e as any).funcaoCodigo,
+            tipoTransferencia: (e as any).tipoTransferencia,
+            secretariaDestino: (e as any).secretariaDestino,
             status: safeStatus,
             institutionId: e.institutionId,
             institutionName: e.institutionName,
@@ -164,16 +176,20 @@ const EmendasPage: React.FC = () => {
     fetchEmendas();
   }, []);
 
-  // Load "Tipos de Emenda" catalog on page mount so the select always has data.
+  // Load catalogs on page mount so selects always have data.
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const tipos = await tipoEmendaService.list();
+        const [tipos, funcoes] = await Promise.all([
+          tipoEmendaService.list(),
+          funcaoOrcamentariaService.list(),
+        ]);
         if (!cancelled) setTiposEmenda(tipos);
+        if (!cancelled) setFuncoesOrcamentarias(funcoes);
       } catch (e) {
-        console.error('[EmendasPage] Error fetching tipos de emenda:', e);
         if (!cancelled) setTiposEmenda([]);
+        if (!cancelled) setFuncoesOrcamentarias([]);
       }
     })();
     return () => {
@@ -391,6 +407,7 @@ const EmendasPage: React.FC = () => {
         numeroConvenio: editForm.existeConvenio ? (editForm.numeroConvenio || '').trim() : null,
         anoConvenio: editForm.existeConvenio ? (editForm.anoConvenio ?? null) : null,
         category: editForm.category,
+        funcaoCodigo: editForm.funcaoCodigo,
         status: editForm.status,
         statusCicloVida: editForm.status,  // ✅ Status do ciclo de vida
         institutionId: editForm.institutionId,
@@ -456,6 +473,9 @@ const EmendasPage: React.FC = () => {
         numeroConvenio: (result as any).numeroConvenio,
         anoConvenio: (result as any).anoConvenio,
         category: result.category,
+        funcaoCodigo: (result as any).funcaoCodigo,
+        tipoTransferencia: (result as any).tipoTransferencia,
+        secretariaDestino: (result as any).secretariaDestino,
         status: (result.status || 'Recebido') as string,
         institutionId: result.institutionId,
         institutionName,
@@ -595,6 +615,25 @@ const EmendasPage: React.FC = () => {
       }
 
       if (year && String((e as any).year) !== year) return false;
+
+      // Story 4 — Visibility by tipoTransferencia + role
+      const isDemandaAprovada = e.status === 'Análise de demanda aprovada';
+      if (isDemandaAprovada) {
+        const isIndireta = e.tipoTransferencia === 'Indireta';
+        const isDireta = !isIndireta; // null/undefined defaults to Direta
+        // SECRETARIA: only sees Direta (hide Indireta → that's Convênios' job)
+        if (hasRole(UserRole.SECRETARIA) && !hasRole(UserRole.ADMIN) && isIndireta) return false;
+        // CONVENIOS: only sees Indireta (hide Direta → that went back to Secretaria)
+        if (hasRole(UserRole.CONVENIOS) && !hasRole(UserRole.ADMIN) && isDireta) return false;
+      }
+
+      // Story 4 — SECRETARIA users only see emendas assigned to their secretaria
+      if (hasRole(UserRole.SECRETARIA) && !hasRole(UserRole.ADMIN)) {
+        const userSecretaria = (user as any)?.secretaria as string | undefined;
+        if (userSecretaria && e.secretariaDestino) {
+          if (e.secretariaDestino.toLowerCase() !== userSecretaria.toLowerCase()) return false;
+        }
+      }
 
       // "Minha Fila" — filtra apenas status relevantes para o role
       if (myQueueOnly && myQueueStatuses.length > 0) {
@@ -817,11 +856,11 @@ const EmendasPage: React.FC = () => {
                                 </span>
                               </div>
                             )}
-                            {e.category && (
+                            {e.funcaoCodigo && (
                               <div>
-                                <div className="text-xs text-slate-400 mb-0.5">Categoria</div>
+                                <div className="text-xs text-slate-400 mb-0.5">Função</div>
                                 <span className="text-xs text-slate-600 bg-slate-50 border border-slate-200 px-2 py-1 rounded">
-                                  {e.category}
+                                  {e.funcaoCodigo} - {funcoesOrcamentarias.find(f => f.codigo === e.funcaoCodigo)?.descricao || e.funcaoCodigo}
                                 </span>
                               </div>
                             )}
@@ -1236,20 +1275,29 @@ const EmendasPage: React.FC = () => {
                         </div>
                      </div>
 
-                     {/* Categoria */}
+                     {/* Função Orçamentária */}
                      <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
                        <div>
-                         <span className="text-xs text-slate-500 uppercase block">Categoria</span>
-                         {isCreateMode ? (
-                           <input
-                             type="text"
-                             value={editForm.category || ''}
-                             onChange={(e) => handleFormChange('category', e.target.value)}
+                         <span className="text-xs text-slate-500 uppercase block">Função</span>
+                         {(isCreateMode || isEditMode) ? (
+                           <select
+                             value={editForm.funcaoCodigo || ''}
+                             onChange={(e) => handleFormChange('funcaoCodigo', e.target.value)}
                              className="mt-1 w-full border rounded px-3 py-2 text-sm"
-                             placeholder="Ex: SAÚDE"
-                           />
+                           >
+                             <option value="">Selecione a função...</option>
+                             {funcoesOrcamentarias.map((f) => (
+                               <option key={f.codigo} value={f.codigo}>
+                                 {f.codigo} - {f.descricao}
+                               </option>
+                             ))}
+                           </select>
                          ) : (
-                           <span className="text-slate-700 text-sm">{editForm.category || '—'}</span>
+                           <span className="text-slate-700 text-sm">
+                             {editForm.funcaoCodigo
+                               ? `${editForm.funcaoCodigo} - ${funcoesOrcamentarias.find(f => f.codigo === editForm.funcaoCodigo)?.descricao || editForm.funcaoCodigo}`
+                               : '—'}
+                           </span>
                          )}
                        </div>
                      </div>

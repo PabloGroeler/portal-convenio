@@ -5,6 +5,7 @@ import emendaService from '../services/emendaService';
 interface Props {
   emendaId: string;
   emendaStatus?: string;
+  tipoTransferencia?: string;
   canAct?: boolean;
   onStatusChange?: (newStatus: string) => void;
 }
@@ -12,12 +13,17 @@ interface Props {
 const ConveniosDocumentalPanel: React.FC<Props> = ({
   emendaId,
   emendaStatus,
+  tipoTransferencia,
   canAct = false,
   onStatusChange,
 }) => {
   const queryClient = useQueryClient();
   const [parecer, setParecer] = useState('');
   const [error, setError] = useState<string | null>(null);
+
+  // Story 5: Direta executions are fully closed after demand approval — no documental step
+  const isIndireta = tipoTransferencia === 'Indireta';
+  const isDireta = !isIndireta; // null/undefined also means Direta (default)
 
   const acaoMutation = useMutation({
     mutationFn: (payload: { acao: string; observacao?: string }) =>
@@ -50,11 +56,35 @@ const ConveniosDocumentalPanel: React.FC<Props> = ({
   const isRelevant = isDemandaAprovada || isEmAnaliseDocumental || isDocumentalAprovada || isDevolvida;
   if (!isRelevant) return null;
 
+  // Story 5: for Direta, render a read-only closure notice — no actions allowed
+  if (isDireta) {
+    return (
+      <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+        <h3 className="text-sm font-semibold text-blue-800 mb-2 flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24"
+            fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/>
+          </svg>
+          Fluxo Encerrado — Execução Direta
+        </h3>
+        <p className="text-xs text-blue-700">
+          Esta emenda possui execução <strong>Direta</strong>. O fluxo no módulo de emendas está
+          encerrado após a aprovação da demanda. Não há análise documental nem encaminhamento ao
+          Setor de Convênios.
+        </p>
+      </div>
+    );
+  }
+
+  // Indireta: full documental analysis flow
   return (
     <div className="bg-white border border-slate-200 rounded-xl p-4">
       <h3 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
         <span className="inline-block w-2 h-2 rounded-full bg-violet-500" />
         Análise Documental — Convênios
+        <span className="ml-auto text-xs px-2 py-0.5 rounded-full font-medium bg-purple-100 text-purple-700">
+          Indireta
+        </span>
       </h3>
 
       {emendaStatus && (isEmAnaliseDocumental || isDocumentalAprovada || isDevolvida) && (

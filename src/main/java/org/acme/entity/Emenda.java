@@ -115,6 +115,30 @@ public class Emenda {
     @Column(name = "secretaria_destino", length = 255)
     public String secretariaDestino;
 
+    /**
+     * Tipo de transferência: Direta ou Indireta
+     */
+    @Column(name = "tipo_transferencia", length = 20)
+    public String tipoTransferencia = "Direta";
+
+    /**
+     * ID da dotação orçamentária vinculada
+     */
+    @Column(name = "dotacao_orcamentaria_id")
+    public Long dotacaoOrcamentariaId;
+
+    /**
+     * Texto completo da dotação orçamentária (desnormalizado para exibição rápida)
+     */
+    @Column(name = "dotacao_orcamentaria_texto", length = 500)
+    public String dotacaoOrcamentariaTexto;
+
+    /**
+     * Código da função orçamentária (referência à tabela funcoes_orcamentarias)
+     */
+    @Column(name = "funcao_codigo", length = 10)
+    public String funcaoCodigo;
+
     @Column(name = "data_criacao")
     public OffsetDateTime createTime;
 

@@ -105,7 +105,8 @@ public class UserService {
             user.nomeCompleto,
             user.role.name(),    // Include role for RBAC
             user.status.name(),  // Include status
-            java.util.Collections.emptyList() // Novo usuário sem instituições
+            java.util.Collections.emptyList(), // Novo usuário sem instituições
+            user.secretaria
         );
 
         // IMPORTANT: Only send email AFTER all validations and persistence succeed

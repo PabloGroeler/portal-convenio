@@ -1,0 +1,41 @@
+-- V45: Create funcoes_orcamentarias table and seed data
+CREATE TABLE IF NOT EXISTS funcoes_orcamentarias (
+    id        BIGSERIAL PRIMARY KEY,
+    codigo    VARCHAR(10) NOT NULL UNIQUE,
+    descricao VARCHAR(200) NOT NULL,
+    ativo     BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO funcoes_orcamentarias (codigo, descricao) VALUES
+('00', 'GABINETE DO PREFEITO'),
+('01', 'LEGISLATIVA'),
+('02', 'JUDICIÁRIA'),
+('03', 'ESSENCIAL À JUSTIÇA'),
+('04', 'ADMINISTRAÇÃO'),
+('05', 'DEFESA NACIONAL'),
+('06', 'SEGURANÇA PÚBLICA'),
+('07', 'RELAÇÕES EXTERIORES'),
+('08', 'ASSISTÊNCIA SOCIAL'),
+('09', 'PREVIDÊNCIA MUNICIPAL'),
+('10', 'SAÚDE'),
+('11', 'TRABALHO'),
+('12', 'EDUCAÇÃO'),
+('13', 'CULTURA'),
+('14', 'DIREITOS DE CIDADANIA'),
+('15', 'URBANISMO'),
+('16', 'HABITAÇÃO'),
+('17', 'SANEAMENTO'),
+('18', 'GESTÃO AMBIENTAL'),
+('19', 'CIÊNCIA E TECNOLOGIA'),
+('20', 'AGRICULTURA'),
+('21', 'ORGANIZAÇÃO AGRÁRIA'),
+('22', 'INDÚSTRIA'),
+('23', 'COMÉRCIO E SERVIÇOS'),
+('24', 'COMUNICAÇÕES'),
+('25', 'ENERGIA'),
+('26', 'TRANSPORTE'),
+('27', 'DESPORTO E LAZER'),
+('28', 'ENCARGOS ESPECIAIS'),
+('99', 'RESERVA DE CONTINGÊNCIA')
+ON CONFLICT DO NOTHING;
+

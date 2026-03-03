@@ -83,7 +83,8 @@ public class AuthResource {
                 user.nomeCompleto,
                 user.role.name(),      // Include role for RBAC
                 user.status.name(),    // Include status
-                instituicoes
+                instituicoes,
+                user.secretaria        // Secretaria vinculada (SECRETARIA role)
             );
 
             // AUDIT LOG - Login bem sucedido

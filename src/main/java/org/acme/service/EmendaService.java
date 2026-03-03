@@ -95,6 +95,71 @@ public class EmendaService {
     }
 
     /**
+     * Story 4 — Role-based visibility filter.
+     *
+     * Rules applied on top of listAllWithDetails():
+     *   • SECRETARIA: can see "Análise de demanda aprovada" only for Direta.
+     *     Indireta at that status belongs to Convênios.
+     *     Additionally filtered to only the secretaria the user is linked to.
+     *   • CONVENIOS: can see "Análise de demanda aprovada" only for Indireta.
+     *     Direta at that status goes back to the Secretaria.
+     *   • ADMIN / ORCAMENTO / others: see everything (no filter applied here).
+     */
+    @Transactional
+    public List<EmendaDetailDTO> listWithDetailsForUser(String username) {
+        org.acme.entity.User caller = org.acme.entity.User.findByUsername(username);
+        List<EmendaDetailDTO> all = listAllWithDetails();
+        if (caller == null) return all;
+
+        org.acme.entity.User.UserRole role = caller.role;
+
+        // ADMIN, ORCAMENTO and unrecognised roles: no additional filter
+        if (role == org.acme.entity.User.UserRole.ADMIN ||
+            role == org.acme.entity.User.UserRole.ORCAMENTO) {
+            return all;
+        }
+
+        final String DEMANDA_APROVADA = "Análise de demanda aprovada";
+
+        if (role == org.acme.entity.User.UserRole.SECRETARIA) {
+            // Secretaria sees:
+            //   • Everything that is NOT "Análise de demanda aprovada + Indireta"
+            //     (that belongs to Convênios)
+            //   • For statuses that require secretaria routing, filter to own secretaria
+            final String userSecretaria = caller.secretaria;
+            return all.stream().filter(e -> {
+                boolean isDemandaAprovada = DEMANDA_APROVADA.equalsIgnoreCase(e.status);
+                boolean isIndireta = "Indireta".equalsIgnoreCase(e.tipoTransferencia);
+                // Hide: Demanda Aprovada + Indireta (that's for Convênios)
+                if (isDemandaAprovada && isIndireta) return false;
+                // For emendas with secretariaDestino, only show those that match the user's secretaria
+                if (e.secretariaDestino != null && !e.secretariaDestino.isBlank() &&
+                    userSecretaria != null && !userSecretaria.isBlank()) {
+                    return e.secretariaDestino.equalsIgnoreCase(userSecretaria);
+                }
+                return true;
+            }).collect(Collectors.toList());
+        }
+
+        if (role == org.acme.entity.User.UserRole.CONVENIOS) {
+            // Convênios sees:
+            //   • Everything that is NOT "Análise de demanda aprovada + Direta"
+            //     (that goes back to the Secretaria)
+            return all.stream().filter(e -> {
+                boolean isDemandaAprovada = DEMANDA_APROVADA.equalsIgnoreCase(e.status);
+                boolean isDireta = "Direta".equalsIgnoreCase(e.tipoTransferencia) ||
+                                   e.tipoTransferencia == null; // null defaults to Direta
+                // Hide: Demanda Aprovada + Direta (not for Convênios)
+                if (isDemandaAprovada && isDireta) return false;
+                return true;
+            }).collect(Collectors.toList());
+        }
+
+        // All other roles (OPERADOR, GESTOR, ANALISTA, JURIDICO): no filter
+        return all;
+    }
+
+    /**
      * Get a single emenda with enriched institution and councilor data
      */
     public EmendaDetailDTO findByIdWithDetails(String id) {
@@ -231,6 +296,10 @@ public class EmendaService {
         }
         existing.description = updated.description;
         existing.objectDetail = updated.objectDetail;
+        existing.tipoTransferencia = updated.tipoTransferencia;
+        existing.dotacaoOrcamentariaId = updated.dotacaoOrcamentariaId;
+        existing.dotacaoOrcamentariaTexto = updated.dotacaoOrcamentariaTexto;
+        existing.funcaoCodigo = updated.funcaoCodigo;
         existing.updateTime = OffsetDateTime.now();
 
         // Register generic update in history
@@ -337,10 +406,20 @@ public class EmendaService {
                 acaoRegistrada = "EM_ANALISE_DEMANDA";
                 break;
             case "APROVAR_DEMANDA":
-                novoStatus = "Análise de demanda aprovada";
-                acaoRegistrada = "ANALISE_DEMANDA_APROVADA";
-                acao.observacao = "Viabilidade da demanda aprovada, encaminhado ao Setor de Convênios" +
-                    (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                // Story 3: only route to Convênios when tipoTransferencia = "Indireta"
+                boolean isIndireta = "Indireta".equalsIgnoreCase(emenda.tipoTransferencia);
+                if (isIndireta) {
+                    novoStatus = "Análise de demanda aprovada";
+                    acaoRegistrada = "ANALISE_DEMANDA_APROVADA";
+                    acao.observacao = "Viabilidade da demanda aprovada, encaminhado ao Setor de Convênios" +
+                        (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                } else {
+                    // Direta: demand approved, no Convênios step needed
+                    novoStatus = "Análise de demanda aprovada";
+                    acaoRegistrada = "ANALISE_DEMANDA_APROVADA";
+                    acao.observacao = "Viabilidade da demanda aprovada, encaminhado para execução direta" +
+                        (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
+                }
                 break;
             case "REPROVAR_DEMANDA":
                 novoStatus = "Devolvida por incompatibilidade de demanda";
@@ -349,16 +428,32 @@ public class EmendaService {
                     (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
                 break;
             case "INICIAR_ANALISE_DOCUMENTAL":
+                // Story 5: Direta executions are finalised after demand approval — no documental step
+                if (!"Indireta".equalsIgnoreCase(emenda.tipoTransferencia)) {
+                    throw new IllegalArgumentException(
+                        "Análise documental não se aplica a emendas com execução Direta. " +
+                        "O processo é considerado encerrado após a aprovação da demanda.");
+                }
                 novoStatus = "Em análise documental";
                 acaoRegistrada = "EM_ANALISE_DOCUMENTAL";
                 break;
             case "APROVAR_DOCUMENTAL":
+                // Story 5: guard — should never reach here for Direta
+                if (!"Indireta".equalsIgnoreCase(emenda.tipoTransferencia)) {
+                    throw new IllegalArgumentException(
+                        "Aprovação documental não se aplica a emendas com execução Direta.");
+                }
                 novoStatus = "Análise documental aprovada";
                 acaoRegistrada = "ANALISE_DOCUMENTAL_APROVADA";
                 acao.observacao = "Viabilidade documental aprovada, encaminhado para elaboração do termo de fomento e empenho" +
                     (acao.observacao != null && !acao.observacao.isBlank() ? ". " + acao.observacao : "");
                 break;
             case "REPROVAR_DOCUMENTAL":
+                // Story 5: guard — should never reach here for Direta
+                if (!"Indireta".equalsIgnoreCase(emenda.tipoTransferencia)) {
+                    throw new IllegalArgumentException(
+                        "Reprovação documental não se aplica a emendas com execução Direta.");
+                }
                 novoStatus = "Devolvida por inviabilidade documental";
                 acaoRegistrada = "DEVOLVIDA_INVIABILIDADE_DOCUMENTAL";
                 acao.observacao = "Inviabilidade documental, encaminhada ao setor de Orçamento" +
