@@ -1,12 +1,17 @@
 package org.acme.entity;
 
-import io.quarkus.hibernate.orm.panache.PanacheEntity;
+import io.quarkus.hibernate.orm.panache.PanacheEntityBase;
 import jakarta.persistence.*;
 import java.time.OffsetDateTime;
 
 @Entity
 @Table(name = "usuarios_instituicoes")
-public class UsuarioInstituicao extends PanacheEntity {
+public class UsuarioInstituicao extends PanacheEntityBase {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "usuarios_instituicoes_seq")
+    @SequenceGenerator(name = "usuarios_instituicoes_seq", sequenceName = "usuarios_instituicoes_id_seq", allocationSize = 1)
+    public Long id;
 
     @Column(name = "usuario_id", nullable = false)
     public Long usuarioId;

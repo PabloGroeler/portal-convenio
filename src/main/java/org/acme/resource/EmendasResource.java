@@ -13,7 +13,6 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.SecurityContext;
 import org.acme.entity.Emenda;
 import org.acme.service.*;
 import org.acme.dto.EmendaAcaoDTO;
@@ -26,9 +25,9 @@ import java.util.List;
 @Path("/api/emendas")
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
-public class EmendasResource {
+public class EmendasResource extends BaseResource {
 
-    private static final Logger log = Logger.getLogger(EmendasResource.class);
+    private static final Logger LOG = Logger.getLogger(EmendasResource.class);
 
     @Inject
     EmendaService emendaService;
@@ -54,15 +53,6 @@ public class EmendasResource {
     @Context
     ContainerRequestContext httpRequest;
 
-    @Context
-    SecurityContext securityContext;
-
-    private String getCurrentUser() {
-        if (securityContext != null && securityContext.getUserPrincipal() != null) {
-            return securityContext.getUserPrincipal().getName();
-        }
-        return "sistema";
-    }
 
     @GET
     public List<Emenda> list() {
@@ -72,14 +62,14 @@ public class EmendasResource {
     @GET
     @Path("/with-details")
     public List<EmendaDetailDTO> listWithDetails() {
-        log.info("🔍 GET /api/emendas/with-details - Listing emendas for user: " + getCurrentUser());
+        LOG.info("🔍 GET /api/emendas/with-details - Listing emendas for user: " + getCurrentUser());
         try {
             // Story 4: apply role-based visibility filter
             List<EmendaDetailDTO> result = emendaService.listWithDetailsForUser(getCurrentUser());
-            log.info("✅ Found " + (result != null ? result.size() : 0) + " emendas for user");
+            LOG.info("✅ Found " + (result != null ? result.size() : 0) + " emendas for user");
             return result;
         } catch (Exception e) {
-            log.error("❌ Error listing emendas with details", e);
+            LOG.error("❌ Error listing emendas with details", e);
             throw e;
         }
     }
@@ -107,8 +97,8 @@ public class EmendasResource {
     @POST
     public Response create(Emenda emenda) {
         try {
-            log.info("🔵 POST /api/emendas - Creating new emenda");
-            log.info("📋 Received emenda data: officialCode=" + emenda.officialCode +
+            LOG.info("🔵 POST /api/emendas - Creating new emenda");
+            LOG.info("📋 Received emenda data: officialCode=" + emenda.officialCode +
                 ", councilorId=" + emenda.councilorId +
                 ", institutionId=" + emenda.institutionId +
                 ", value=" + emenda.value +
@@ -118,30 +108,30 @@ public class EmendasResource {
             if (emenda.statusCicloVida == null || emenda.statusCicloVida.isBlank()) {
                 emenda.statusCicloVida = "Recebido";
             }
-            log.info("✅ Status ciclo vida: " + emenda.statusCicloVida);
+            LOG.info("✅ Status ciclo vida: " + emenda.statusCicloVida);
             statusCicloVidaEmendaService.validateOrThrow(emenda.statusCicloVida);
             emenda.statusCicloVida = statusCicloVidaEmendaService.normalize(emenda.statusCicloVida);
 
             // JIRA 4: validate tipo de emenda (mapped in 'classification')
-            log.info("🔍 Validating tipo emenda (classification): " + emenda.classification);
+            LOG.info("🔍 Validating tipo emenda (classification): " + emenda.classification);
             tipoEmendaService.validateCodigoAtivoOrThrow(emenda.classification);
 
             // JIRA 6: validate esfera
-            log.info("🔍 Validating esfera: " + emenda.esfera);
+            LOG.info("🔍 Validating esfera: " + emenda.esfera);
             esferaEmendaService.validateOrThrow(emenda.esfera);
             emenda.esfera = esferaEmendaService.normalize(emenda.esfera);
 
             // JIRA 7: validate convênio fields
-            log.info("🔍 Validating convenio: existeConvenio=" + emenda.existeConvenio +
+            LOG.info("🔍 Validating convenio: existeConvenio=" + emenda.existeConvenio +
                 ", numeroConvenio=" + emenda.numeroConvenio +
                 ", anoConvenio=" + emenda.anoConvenio);
             convenioValidationService.validateOrThrow(emenda.existeConvenio, emenda.numeroConvenio, emenda.anoConvenio);
             convenioValidationService.normalize(emenda);
 
             // JIRA 5: validate business rules per tipo (executed in service)
-            log.info("✅ All validations passed, creating emenda...");
+            LOG.info("✅ All validations passed, creating emenda...");
             Emenda created = emendaService.create(emenda, getCurrentUser());
-            log.info("✅ Emenda created successfully with id: " + created.id);
+            LOG.info("✅ Emenda created successfully with id: " + created.id);
 
             // AUDIT LOG - Criação de emenda
             String currentUser = getCurrentUser();
@@ -156,12 +146,12 @@ public class EmendasResource {
 
             return Response.status(Response.Status.CREATED).entity(EmendaDetailDTO.fromEmenda(created)).build();
         } catch (IllegalArgumentException e) {
-            log.error("❌ Validation error creating emenda: " + e.getMessage());
+            LOG.error("❌ Validation error creating emenda: " + e.getMessage());
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
                     .build();
         } catch (Exception e) {
-            log.error("❌ Unexpected error creating emenda", e);
+            LOG.error("❌ Unexpected error creating emenda", e);
             return Response.status(Response.Status.INTERNAL_SERVER_ERROR)
                     .entity("{\"error\": \"Erro interno ao criar emenda: " + e.getMessage().replace("\"", "\\\"") + "\"}")
                     .build();
@@ -336,44 +326,13 @@ public class EmendasResource {
             EmendaImportService.ImportSummary summary = externalSyncService.syncNow(getCurrentUser());
             return Response.ok(summary).build();
         } catch (IllegalStateException e) {
-            // e.g. missing external token
             return Response.status(Response.Status.BAD_REQUEST)
                     .entity("{\"error\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
                     .build();
         } catch (Exception e) {
-            // Propagate a helpful error (external 401, parsing, etc.)
             return Response.status(Response.Status.BAD_GATEWAY)
                     .entity("{\"error\": \"Falha ao sincronizar com API externa\", \"details\": \"" + e.getMessage().replace("\"", "\\\"") + "\"}")
                     .build();
         }
-    }
-
-    private Long getCurrentUserId() {
-        if (securityContext != null && securityContext.getUserPrincipal() != null) {
-            try {
-                String username = securityContext.getUserPrincipal().getName();
-                org.acme.entity.User user = org.acme.entity.User.find("username", username).firstResult();
-                return user != null ? user.id : null;
-            } catch (Exception e) {
-                log.warn("Error getting current user ID: " + e.getMessage());
-            }
-        }
-        return null;
-    }
-
-    private String getClientIP() {
-        if (httpRequest == null) {
-            return "unknown";
-        }
-        // Try to get real IP from headers (in case of proxy/load balancer)
-        String ip = httpRequest.getHeaderString("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = httpRequest.getHeaderString("X-Real-IP");
-        }
-        // If multiple IPs in X-Forwarded-For, get the first one
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip != null && !ip.isEmpty() ? ip : "unknown";
     }
 }

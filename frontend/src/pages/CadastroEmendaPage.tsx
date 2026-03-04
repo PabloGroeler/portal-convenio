@@ -1,9 +1,10 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import emendaService from '../services/emendaService';
 import institutionService, { type InstitutionDTO } from '../services/institutionService';
 import councilorService, { type CouncilorDTO } from '../services/councilorService';
 import tipoEmendaService, { type TipoEmendaDTO } from '../services/tipoEmendaService';
+import funcaoOrcamentariaService, { type FuncaoOrcamentariaDTO } from '../services/funcaoOrcamentariaService';
 import { formatCurrency, parseCurrency } from '../utils/formatters';
 import api from '../services/api';
 
@@ -38,6 +39,7 @@ interface EmendaForm {
   tipoTransferencia: string;
   dotacaoOrcamentariaId?: number;
   dotacaoOrcamentariaTexto?: string;
+  funcaoCodigo?: string;
 }
 
 const CadastroEmendaPage: React.FC = () => {
@@ -71,11 +73,14 @@ const CadastroEmendaPage: React.FC = () => {
     tipoTransferencia: 'Direta',
     dotacaoOrcamentariaId: undefined,
     dotacaoOrcamentariaTexto: '',
+    funcaoCodigo: '',
   });
 
   const [institutions, setInstitutions] = useState<InstitutionDTO[]>([]);
   const [councilors, setCouncilors] = useState<CouncilorDTO[]>([]);
   const [tiposEmenda, setTiposEmenda] = useState<TipoEmendaDTO[]>([]);
+  const [funcoesOrcamentarias, setFuncoesOrcamentarias] = useState<FuncaoOrcamentariaDTO[]>([]);
+  const [dotacoesAll, setDotacoesAll] = useState<DotacaoOrcamentaria[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
@@ -85,12 +90,30 @@ const CadastroEmendaPage: React.FC = () => {
   const [institutionSearch, setInstitutionSearch] = useState('');
   const [councilorSearch, setCouncilorSearch] = useState('');
 
-  // Dotação orçamentária search
-  const [dotacaoSearch, setDotacaoSearch] = useState('');
-  const [dotacaoResults, setDotacaoResults] = useState<DotacaoOrcamentaria[]>([]);
-  const [dotacaoLoading, setDotacaoLoading] = useState(false);
-  const [showDotacaoDropdown, setShowDotacaoDropdown] = useState(false);
+  // Dotação combobox state
+  const [dotacaoQuery, setDotacaoQuery] = useState('');
+  const [dotacaoOpen, setDotacaoOpen] = useState(false);
   const dotacaoRef = useRef<HTMLDivElement>(null);
+
+  const dotacaoFiltered = useCallback(() => {
+    const q = dotacaoQuery.trim().toLowerCase();
+    if (!q) return dotacoesAll.slice(0, 50);
+    return dotacoesAll.filter(d =>
+      (d.descricao || '').toLowerCase().includes(q) ||
+      d.codigoReduzido.toLowerCase().includes(q)
+    ).slice(0, 50);
+  }, [dotacaoQuery, dotacoesAll]);
+
+  // Close dotacao dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (dotacaoRef.current && !dotacaoRef.current.contains(e.target as Node)) {
+        setDotacaoOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   useEffect(() => {
     loadInitialData();
@@ -104,14 +127,25 @@ const CadastroEmendaPage: React.FC = () => {
 
   const loadInitialData = async () => {
     try {
-      const [instData, councData, tiposData] = await Promise.all([
+      const [instData, councData, tiposData, funcoesData, dotacoesData] = await Promise.all([
         institutionService.list(),
         councilorService.list(),
         tipoEmendaService.list(),
+        funcaoOrcamentariaService.list(),
+        api.get<DotacaoOrcamentaria[]>('/dotacoes-orcamentarias/search?limit=500').then(r => {
+          // Deduplicate by codigoReduzido client-side
+          const seen = new Map<string, DotacaoOrcamentaria>();
+          for (const d of r.data) {
+            if (!seen.has(d.codigoReduzido)) seen.set(d.codigoReduzido, d);
+          }
+          return Array.from(seen.values());
+        }).catch(() => [] as DotacaoOrcamentaria[]),
       ]);
       setInstitutions(instData);
       setCouncilors(councData);
       setTiposEmenda(tiposData);
+      setFuncoesOrcamentarias(funcoesData);
+      setDotacoesAll(dotacoesData);
     } catch (err) {
       console.error('Erro ao carregar dados:', err);
       setError('Erro ao carregar dados iniciais');
@@ -146,9 +180,10 @@ const CadastroEmendaPage: React.FC = () => {
         tipoTransferencia: data.tipoTransferencia || 'Direta',
         dotacaoOrcamentariaId: data.dotacaoOrcamentariaId,
         dotacaoOrcamentariaTexto: data.dotacaoOrcamentariaTexto || '',
+        funcaoCodigo: data.funcaoCodigo || '',
       });
       if (data.dotacaoOrcamentariaTexto) {
-        setDotacaoSearch(data.dotacaoOrcamentariaTexto);
+        setDotacaoQuery(data.dotacaoOrcamentariaTexto);
       }
     } catch (err) {
       console.error('Erro ao carregar emenda:', err);
@@ -428,18 +463,21 @@ const CadastroEmendaPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Categoria */}
+            {/* Função / Área de Atuação */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Categoria
+                Função / Área de Atuação
               </label>
-              <input
-                type="text"
-                value={form.category}
-                onChange={(e) => handleChange('category', e.target.value)}
+              <select
+                value={form.funcaoCodigo ?? ''}
+                onChange={e => handleChange('funcaoCodigo', e.target.value)}
                 className="w-full border rounded px-3 py-2"
-                placeholder="Ex: SAÚDE, EDUCAÇÃO"
-              />
+              >
+                <option value="">Selecione a função / área de atuação...</option>
+                {funcoesOrcamentarias.map(f => (
+                  <option key={f.codigo} value={f.codigo}>{f.descricao}</option>
+                ))}
+              </select>
             </div>
 
             {/* Esfera */}
@@ -458,10 +496,10 @@ const CadastroEmendaPage: React.FC = () => {
               </select>
             </div>
 
-            {/* Tipo de Transferência */}
+            {/* Forma de Execução */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Tipo de Transferência
+                Forma de Execução
               </label>
               <div className="flex gap-6 mt-1">
                 {['Direta', 'Indireta'].map(tipo => (
@@ -481,72 +519,58 @@ const CadastroEmendaPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Dotação Orçamentária — full width */}
+          {/* Dotação Orçamentária — combobox com pesquisa */}
           <div className="mt-4" ref={dotacaoRef}>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Dotação Orçamentária
-              <span className="text-xs text-gray-400 ml-2">Digite o código reduzido (ex: 1363) ou parte da descrição</span>
             </label>
             <div className="relative">
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <input
-                    type="text"
-                    value={dotacaoSearch}
-                    onChange={e => searchDotacao(e.target.value)}
-                    onFocus={() => dotacaoResults.length > 0 && setShowDotacaoDropdown(true)}
-                    placeholder="🔍 Buscar por código reduzido ou descrição..."
-                    className="w-full border rounded px-3 py-2 pr-10 text-sm"
-                  />
-                  {dotacaoLoading && (
-                    <span className="absolute right-3 top-2.5 text-gray-400 text-xs">...</span>
-                  )}
-                </div>
+              <div
+                className={`flex items-center border rounded bg-white px-3 py-2 gap-2 cursor-text ${dotacaoOpen ? 'ring-2 ring-blue-400 border-blue-400' : 'border-gray-300'}`}
+                onClick={() => setDotacaoOpen(true)}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-gray-400 shrink-0"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input
+                  type="text"
+                  value={dotacaoQuery}
+                  onChange={e => { setDotacaoQuery(e.target.value); setDotacaoOpen(true); }}
+                  onFocus={() => setDotacaoOpen(true)}
+                  placeholder="Pesquisar dotação pela descrição..."
+                  className="flex-1 text-sm outline-none bg-transparent"
+                />
                 {form.dotacaoOrcamentariaId && (
-                  <button type="button" onClick={clearDotacao}
-                    className="px-3 py-2 text-xs text-red-600 border border-red-200 rounded hover:bg-red-50">
-                    ✕ Limpar
+                  <button type="button"
+                    onClick={e => { e.stopPropagation(); handleChange('dotacaoOrcamentariaId', undefined); handleChange('dotacaoOrcamentariaTexto', ''); setDotacaoQuery(''); }}
+                    className="text-gray-400 hover:text-red-500 shrink-0 text-xs">✕
                   </button>
                 )}
               </div>
 
-              {/* Selected badge */}
-              {form.dotacaoOrcamentariaId && (
-                <div className="mt-1.5 text-xs text-green-700 bg-green-50 border border-green-200 rounded px-2 py-1">
-                  ✅ Dotação selecionada (ID: {form.dotacaoOrcamentariaId})
-                </div>
-              )}
-
-              {/* Dropdown results */}
-              {showDotacaoDropdown && dotacaoResults.length > 0 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-72 overflow-y-auto">
-                  {dotacaoResults.map(d => (
-                    <button
-                      key={d.id}
-                      type="button"
-                      onClick={() => selectDotacao(d)}
-                      className="w-full text-left px-4 py-3 hover:bg-blue-50 border-b border-gray-100 last:border-0"
-                    >
-                      <div className="flex items-start gap-3">
-                        <span className="shrink-0 text-xs font-mono font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded mt-0.5">
-                          {d.codigoReduzido}
-                        </span>
-                        <div>
-                          <div className="text-xs text-gray-800 font-medium line-clamp-2">{d.descricao}</div>
-                          <div className="text-xs text-gray-400 font-mono mt-0.5 truncate">{d.dotacao}</div>
-                        </div>
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {showDotacaoDropdown && !dotacaoLoading && dotacaoResults.length === 0 && dotacaoSearch.length > 1 && (
-                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow px-4 py-3 text-sm text-gray-500">
-                  Nenhuma dotação encontrada para "{dotacaoSearch}"
+              {dotacaoOpen && (
+                <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-64 overflow-y-auto">
+                  {dotacaoFiltered().length === 0 ? (
+                    <div className="px-4 py-3 text-sm text-gray-500">Nenhuma dotação encontrada</div>
+                  ) : (
+                    dotacaoFiltered().map(d => (
+                      <button key={d.id} type="button"
+                        onMouseDown={() => {
+                          handleChange('dotacaoOrcamentariaId', d.id);
+                          handleChange('dotacaoOrcamentariaTexto', `${d.codigoReduzido} - ${d.descricao || d.dotacao}`);
+                          setDotacaoQuery(`${d.codigoReduzido} — ${d.descricao || d.dotacao}`);
+                          setDotacaoOpen(false);
+                        }}
+                        className="w-full text-left px-4 py-2.5 hover:bg-blue-50 border-b border-gray-100 last:border-0">
+                        <span className="text-xs font-mono font-bold text-blue-700 mr-2">{d.codigoReduzido}</span>
+                        <span className="text-sm text-gray-700">{d.descricao || d.dotacao}</span>
+                      </button>
+                    ))
+                  )}
                 </div>
               )}
             </div>
+            {form.dotacaoOrcamentariaId && (
+              <p className="text-xs text-green-700 mt-1">✅ Dotação selecionada</p>
+            )}
           </div>
 
           {/* Descrição */}
@@ -560,12 +584,10 @@ const CadastroEmendaPage: React.FC = () => {
               onChange={(e) => handleChange('description', e.target.value)}
               className="w-full border rounded px-3 py-2"
               rows={3}
-              maxLength={250}
+              maxLength={5000}
               placeholder="Descrição da emenda..."
             />
-            <p className="text-xs text-gray-500 mt-1">
-              {form.description.length}/250 caracteres
-            </p>
+            <p className="text-xs text-gray-500 mt-1">{form.description.length}/5000 caracteres</p>
           </div>
         </section>
 

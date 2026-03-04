@@ -26,7 +26,7 @@ public class DotacaoOrcamentariaResource {
             @QueryParam("dotacao")        String dotacao,
             @QueryParam("limit")          @DefaultValue("20") int limit) {
         try {
-            List<DotacaoOrcamentaria> results = repository.search(codigoReduzido, dotacao, Math.min(limit, 100));
+            List<DotacaoOrcamentaria> results = repository.search(codigoReduzido, dotacao, Math.min(limit, 500));
             return Response.ok(results).build();
         } catch (Exception e) {
             log.errorf(e, "Erro ao buscar dotações");

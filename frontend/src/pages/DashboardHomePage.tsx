@@ -91,7 +91,7 @@ const DashboardHomePage: React.FC = () => {
       </div>
 
       {/* ── Aviso sem instituição ── */}
-      {!loading && !hasInstituicoes && (
+      {!loading && !hasInstituicoes && user?.role === 'OPERADOR' && (
         <div className="bg-amber-50 border border-amber-200 rounded-xl p-5 flex gap-4">
           <div className="text-2xl">⚠️</div>
           <div>

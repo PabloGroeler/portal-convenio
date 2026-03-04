@@ -51,21 +51,12 @@ import { StatusOSCBadge, StatusOSCPanel } from '../components/StatusOSCComponent
 import tipoDocumentoConfigService from '../services/tipoDocumentoConfigService';
 import type { TipoDocumentoConfig } from '../services/tipoDocumentoConfigService';
 import DocumentosPessoaisUpload from '../components/DocumentosPessoaisUpload';
+import funcaoOrcamentariaService, { type FuncaoOrcamentariaDTO } from '../services/funcaoOrcamentariaService';
 
 const UFS = [
   'AC','AL','AP','AM','BA','CE','DF','ES','GO','MA','MT','MS','MG','PA','PB','PR','PE','PI','RJ','RN','RS','RO','RR','SC','SP','SE','TO',
 ];
 
-const AREAS_ATUACAO_OPTIONS = [
-  'Assistência Social',
-  'Saúde',
-  'Educação',
-  'Cultura',
-  'Esporte',
-  'Meio Ambiente',
-  'Direitos Humanos',
-  'Outra',
-];
 
 type FormState = Partial<InstitutionDTO>;
 
@@ -166,6 +157,9 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
   const [documentConfigs, setDocumentConfigs] = useState<TipoDocumentoConfig[]>([]);
   const [loadingConfigs, setLoadingConfigs] = useState(false);
   const [selectedDocConfig, setSelectedDocConfig] = useState<TipoDocumentoConfig | null>(null);
+
+  // Função / Área de Atuação - loaded from funcoes_orcamentarias
+  const [funcoesOrcamentarias, setFuncoesOrcamentarias] = useState<FuncaoOrcamentariaDTO[]>([]);
 
   // File viewer modal state
   const [showFileViewer, setShowFileViewer] = useState(false);
@@ -1136,6 +1130,11 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
     };
   }, [editId]);
 
+  // Load funcoes orcamentarias for Função / Área de Atuação field
+  useEffect(() => {
+    funcaoOrcamentariaService.list().then(setFuncoesOrcamentarias).catch(() => setFuncoesOrcamentarias([]));
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -1573,22 +1572,47 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
           </div>
 
           <div className="mt-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Área de Atuação</label>
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
-              {AREAS_ATUACAO_OPTIONS.map((opt) => {
-                const checked = (form.areasAtuacao ?? []).includes(opt);
-                return (
-                  <label key={opt} className="flex items-center gap-2 text-sm text-gray-700">
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => handleToggleArea(opt)}
-                    />
-                    {opt}
-                  </label>
-                );
-              })}
-            </div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Função / Área de Atuação</label>
+            <select
+              className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+              value=""
+              onChange={(e) => {
+                const code = e.target.value;
+                if (code && !(form.areasAtuacao ?? []).includes(code)) {
+                  handleToggleArea(code);
+                }
+              }}
+            >
+              <option value="">Selecione uma função / área de atuação...</option>
+              {funcoesOrcamentarias
+                .filter((f) => !(form.areasAtuacao ?? []).includes(f.codigo))
+                .map((f) => (
+                  <option key={f.codigo} value={f.codigo}>{f.descricao}</option>
+                ))}
+            </select>
+            {(form.areasAtuacao ?? []).length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {(form.areasAtuacao ?? []).map((code) => {
+                  const descricao = funcoesOrcamentarias.find((f) => f.codigo === code)?.descricao ?? code;
+                  return (
+                    <span
+                      key={code}
+                      className="inline-flex items-center gap-1 bg-blue-100 text-blue-800 text-xs font-medium px-2.5 py-1 rounded-full"
+                    >
+                      {descricao}
+                      <button
+                        type="button"
+                        onClick={() => handleToggleArea(code)}
+                        className="ml-1 text-blue-600 hover:text-blue-900 font-bold leading-none"
+                        title="Remover"
+                      >
+                        ×
+                      </button>
+                    </span>
+                  );
+                })}
+              </div>
+            )}
           </div>
         </section>
 

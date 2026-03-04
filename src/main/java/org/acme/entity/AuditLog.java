@@ -14,7 +14,8 @@ import java.time.LocalDateTime;
 public class AuditLog extends PanacheEntityBase {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "logs_auditoria_seq")
+    @SequenceGenerator(name = "logs_auditoria_seq", sequenceName = "logs_auditoria_id_seq", allocationSize = 1)
     public Long id;
 
     @Column(name = "data_hora", nullable = false)

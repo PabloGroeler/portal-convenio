@@ -104,7 +104,6 @@ function App() {
               <Route path="/plano/full/:id" element={<PlanoFullPage />} />
               <Route path="/plano/prestacao-contas" element={<PrestacaoContasPage />} />
 
-              {/* Full-screen admin pages */}
               {/* Redirect legacy routes to dashboard */}
               <Route path="/emendas" element={<Navigate to="/dashboard/emendas" replace />} />
               <Route path="/emendas/:id" element={<Navigate to="/dashboard/emendas" replace />} />
@@ -113,9 +112,11 @@ function App() {
                 element={<Navigate to="/dashboard/emendas" replace />}
               />
 
+              {/* Standalone landing page — no navbar/footer */}
+              <Route path="/" element={<HomePage />} />
+
               {/* All other routes rendered inside Layout */}
               <Route path="/*" element={<Layout />}>
-                <Route index element={<HomePage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
 

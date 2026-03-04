@@ -39,6 +39,8 @@ interface Emenda {
   justificativa?: string;
   previsaoConclusao?: string;
   secretariaDestino?: string;
+  dotacaoOrcamentariaId?: number;
+  dotacaoOrcamentariaTexto?: string;
 }
 
 const EmendaDetailPage: React.FC = () => {
@@ -49,8 +51,6 @@ const EmendaDetailPage: React.FC = () => {
   const isAdmin = hasRole(UserRole.ADMIN);
   const isSecretaria = hasRole(UserRole.SECRETARIA);
   const isConvenios = hasRole(UserRole.CONVENIOS);
-  // Can edit Tipo de Emenda and Tipo de Execução
-  const canEditTipos = isAdmin || hasRole(UserRole.ORCAMENTO);
 
   const [emenda, setEmenda] = useState<Emenda | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,11 +62,6 @@ const EmendaDetailPage: React.FC = () => {
   const [despachoObservacao, setDespachoObservacao] = useState('');
   const [executingAction, setExecutingAction] = useState(false);
 
-  // Inline edit state for Tipo de Emenda + Tipo de Execução
-  const [editingTipos, setEditingTipos] = useState(false);
-  const [editClassification, setEditClassification] = useState('');
-  const [editTipoTransferencia, setEditTipoTransferencia] = useState('Direta');
-  const [savingTipos, setSavingTipos] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -75,8 +70,6 @@ const EmendaDetailPage: React.FC = () => {
     api.get<Emenda>(`/emendas/${id}/with-details`)
       .then(({ data }) => {
         setEmenda(data);
-        setEditClassification(data.classification || '');
-        setEditTipoTransferencia(data.tipoTransferencia || 'Direta');
         setLoadingHistorico(true);
         Promise.all([
           emendaService.getHistorico(id).catch(() => [] as EmendaHistoricoDTO[]),
@@ -93,29 +86,6 @@ const EmendaDetailPage: React.FC = () => {
       .finally(() => setLoading(false));
   }, [id]);
 
-  const handleSaveTipos = async () => {
-    if (!id || !emenda) return;
-    setSavingTipos(true);
-    try {
-      // PATCH only the two fields via the general update endpoint
-      const payload = {
-        ...emenda,
-        classification: editClassification,
-        tipoTransferencia: editTipoTransferencia,
-      };
-      const { data } = await api.put<Emenda>(`/emendas/${id}`, payload);
-      setEmenda((prev) => prev ? {
-        ...prev,
-        classification: data.classification ?? editClassification,
-        tipoTransferencia: data.tipoTransferencia ?? editTipoTransferencia,
-      } : prev);
-      setEditingTipos(false);
-    } catch (err: any) {
-      alert(`Erro ao salvar: ${err?.response?.data?.error || err.message || 'Erro desconhecido'}`);
-    } finally {
-      setSavingTipos(false);
-    }
-  };
 
   const handleAcao = async (acao: 'APROVAR' | 'DEVOLVER' | 'REPROVAR') => {
     if (!id || !emenda) return;
@@ -145,10 +115,6 @@ const EmendaDetailPage: React.FC = () => {
       <button onClick={() => navigate('/dashboard/emendas')} className="text-blue-600 underline text-sm">Voltar para lista</button>
     </div>
   );
-
-  // Helper: label for tipoTransferencia
-  const tipoTransferenciaLabel = (v?: string) =>
-    v === 'Indireta' ? 'Indireta' : v === 'Direta' ? 'Direta' : '—';
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -195,6 +161,15 @@ const EmendaDetailPage: React.FC = () => {
         >
           ← Voltar
         </button>
+        {/* Edit button visible to ADMIN, ORCAMENTO, GESTOR, OPERADOR */}
+        {(isAdmin || hasRole(UserRole.ORCAMENTO) || hasRole(UserRole.GESTOR) || hasRole(UserRole.OPERADOR)) && (
+          <button
+            onClick={() => navigate(`/dashboard/cadastro-emenda?id=${id}`)}
+            className="absolute right-4 top-4 text-xs text-indigo-600 border border-indigo-200 rounded-lg px-3 py-1.5 hover:bg-indigo-50 flex items-center gap-1.5"
+          >
+            ✏️ Editar Emenda
+          </button>
+        )}
       </div>
 
       {/* Content */}
@@ -205,7 +180,7 @@ const EmendaDetailPage: React.FC = () => {
           <section className="bg-slate-50 border border-slate-200 rounded-xl p-4 sm:p-6">
             <h3 className="text-base font-semibold text-slate-800 mb-4 border-b pb-2">Dados da Emenda</h3>
             <div className="space-y-4">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div>
                   <label className="text-xs text-slate-500 uppercase block">Número da Emenda</label>
                   <span className="font-mono text-slate-700 font-medium">{emenda.officialCode || '—'}</span>
@@ -249,111 +224,35 @@ const EmendaDetailPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tipo de Emenda + Tipo de Execução — inline editable for ADMIN/ORCAMENTO */}
-              <div className="bg-white border border-slate-200 rounded-xl p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="text-sm font-semibold text-slate-800">Tipo de Emenda e Execução</h4>
-                  {canEditTipos && !editingTipos && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditClassification(emenda.classification || '');
-                        setEditTipoTransferencia(emenda.tipoTransferencia || 'Direta');
-                        setEditingTipos(true);
-                      }}
-                      className="text-xs text-indigo-600 hover:text-indigo-800 border border-indigo-200 rounded px-2 py-1 hover:bg-indigo-50"
-                    >
-                      ✏️ Editar
-                    </button>
-                  )}
-                  {editingTipos && (
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={handleSaveTipos}
-                        disabled={savingTipos}
-                        className="text-xs bg-emerald-600 text-white rounded px-3 py-1 hover:bg-emerald-700 disabled:opacity-50"
-                      >
-                        {savingTipos ? 'Salvando...' : 'Salvar'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setEditingTipos(false)}
-                        className="text-xs border border-slate-300 rounded px-3 py-1 hover:bg-slate-50"
-                      >
-                        Cancelar
-                      </button>
-                    </div>
-                  )}
+              {/* Tipo de Emenda + Forma de Execução + Dotação — read only, edit via "Editar Emenda" */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 border-t border-slate-200">
+                <div>
+                  <span className="text-xs text-slate-500 uppercase block mb-1">Tipo de Emenda</span>
+                  <span className="text-slate-700 text-sm">
+                    {tiposEmenda.find((t) => t.codigo === emenda.classification)?.nome || emenda.classification || '—'}
+                  </span>
                 </div>
-
-                {/* Auto-fill notice when classification matches the canonical import value */}
-                {emenda.classification === 'EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA' && !editingTipos && (
-                  <div className="mb-3 flex items-center gap-2 text-xs text-emerald-700 bg-emerald-50 border border-emerald-200 rounded px-3 py-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></svg>
-                    Preenchido automaticamente na importação (status "Aprovada pelo Gestor")
-                  </div>
-                )}
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <span className="text-xs text-slate-500 uppercase block mb-1">Tipo de Emenda</span>
-                    {editingTipos ? (
-                      <select
-                        value={editClassification}
-                        onChange={(e) => setEditClassification(e.target.value)}
-                        className="w-full border rounded px-3 py-2 text-sm bg-white"
-                      >
-                        <option value="">Selecione...</option>
-                        {/* Always ensure the canonical type appears first */}
-                        {!tiposEmenda.find(t => t.codigo === 'EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA') && (
-                          <option value="EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA">
-                            Emenda Individual - Transferência com Finalidade Definida
-                          </option>
-                        )}
-                        {tiposEmenda.map((t) => (
-                          <option key={t.codigo} value={t.codigo}>{t.nome}</option>
-                        ))}
-                      </select>
-                    ) : (
-                      <span className="text-slate-700 text-sm">
-                        {tiposEmenda.find((t) => t.codigo === emenda.classification)?.nome
-                          || (emenda.classification === 'EMENDA_INDIVIDUAL_TRANSFERENCIA_FINALIDADE_DEFINIDA'
-                              ? 'Emenda Individual - Transferência com Finalidade Definida'
-                              : emenda.classification || '—')}
-                      </span>
-                    )}
-                  </div>
-                  <div>
-                    <span className="text-xs text-slate-500 uppercase block mb-1">Tipo de Execução</span>
-                    {editingTipos ? (
-                      <select
-                        value={editTipoTransferencia}
-                        onChange={(e) => setEditTipoTransferencia(e.target.value)}
-                        className="w-full border rounded px-3 py-2 text-sm bg-white"
-                      >
-                        <option value="Direta">Direta</option>
-                        <option value="Indireta">Indireta</option>
-                      </select>
-                    ) : (
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-medium ${
-                        emenda.tipoTransferencia === 'Indireta'
-                          ? 'bg-purple-100 text-purple-800'
-                          : 'bg-blue-100 text-blue-800'
-                      }`}>
-                        {tipoTransferenciaLabel(emenda.tipoTransferencia)}
-                      </span>
-                    )}
-                  </div>
+                <div>
+                  <span className="text-xs text-slate-500 uppercase block mb-1">Forma de Execução</span>
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded text-sm font-medium ${
+                    emenda.tipoTransferencia === 'Indireta' ? 'bg-purple-100 text-purple-800' : 'bg-blue-100 text-blue-800'
+                  }`}>
+                    {emenda.tipoTransferencia || 'Direta'}
+                  </span>
                 </div>
+              </div>
+
+              <div className="pt-2">
+                <span className="text-xs text-slate-500 uppercase block mb-1">Dotação Orçamentária</span>
+                <span className="text-slate-700 text-sm">{emenda.dotacaoOrcamentariaTexto || '—'}</span>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <span className="text-xs text-slate-500 uppercase block">Função</span>
+                  <span className="text-xs text-slate-500 uppercase block">Função / Área de Atuação</span>
                   <span className="text-slate-700 text-sm">
                     {emenda.funcaoCodigo
-                      ? `${emenda.funcaoCodigo} - ${funcoesOrcamentarias.find(f => f.codigo === emenda.funcaoCodigo)?.descricao || emenda.funcaoCodigo}`
+                      ? funcoesOrcamentarias.find(f => f.codigo === emenda.funcaoCodigo)?.descricao || emenda.funcaoCodigo
                       : '—'}
                   </span>
                 </div>

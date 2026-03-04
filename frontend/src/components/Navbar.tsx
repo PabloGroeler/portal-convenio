@@ -20,13 +20,16 @@ const Navbar = () => {
               <button
                 type="button"
                 onClick={() => navigate('/')}
-                className="text-white hover:text-blue-200 px-3 py-1 rounded"
+                className="flex items-center gap-2 text-white hover:text-blue-200 px-2 py-1 rounded"
               >
-                Application name
+                <img
+                  src="https://www.sinop.mt.gov.br/wp-content/uploads/2022/01/brasao-sinop.png"
+                  alt="SIGEM"
+                  className="h-6 w-6 object-contain"
+                  onError={e => { e.currentTarget.src = '/emendas/favicon.ico'; }}
+                />
+                <span className="font-semibold text-sm">SIGEM</span>
               </button>
-              <Link to="/painel" className="hover:text-blue-200">
-                Painel
-              </Link>
             </div>
           ) : (
             // keep an empty placeholder for layout alignment — brand text removed
@@ -35,23 +38,6 @@ const Navbar = () => {
 
           {/* Right side: public links always visible; auth action (Entrar/Sair) conditional */}
           <div className="hidden md:flex items-center space-x-8">
-            {!isAuthenticated && (
-              <Link to="/painel" className="hover:text-blue-200">
-                Painel
-              </Link>
-            )}
-{/*             <Link to="/news" className="hover:text-blue-200">
-//               Notícias
-//             </Link>
-//             <Link to="/manuals" className="hover:text-blue-200">
-//               Manuais
-//             </Link>
-//             <Link to="/downloads" className="hover:text-blue-200">
-//               Downloads
-//             </Link>
-//             <Link to="/legislation" className="hover:text-blue-200">
-//               Legislação
-//             </Link>*/}
             <Link to="/contact" className="hover:text-blue-200">
               Contato
             </Link>

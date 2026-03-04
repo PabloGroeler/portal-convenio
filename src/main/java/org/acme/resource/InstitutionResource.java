@@ -7,7 +7,6 @@ import jakarta.ws.rs.container.ContainerRequestContext;
 import jakarta.ws.rs.core.Context;
 import jakarta.ws.rs.core.MediaType;
 import jakarta.ws.rs.core.Response;
-import jakarta.ws.rs.core.SecurityContext;
 import lombok.extern.slf4j.Slf4j;
 import org.acme.dto.AlterarStatusDTO;
 import org.acme.dto.StatusCalculadoDTO;
@@ -28,7 +27,7 @@ import java.util.Map;
 @Produces(MediaType.APPLICATION_JSON)
 @Consumes(MediaType.APPLICATION_JSON)
 @Slf4j
-public class InstitutionResource {
+public class InstitutionResource extends BaseResource {
 
     @Inject
     InstitutionService institutionService;
@@ -42,14 +41,9 @@ public class InstitutionResource {
     @Inject
     AuditService auditService;
 
-    @Inject
-    org.acme.security.JwtUtil jwtUtil;
-
     @Context
     ContainerRequestContext requestContext;
 
-    @Context
-    SecurityContext securityContext;
 
     private Response badRequest(String msg) {
         return Response.status(Response.Status.BAD_REQUEST)
@@ -195,12 +189,12 @@ public class InstitutionResource {
                 null,
                 result,
                 getCurrentUserId(),
-                getCurrentUserName(),
+                getCurrentUser(),
                 getClientIP()
             );
         } else {
             auditService.logCreate("Institution", result.institutionId, result,
-                getCurrentUserId(), getCurrentUserName(), getClientIP());
+                getCurrentUserId(), getCurrentUser(), getClientIP());
         }
 
         // Retornar resposta apropriada
@@ -233,7 +227,7 @@ public class InstitutionResource {
             oldInstitution,
             updated,
             getCurrentUserId(),
-            getCurrentUserName(),
+            getCurrentUser(),
             getClientIP()
         );
 
@@ -319,7 +313,7 @@ public class InstitutionResource {
                     oldStatus != null ? oldStatus.name() : "NONE",
                     instituicao.statusOSC != null ? instituicao.statusOSC.name() : "NONE",
                     getCurrentUserId(),
-                    getCurrentUserName(),
+                    getCurrentUser(),
                     getClientIP()
                 );
             }
@@ -491,45 +485,6 @@ public class InstitutionResource {
         }
     }
 
-    private Long getCurrentUserId() {
-        if (securityContext != null && securityContext.getUserPrincipal() != null) {
-            try {
-                String username = securityContext.getUserPrincipal().getName();
-                User user = User.find("username", username).firstResult();
-                return user != null ? user.id : null;
-            } catch (Exception e) {
-                log.warn("Error getting current user ID: " + e.getMessage());
-            }
-        }
-        return null;
-    }
-
-    private String getCurrentUserName() {
-        if (securityContext != null && securityContext.getUserPrincipal() != null) {
-            try {
-                return securityContext.getUserPrincipal().getName();
-            } catch (Exception e) {
-                log.warn("Error getting current user name: " + e.getMessage());
-            }
-        }
-        return "system";
-    }
-
-    private String getClientIP() {
-        if (requestContext == null) {
-            return "unknown";
-        }
-        // Try to get real IP from headers (in case of proxy/load balancer)
-        String ip = requestContext.getHeaderString("X-Forwarded-For");
-        if (ip == null || ip.isEmpty() || "unknown".equalsIgnoreCase(ip)) {
-            ip = requestContext.getHeaderString("X-Real-IP");
-        }
-        // If multiple IPs in X-Forwarded-For, get the first one
-        if (ip != null && ip.contains(",")) {
-            ip = ip.split(",")[0].trim();
-        }
-        return ip != null && !ip.isEmpty() ? ip : "unknown";
-    }
 
     // ===== Endpoints de Aprovação da Instituição =====
 
@@ -547,11 +502,11 @@ public class InstitutionResource {
                 id,
                 observacoes,
                 getCurrentUserId(),
-                getCurrentUserName(),
+                getCurrentUser(),
                 getClientIP()
             );
 
-            log.info("✅ Instituição aprovada: {} por {}", id, getCurrentUserName());
+            log.info("✅ Instituição aprovada: {} por {}", id, getCurrentUser());
             return Response.ok(instituicao).build();
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("❌ Erro ao aprovar instituição: {}", e.getMessage());
@@ -587,11 +542,11 @@ public class InstitutionResource {
                 id,
                 motivo,
                 getCurrentUserId(),
-                getCurrentUserName(),
+                getCurrentUser(),
                 getClientIP()
             );
 
-            log.info("❌ Instituição reprovada: {} por {} - Motivo: {}", id, getCurrentUserName(), motivo);
+            log.info("❌ Instituição reprovada: {} por {} - Motivo: {}", id, getCurrentUser(), motivo);
             return Response.ok(instituicao).build();
         } catch (IllegalArgumentException | IllegalStateException e) {
             log.warn("❌ Erro ao reprovar instituição: {}", e.getMessage());

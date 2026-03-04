@@ -68,10 +68,15 @@ const DashboardLayout: React.FC = () => {
         <aside className="fixed left-0 top-0 h-screen w-72 shrink-0 border-r border-gray-200 bg-white flex flex-col z-40">
           <div className="h-16 px-4 flex items-center border-b border-gray-200 shrink-0">
             <div className="flex items-center gap-3">
-              <img src="/favicon.ico" alt="Aplicação" className="h-7 w-7" />
+              <img
+                src="https://www.sinop.mt.gov.br/wp-content/uploads/2022/01/brasao-sinop.png"
+                alt="SIGEM"
+                className="h-8 w-8 object-contain"
+                onError={e => { e.currentTarget.src = '/emendas/favicon.ico'; }}
+              />
               <div className="leading-tight">
-                <div className="text-sm font-semibold text-gray-900">Dashboard</div>
-                <div className="text-xs text-gray-500 truncate max-w-[220px]">{user?.email ?? ''}</div>
+                <div className="text-sm font-bold text-gray-900">SIGEM</div>
+                <div className="text-xs text-gray-500 truncate max-w-[200px]">Gestão de Emendas Municipais</div>
               </div>
             </div>
           </div>
@@ -89,7 +94,7 @@ const DashboardLayout: React.FC = () => {
                   <svg className={`${iconBase} ${'group-[.bg-gray-900]:text-white'}`} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
                     <path d="M3 13h8V3H3v10zm10 8h8V11h-8v10zM3 21h8v-6H3v6zm10-10h8V3h-8v8z" />
                   </svg>
-                  <span>Dashboard</span>
+                  <span>Área de Trabalho</span>
                 </NavLink>
               </li>
 

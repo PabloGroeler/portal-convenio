@@ -100,7 +100,7 @@ public class Emenda {
     @Column(name = "url", columnDefinition = "TEXT")
     public List<String> attachments = new ArrayList<>();
 
-    @Column(name = "descricao", length = 1000)
+    @Column(name = "descricao", length = 5000)
     public String description;
 
     @Column(name = "objeto_detalhado", columnDefinition = "TEXT")
@@ -109,7 +109,7 @@ public class Emenda {
     @Column(name = "previsao_conclusao")
     public LocalDate previsaoConclusao;
 
-    @Column(name = "justificativa", length = 1000)
+    @Column(name = "justificativa", length = 5000)
     public String justificativa;
 
     @Column(name = "secretaria_destino", length = 255)
