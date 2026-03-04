@@ -1374,8 +1374,6 @@ const CadastroDadosInstitucionaisPage: React.FC = () => {
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* SEMPRE mostrar campo CNPJ */}
         <section className="bg-white rounded-lg shadow p-6 border border-gray-100">
-          <h2 className="text-xl font-semibold text-gray-900 mb-4">Buscar ou Cadastrar Instituição</h2>
-
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700 mb-2">
               CNPJ *

@@ -115,6 +115,10 @@ function App() {
               {/* Standalone landing page — no navbar/footer */}
               <Route path="/" element={<HomePage />} />
 
+              {/* Standalone public pages — no navbar/footer */}
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+
               {/* All other routes rendered inside Layout */}
               <Route path="/*" element={<Layout />}>
                 <Route path="login" element={<LoginPage />} />

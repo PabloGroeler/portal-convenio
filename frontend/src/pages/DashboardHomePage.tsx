@@ -174,13 +174,6 @@ const DashboardHomePage: React.FC = () => {
                     <div className="flex items-center gap-2 shrink-0">
                       <button
                         type="button"
-                        onClick={e => { e.stopPropagation(); navigate(`/dashboard/cadastro-emenda?instituicaoId=${inst.id}`); }}
-                        className="px-3 py-1.5 text-xs font-medium text-emerald-600 border border-emerald-200 rounded-lg hover:bg-emerald-50 transition-colors"
-                      >
-                        + Nova Emenda
-                      </button>
-                      <button
-                        type="button"
                         onClick={e => { e.stopPropagation(); navigate(`/dashboard/cadastro-dados-institucionais?id=${inst.id}`); }}
                         className="px-3 py-1.5 text-xs font-medium text-indigo-600 border border-indigo-200 rounded-lg hover:bg-indigo-50 transition-colors"
                       >

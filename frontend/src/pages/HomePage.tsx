@@ -140,7 +140,7 @@ const HomePage = () => {
 
       {/* Footer */}
       <div className="border-t border-white/10 py-5 text-center text-slate-500 text-xs space-y-1">
-        <div>© {new Date().getFullYear()} SIGEM — Prefeitura Municipal de Sinop — MT · Todos os direitos reservados</div>
+        <div>&copy; {new Date().getFullYear()} SIGEM &mdash; Prefeitura Municipal de Sinop &mdash; MT &middot; Todos os direitos reservados</div>
         <div>Desenvolvido em Parceria com a Diretoria de Softwares e Suporte a TIC.</div>
       </div>
     </div>
