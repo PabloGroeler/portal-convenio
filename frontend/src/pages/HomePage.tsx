@@ -8,16 +8,12 @@ const HomePage = () => {
         {/* Brasão Sinop */}
         <div className="w-24 h-24 rounded-full flex items-center justify-center mb-8 border-2 border-blue-400/40 shadow-2xl bg-white/5 overflow-hidden">
           <img
-            src="https://www.sinop.mt.gov.br/wp-content/uploads/2022/01/brasao-sinop.png"
+            src="favicon.ico"
             alt="Brasão de Sinop"
             className="w-20 h-20 object-contain drop-shadow-lg"
             onError={e => {
-              const target = e.currentTarget;
-              target.style.display = 'none';
-              const parent = target.parentElement;
-              if (parent) {
-                parent.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="52" height="52" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" style="color:#93c5fd"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>`;
-              }
+              e.currentTarget.onerror = null;
+              e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='52' height='52' viewBox='0 0 24 24' fill='none' stroke='%2393c5fd' stroke-width='1.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/%3E%3Cpolyline points='9 22 9 12 15 12 15 22'/%3E%3C/svg%3E";
             }}
           />
         </div>

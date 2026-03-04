@@ -23,10 +23,13 @@ const DashboardTopBar: React.FC = () => {
               to="/dashboard"
             >
               <img
-                alt="Sistema de Emendas"
-                className="h-6 w-6 sm:h-7 sm:w-7"
-                loading="lazy"
-                src="/favicon.ico"
+                alt="SIGEM"
+                className="h-6 w-6 sm:h-7 sm:w-7 object-contain"
+                src="favicon.ico"
+                onError={e => {
+                  e.currentTarget.onerror = null;
+                  e.currentTarget.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28' viewBox='0 0 24 24' fill='none' stroke='%234f46e5' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z'/%3E%3Cpolyline points='9 22 9 12 15 12 15 22'/%3E%3C/svg%3E";
+                }}
               />
             </Link>
             <div>
