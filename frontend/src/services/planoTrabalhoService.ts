@@ -36,6 +36,10 @@ const service = {
   reprovar: async (id: string, motivo: string) => {
     const res = await api.post(`/plano-trabalho/${id}/reprovar`, { motivo });
     return res.data;
+  },
+  enviar: async (id: string) => {
+    const res = await api.post(`/plano-trabalho/${id}/enviar`);
+    return res.data;
   }
 }
 

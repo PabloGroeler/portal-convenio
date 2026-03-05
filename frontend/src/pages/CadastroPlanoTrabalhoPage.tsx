@@ -29,6 +29,7 @@ const CadastroPlanoTrabalhoPage: React.FC = () => {
     valor: 'R$ 0,00',
     status: 'RASCUNHO',
   });
+  const [canEdit, setCanEdit] = useState(true);
 
   const [emendas, setEmendas] = useState<any[]>([]);
   const [instituicaoNome, setInstituicaoNome] = useState('');
@@ -77,6 +78,7 @@ const CadastroPlanoTrabalhoPage: React.FC = () => {
         valor: p.valor != null ? formatCurrency(String(p.valor)) : 'R$ 0,00',
         status: p.status || 'RASCUNHO',
       });
+      setCanEdit(!(p.status === 'APROVADO' || p.status === 'FECHADO'));
     } catch (err) {
       console.error('Erro ao carregar plano:', err);
       alert('Erro ao carregar plano');
@@ -234,6 +236,7 @@ const CadastroPlanoTrabalhoPage: React.FC = () => {
             onChange={e => handleValueChange(e.target.value)}
             onBlur={handleValueBlur}
             placeholder="R$ 0,00"
+            readOnly={!canEdit || Boolean(form.emendaId && emendas.find(em => em.id === form.emendaId && em.value != null))}
             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <p className="text-xs text-gray-400 mt-1">Se vinculado a uma emenda, o valor da emenda será usado como referência.</p>
@@ -264,7 +267,7 @@ const CadastroPlanoTrabalhoPage: React.FC = () => {
           </button>
           <button
             type="submit"
-            disabled={saving}
+            disabled={saving || !canEdit}
             className="px-6 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {saving ? 'Salvando...' : isEditMode ? 'Salvar Alterações' : 'Criar Plano'}

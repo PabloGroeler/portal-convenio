@@ -21,6 +21,9 @@ public class PlanoTrabalhoService {
     MetaService metaService;
 
     @Inject
+    ItemService itemService;
+
+    @Inject
     EmendaRepository emendaRepository;
 
     @Transactional
@@ -91,6 +94,10 @@ public class PlanoTrabalhoService {
     public PlanoTrabalhoDTO update(String id, PlanoTrabalhoDTO dto, String usuario) {
         PlanoTrabalho p = PlanoTrabalho.findById(id);
         if (p == null) return null;
+        // Prevent changes when plan is finalized
+        if ("APROVADO".equals(p.status) || "FECHADO".equals(p.status)) {
+            throw new IllegalArgumentException("Não é possível atualizar um plano que já foi aprovado ou encerrado.");
+        }
         p.titulo = dto.titulo();
         p.descricao = dto.descricao();
         p.valor = dto.valor();
@@ -146,6 +153,47 @@ public class PlanoTrabalhoService {
         h.planoTrabalhoId = p.id;
         h.acao = "REPROVAR";
         h.motivo = motivo;
+        h.usuario = usuario;
+        h.persist();
+
+        return toDto(p);
+    }
+
+    @Transactional
+    public PlanoTrabalhoDTO enviarParaAprovacao(String id, String usuario) {
+        PlanoTrabalho p = PlanoTrabalho.findById(id);
+        if (p == null) return null;
+
+        // 1) metas exist
+        List<MetaDTO> metas = metaService.listByPlano(p.id);
+        if (metas == null || metas.isEmpty()) {
+            throw new IllegalArgumentException("O plano deve conter ao menos 1 meta antes de enviar para aprovação.");
+        }
+
+        // 2) each meta must have items
+        for (MetaDTO m : metas) {
+            var items = itemService.listByMeta(m.id());
+            if (items == null || items.isEmpty()) {
+                throw new IllegalArgumentException("A meta '" + (m.titulo() == null ? m.id() : m.titulo()) + "' deve ter ao menos 1 item.");
+            }
+        }
+
+        // 3) total metas >= emenda value (if exists)
+        BigDecimal total = metas.stream().map(md -> md.valor() == null ? BigDecimal.ZERO : md.valor()).reduce(BigDecimal.ZERO, BigDecimal::add);
+        if (p.emendaId != null && !p.emendaId.isBlank()) {
+            Emenda em = emendaRepository.findById(p.emendaId);
+            if (em != null && em.value != null) {
+                if (total.compareTo(em.value) < 0) {
+                    throw new IllegalArgumentException("Total do plano (" + total + ") é menor que o valor da emenda (" + em.value + ").");
+                }
+            }
+        }
+
+        p.status = "ENVIADO";
+
+        PlanoTrabalhoHistorico h = new PlanoTrabalhoHistorico();
+        h.planoTrabalhoId = p.id;
+        h.acao = "ENVIAR_PARA_APROVACAO";
         h.usuario = usuario;
         h.persist();
 

@@ -3,6 +3,7 @@ package org.acme.resource;
 import org.acme.dto.PlanoTrabalhoDTO;
 import org.acme.dto.FullPlanoTrabalhoDTO;
 import org.acme.service.PlanoTrabalhoService;
+import org.acme.security.RolesAllowed;
 import jakarta.inject.Inject;
 import jakarta.ws.rs.*;
 import jakarta.ws.rs.core.MediaType;
@@ -122,6 +123,22 @@ public class PlanoTrabalhoResource {
         PlanoTrabalhoDTO updated = service.reprovar(id, payload.motivo, user);
         if (updated == null) return Response.status(Response.Status.NOT_FOUND).build();
         return Response.ok(updated).build();
+    }
+
+    @POST
+    @Path("/{id}/enviar")
+    @RolesAllowed({"ADMIN", "GESTOR"})
+    public Response enviar(@PathParam("id") String id, @Context SecurityContext ctx) {
+        String user = ctx.getUserPrincipal() != null ? ctx.getUserPrincipal().getName() : null;
+        try {
+            PlanoTrabalhoDTO updated = service.enviarParaAprovacao(id, user);
+            if (updated == null) return Response.status(Response.Status.NOT_FOUND).build();
+            return Response.ok(updated).build();
+        } catch (IllegalArgumentException e) {
+            return Response.status(Response.Status.BAD_REQUEST).entity(java.util.Map.of("error", e.getMessage())).build();
+        } catch (Exception e) {
+            return Response.status(Response.Status.INTERNAL_SERVER_ERROR).entity(java.util.Map.of("error", "Erro interno ao enviar para aprovação: " + e.getMessage())).build();
+        }
     }
 
     @GET

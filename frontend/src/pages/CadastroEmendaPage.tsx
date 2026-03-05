@@ -533,11 +533,23 @@ const CadastroEmendaPage: React.FC = () => {
                 <input
                   type="text"
                   value={dotacaoQuery}
-                  onChange={e => { setDotacaoQuery(e.target.value); setDotacaoOpen(true); }}
+                  onChange={e => { setDotacaoQuery(e.target.value); }}
                   onFocus={() => setDotacaoOpen(true)}
+                  onKeyDown={e => {
+                    // don't rely on Tab — support Enter to trigger the search/dropdown
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      setDotacaoOpen(true);
+                    }
+                  }}
                   placeholder="Pesquisar dotação pela descrição..."
                   className="flex-1 text-sm outline-none bg-transparent"
                 />
+                {/* Search button to explicitly open/find dotação — useful when Tab doesn't trigger */}
+                <button type="button" onClick={e => { e.stopPropagation(); setDotacaoOpen(true); }}
+                  className="px-2 py-1 bg-blue-50 border border-blue-100 text-blue-600 rounded text-xs hover:bg-blue-100">
+                  Buscar
+                </button>
                 {form.dotacaoOrcamentariaId && (
                   <button type="button"
                     onClick={e => { e.stopPropagation(); handleChange('dotacaoOrcamentariaId', undefined); handleChange('dotacaoOrcamentariaTexto', ''); setDotacaoQuery(''); }}

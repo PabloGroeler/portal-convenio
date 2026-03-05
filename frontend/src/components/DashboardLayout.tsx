@@ -207,6 +207,28 @@ const DashboardLayout: React.FC = () => {
                         <span>Tipos de Documentos</span>
                       </NavLink>
                     </li>
+                    <li>
+                      <NavLink
+                        to="/dashboard/admin/parlamentar-limites"
+                        className={({ isActive }) =>
+                          `${linkBase} ${isActive ? 'bg-purple-100 text-purple-800' : 'text-gray-700 hover:bg-gray-100'}`
+                        }
+                      >
+                        <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-gray-200 text-gray-700 text-[10px] font-bold">L</span>
+                        <span>Limites Parlamentares</span>
+                      </NavLink>
+                    </li>
+                    <li>
+                      <NavLink
+                        to="/dashboard/admin/funcionalidades"
+                        className={({ isActive }) =>
+                          `${linkBase} ${isActive ? 'bg-purple-100 text-purple-800' : 'text-gray-700 hover:bg-gray-100'}`
+                        }
+                      >
+                        <span className="inline-flex items-center justify-center h-5 w-5 rounded bg-gray-200 text-gray-700 text-[10px] font-bold">F</span>
+                        <span>Funcionalidades</span>
+                      </NavLink>
+                    </li>
                   </ul>
                 )}
               </li>

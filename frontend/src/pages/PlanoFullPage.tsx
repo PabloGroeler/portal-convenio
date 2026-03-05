@@ -12,6 +12,8 @@ import institutionService from '../services/institutionService';
 import { getMinhasInstituicoesDetalhadas } from '../services/userService';
 import type { InstituicaoDetalhada } from '../types/user.types';
 import { formatCurrency, parseCurrency } from '../utils/formatters';
+import { useAuth } from '../context/AuthContext';
+import Toast from '../components/Toast';
 
 const currencyFmt = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
@@ -38,7 +40,7 @@ const emptyPlanoForm = (): PlanoForm => ({
   status: 'RASCUNHO',
 });
 
-const STATUS_OPTIONS = ['RASCUNHO', 'ENVIADO', 'APROVADO', 'REPROVADO'];
+const STATUS_OPTIONS = ['RASCUNHO', 'ENVIADO', 'APROVADO', 'REPROVADO', 'EM_PRESTACAO', 'FECHADO'];
 
 const STATUS_LABEL: Record<string, string> = {
   RASCUNHO: 'Rascunho',
@@ -47,6 +49,8 @@ const STATUS_LABEL: Record<string, string> = {
   EM_ANALISE: 'Em Análise',
   APROVADO: 'Aprovado',
   REPROVADO: 'Reprovado',
+  EM_PRESTACAO: 'Em Prestação de Contas',
+  FECHADO: 'Fechado',
 };
 const STATUS_COLOR: Record<string, string> = {
   APROVADO: 'bg-emerald-100 text-emerald-700 border-emerald-200',
@@ -55,6 +59,8 @@ const STATUS_COLOR: Record<string, string> = {
   ENVIADO: 'bg-blue-100 text-blue-700 border-blue-200',
   PENDENTE: 'bg-yellow-100 text-yellow-700 border-yellow-200',
   RASCUNHO: 'bg-gray-100 text-gray-600 border-gray-200',
+  EM_PRESTACAO: 'bg-indigo-100 text-indigo-700 border-indigo-200',
+  FECHADO: 'bg-slate-100 text-slate-700 border-slate-200',
 };
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -118,6 +124,66 @@ const PlanoFullPage: React.FC = () => {
   const [editPcValor, setEditPcValor] = useState<number | ''>('');
   const [editPcObs, setEditPcObs] = useState('');
   const [editPcSaving, setEditPcSaving] = useState(false);
+
+  // ── New state and logic for approval workflow ──────────────────────────────
+  const { user } = useAuth();
+  const isGestorOrAdmin = user?.role === 'GESTOR' || user?.role === 'ADMIN';
+  const [sendingForApproval, setSendingForApproval] = useState(false);
+  const [toast, setToast] = useState<{message: string; type?: 'success'|'error'|'info'} | null>(null);
+  const [confirmSending, setConfirmSending] = useState(false);
+
+  const validateBeforeSend = async (): Promise<string | null> => {
+    // 1) At least 1 meta
+    if (!metas || metas.length === 0) return 'O plano deve conter ao menos 1 meta antes de enviar para aprovação.';
+
+    // 2) Each meta must have >= 1 item — fetch when not loaded
+    for (const m of metas) {
+      const items = itemsByMeta[m.id!] ?? await itemService.listByMeta(m.id!);
+      if (!items || items.length === 0) return `A meta "${m.titulo || ''}" deve ter ao menos 1 item.`;
+    }
+
+    // 3) Total geral do plano >= valor da emenda
+    // compute total from metas (fallback to plan.valor)
+    const totalFromMetas = metas.reduce((s, mm) => s + (mm.valor || 0), 0);
+    const totalPlano = totalFromMetas > 0 ? totalFromMetas : (plan?.valor ?? parseCurrency(planoForm.valor));
+    const emendaValor = plan?.emendaValor ?? plan?.emenda?.value ?? (plan?.valor ?? 0);
+    if (emendaValor && Number(totalPlano) < Number(emendaValor)) {
+      return `Total do plano (${currencyFmt.format(Number(totalPlano))}) é menor que o valor da emenda (${currencyFmt.format(Number(emendaValor))}).`;
+    }
+
+    return null;
+  };
+
+  const handleSendForApproval = async () => {
+    if (!id) return;
+    setPlanErrors({});
+    try {
+      setSendingForApproval(true);
+      const errMsg = await validateBeforeSend();
+      if (errMsg) {
+        setPlanErrors({ general: errMsg });
+        return;
+      }
+      // use dedicated API to send for approval (server-side validation)
+      await planoService.enviar(id);
+      // refresh plan and metas from server
+      const res = await planoService.getFull(id);
+      setPlan(res.data);
+      setMetas(await metaService.listByPlano(id));
+      // feedback
+      setToast({ message: 'Plano enviado para aprovação com sucesso.', type: 'success' });
+      // ensure UI locked and redirect after short delay
+      setTimeout(() => {
+        navigate('/dashboard/plano-trabalho');
+      }, 900);
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || 'Erro ao enviar para aprovação';
+      setToast({ message: String(msg), type: 'error' });
+    } finally {
+      setSendingForApproval(false);
+      setConfirmSending(false);
+    }
+  };
 
   // ── Initial load ──────────────────────────────────────────────────────────
   useEffect(() => {
@@ -234,10 +300,12 @@ const PlanoFullPage: React.FC = () => {
   const handleCreateMeta = async (e: React.FormEvent) => {
     e.preventDefault();
     setMetaError(null);
-    if (!newMeta.titulo.trim()) return setMetaError('Título é obrigatório');
+    // auto-name if empty
+    const titulo = newMeta.titulo.trim() || `Meta ${metas.length + 1}`;
+    if (!titulo) return setMetaError('Título é obrigatório');
     try {
       setSavingMeta(true);
-      await metaService.create({ planoTrabalhoId: id!, titulo: newMeta.titulo, descricao: newMeta.descricao, valor: newMeta.valor ? Number(newMeta.valor) : undefined });
+      await metaService.create({ planoTrabalhoId: id!, titulo, descricao: newMeta.descricao, valor: newMeta.valor ? Number(newMeta.valor) : undefined });
       setNewMeta(emptyMeta());
       setShowNewMeta(false);
       await reloadMetas();
@@ -293,10 +361,14 @@ const PlanoFullPage: React.FC = () => {
   const handleCreateItem = async (metaId: string) => {
     const form = newItemByMeta[metaId];
     if (!form?.titulo?.trim()) return setItemError('Título do item é obrigatório');
+    // Accept optional fields: tipo, quantidade, valorUnitario, unidade
+    const quantidade = Number(form.quantidade || 0);
+    const valorUnitario = Number(form.valorUnitario || 0);
+    const valorCalc = quantidade > 0 && valorUnitario > 0 ? quantidade * valorUnitario : (form.valor ? Number(form.valor) : undefined);
     setItemError(null);
     try {
       setSavingItemMeta(metaId);
-      await itemService.create({ metaId, titulo: form.titulo, descricao: form.descricao || '', valor: form.valor ? Number(form.valor) : undefined });
+      await itemService.create({ metaId, titulo: form.titulo, descricao: form.descricao || '', valor: valorCalc, tipo: form.tipo || undefined, quantidade: quantidade || undefined, unidade: form.unidade || undefined, valorUnitario: valorUnitario || undefined });
       setNewItemByMeta(prev => ({ ...prev, [metaId]: emptyItem() }));
       setShowNewItemFor(null);
       await reloadItems(metaId);
@@ -364,6 +436,9 @@ const PlanoFullPage: React.FC = () => {
   const totalMetas = metas.reduce((s, m) => s + (m.valor || 0), 0);
   const totalPrestacoes = prestacoes.reduce((s, p) => s + (p.valorExecutado || 0), 0);
   const statusColor = STATUS_COLOR[(plan?.status) || planoForm.status] || STATUS_COLOR.RASCUNHO;
+
+  // editing permission
+  const canEdit = !(plan?.status === 'APROVADO' || plan?.status === 'FECHADO');
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (pageLoading) return (
@@ -445,20 +520,28 @@ const PlanoFullPage: React.FC = () => {
             <p className="text-xs text-gray-400 mt-1">{planoForm.titulo.length}/200 caracteres</p>
           </div>
 
-          {/* Descrição */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
-            <textarea value={planoForm.descricao}
-              onChange={e => setPlanoForm(f => ({ ...f, descricao: e.target.value }))}
-              rows={3} placeholder="Descreva o objetivo e escopo do plano..."
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-          </div>
-
           {/* Emenda vinculada */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Emenda Vinculada</label>
             <select value={planoForm.emendaId}
-              onChange={e => setPlanoForm(f => ({ ...f, emendaId: e.target.value }))}
+              onChange={e => {
+                const emId = e.target.value;
+                // set the emendaId immediately
+                setPlanoForm(f => ({ ...f, emendaId: emId }));
+                // if no emenda selected, do nothing further (user may type value manually later)
+                if (!emId) return;
+                // find the emenda in the loaded list
+                const em = emendas.find((x: any) => x.id === emId);
+                if (!em) return;
+                // Prefill description and value from emenda; description remains editable.
+                // Value will be locked (readOnly) when it comes from emenda (em.value != null).
+                setPlanoForm(f => ({
+                  ...f,
+                  descricao: em.description ? String(em.description) : f.descricao,
+                  valor: (em.value != null) ? formatCurrency(String(em.value)) : f.valor,
+                  emendaId: emId,
+                }));
+              }}
               className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
               <option value="">— Nenhuma (plano sem emenda) —</option>
               {emendas.map((em: any) => (
@@ -472,13 +555,24 @@ const PlanoFullPage: React.FC = () => {
             <p className="text-xs text-gray-400 mt-1">Cada emenda pode ter apenas 1 plano.</p>
           </div>
 
+          {/* Descrição */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Descrição</label>
+            <textarea value={planoForm.descricao}
+              onChange={e => setPlanoForm(f => ({ ...f, descricao: e.target.value }))}
+              rows={3} placeholder="Descreva o objetivo e escopo do plano..."
+              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+          </div>
+
           {/* Valor */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Valor do Plano</label>
+            {/* lock the value input when emenda provides a value */}
             <input type="text" value={planoForm.valor}
               onChange={e => setPlanoForm(f => ({ ...f, valor: e.target.value }))}
               onBlur={handleValueBlur} placeholder="R$ 0,00"
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              readOnly={Boolean(planoForm.emendaId && emendas.find(em => em.id === planoForm.emendaId && em.value != null))}
+              className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${planoForm.emendaId && emendas.find(em => em.id === planoForm.emendaId && em.value != null) ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`} />
           </div>
 
           {/* Status */}
@@ -517,29 +611,55 @@ const PlanoFullPage: React.FC = () => {
     <div className="max-w-5xl mx-auto p-4 sm:p-6 space-y-6">
 
       {/* ── HEADER CARD ───────────────────────────────────────────────────── */}
-      <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-        {/* Top bar */}
-        <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-3 flex items-center justify-between">
+      <div className={'bg-white px-6 py-3 rounded-2xl shadow-sm border border-gray-100 overflow-hidden'}>
+         {/* Top bar */}
+         <div className="flex items-center justify-between">
           <button onClick={() => navigate(backUrl)}
-            className="text-blue-100 hover:text-white text-sm flex items-center gap-1 transition-colors">
-            ← Voltar
-          </button>
-          <div className="flex items-center gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
-              {STATUS_LABEL[plan.status] || plan.status}
-            </span>
-            {!isEditingHeader && (
-              <button onClick={() => setIsEditingHeader(true)}
-                className="px-3 py-1 bg-white/20 hover:bg-white/30 text-white rounded-full text-xs font-medium transition-colors">
-                ✏️ Editar
-              </button>
-            )}
-          </div>
-        </div>
+            className={`text-blue-600 hover:text-blue-800 text-sm flex items-center gap-1 transition-colors`}>
+             ← Voltar
+           </button>
+           <div className="flex items-center gap-2">
+             <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${statusColor}`}>
+               {STATUS_LABEL[plan.status] || plan.status}
+             </span>
+             {!isEditingHeader && (
+               <>
+                 {canEdit ? (
+                  <button onClick={() => setIsEditingHeader(true)}
+                    className="px-3 py-1 border border-gray-200 text-gray-700 rounded-full text-xs font-medium transition-colors">
+                    ✏️ Editar
+                  </button>
+                 ) : (
+                  <span className="px-3 py-1 text-xs text-gray-500">(Edição bloqueada)</span>
+                 )}
+                 {canEdit && !isGestorOrAdmin && (plan.status === 'RASCUNHO' || plan.status === 'PENDENTE') && (
+                   <>
+                     <button onClick={() => setConfirmSending(true)} disabled={sendingForApproval} className="px-3 py-1 bg-yellow-500 text-white rounded-full text-xs font-medium ml-2 hover:bg-yellow-600 disabled:opacity-50">
+                       {sendingForApproval ? 'Enviando...' : 'Enviar para aprovação'}
+                     </button>
+                     {confirmSending && (
+                       <div className="fixed inset-0 flex items-center justify-center z-50">
+                         <div className="absolute inset-0 bg-black opacity-30" />
+                         <div className="bg-white rounded-lg p-6 z-60 max-w-md w-full">
+                           <p className="font-medium mb-4">Confirmar envio</p>
+                           <p className="text-sm text-gray-600 mb-4">Deseja realmente enviar este plano para aprovação? Esta ação irá bloquear parte da edição.</p>
+                           <div className="flex justify-end gap-2">
+                             <button onClick={() => setConfirmSending(false)} className="px-3 py-1 border rounded">Cancelar</button>
+                             <button onClick={handleSendForApproval} className="px-3 py-1 bg-yellow-500 text-white rounded">Confirmar</button>
+                           </div>
+                         </div>
+                       </div>
+                     )}
+                   </>
+                 )}
+               </>
+             )}
+           </div>
+         </div>
 
         {/* Plan info – VIEW sub-mode */}
         {!isEditingHeader && (
-          <div className="p-6">
+          <div className="mt-4">
             <p className="text-xs text-gray-400 uppercase font-semibold tracking-wide mb-1">Plano de Trabalho</p>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">{plan.titulo}</h1>
             {plan.descricao && <p className="text-gray-500 text-sm mb-1">{plan.descricao}</p>}
@@ -578,20 +698,19 @@ const PlanoFullPage: React.FC = () => {
                 {planErrors.titulo && <p className="text-xs text-red-500 mt-1">{planErrors.titulo}</p>}
               </div>
 
-              {/* Descrição */}
-              <div className="sm:col-span-2">
-                <label className="block text-xs font-medium text-gray-600 mb-1">Descrição</label>
-                <textarea value={planoForm.descricao}
-                  onChange={e => setPlanoForm(f => ({ ...f, descricao: e.target.value }))}
-                  rows={2}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
-              </div>
-
               {/* Emenda */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Emenda Vinculada</label>
                 <select value={planoForm.emendaId}
-                  onChange={e => setPlanoForm(f => ({ ...f, emendaId: e.target.value }))}
+                  onChange={e => {
+                    const emId = e.target.value;
+                    setPlanoForm(f => ({ ...f, emendaId: emId }));
+                    if (!emId) return;
+                    const em = emendas.find((x: any) => x.id === emId);
+                    if (!em) return;
+                    // prefill description and value (value will be locked below)
+                    setPlanoForm(f => ({ ...f, descricao: em.description ? String(em.description) : f.descricao, valor: em.value != null ? formatCurrency(String(em.value)) : f.valor }));
+                  }}
                   className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
                   <option value="">— Nenhuma —</option>
                   {emendas.map((em: any) => (
@@ -602,13 +721,23 @@ const PlanoFullPage: React.FC = () => {
                 </select>
               </div>
 
+              {/* Descrição */}
+              <div className="sm:col-span-2">
+                <label className="block text-xs font-medium text-gray-600 mb-1">Descrição</label>
+                <textarea value={planoForm.descricao}
+                  onChange={e => setPlanoForm(f => ({ ...f, descricao: e.target.value }))}
+                  rows={2}
+                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+              </div>
+
               {/* Valor */}
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">Valor do Plano</label>
                 <input type="text" value={planoForm.valor}
                   onChange={e => setPlanoForm(f => ({ ...f, valor: e.target.value }))}
                   onBlur={handleValueBlur}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                  readOnly={Boolean(planoForm.emendaId && emendas.find(em => em.id === planoForm.emendaId && em.value != null))}
+                  className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 ${planoForm.emendaId && emendas.find(em => em.id === planoForm.emendaId && em.value != null) ? 'bg-gray-100 cursor-not-allowed' : 'border-gray-300'}`} />
               </div>
 
               {/* Status */}
@@ -659,10 +788,14 @@ const PlanoFullPage: React.FC = () => {
           <div className="p-6">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-base font-semibold text-gray-800">Metas do Plano</h2>
-              <button onClick={() => { setShowNewMeta(v => !v); setMetaError(null); setNewMeta(emptyMeta()); }}
-                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
-                + Nova Meta
-              </button>
+              {canEdit ? (
+                <button onClick={() => { setShowNewMeta(v => !v); setMetaError(null); setNewMeta(emptyMeta()); }}
+                  className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors">
+                  + Nova Meta
+                </button>
+              ) : (
+                <div className="text-xs text-gray-400 italic">Criação de metas bloqueada após aprovação.</div>
+              )}
             </div>
 
             {showNewMeta && (
@@ -746,7 +879,7 @@ const PlanoFullPage: React.FC = () => {
 
                       <div className="flex items-center gap-1 shrink-0">
                         {editingMetaId === m.id ? (
-                          <>
+                          <div className="flex items-center gap-2">
                             <button onClick={handleSaveMeta} disabled={savingMeta}
                               className="px-3 py-1.5 bg-emerald-600 text-white rounded-lg text-xs font-medium hover:bg-emerald-700 disabled:opacity-50">
                               {savingMeta ? '...' : 'Salvar'}
@@ -755,19 +888,23 @@ const PlanoFullPage: React.FC = () => {
                               className="px-3 py-1.5 border rounded-lg text-xs text-gray-600 hover:bg-white">
                               Cancelar
                             </button>
-                          </>
+                          </div>
                         ) : (
-                          <>
+                          <div className="flex items-center gap-2">
                             <button onClick={() => toggleMeta(m.id!)}
                               className="p-1.5 rounded-lg text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors text-base"
                               title={expandedMetas.has(m.id!) ? 'Recolher' : 'Expandir'}>
                               {expandedMetas.has(m.id!) ? '▾' : '▸'}
                             </button>
-                            <button onClick={() => { setEditingMetaId(m.id!); setEditMetaForm({ titulo: m.titulo || '', descricao: m.descricao || '', valor: m.valor?.toString() || '' }); setMetaError(null); }}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 transition-colors" title="Editar">✏️</button>
-                            <button onClick={() => handleDeleteMeta(m.id!)}
-                              className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Excluir">🗑️</button>
-                          </>
+                            {canEdit && (
+                              <>
+                                <button onClick={() => { setEditingMetaId(m.id!); setEditMetaForm({ titulo: m.titulo || '', descricao: m.descricao || '', valor: m.valor?.toString() || '' }); setMetaError(null); }}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 transition-colors" title="Editar">✏️</button>
+                                <button onClick={() => handleDeleteMeta(m.id!)}
+                                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors" title="Excluir">🗑️</button>
+                              </>
+                            )}
+                          </div>
                         )}
                       </div>
                     </div>
@@ -802,17 +939,25 @@ const PlanoFullPage: React.FC = () => {
                                 )}
                                 <div className="flex gap-1 shrink-0">
                                   {editingItemId === item.id ? (
-                                    <>
-                                      <button onClick={() => handleSaveItem(m.id!)} className="px-2 py-1 bg-emerald-600 text-white rounded text-xs">Salvar</button>
-                                      <button onClick={() => setEditingItemId(null)} className="px-2 py-1 border rounded text-xs">Cancelar</button>
-                                    </>
+                                    canEdit ? (
+                                      <>
+                                        <button onClick={() => handleSaveItem(m.id!)} className="px-2 py-1 bg-emerald-600 text-white rounded text-xs">Salvar</button>
+                                        <button onClick={() => setEditingItemId(null)} className="px-2 py-1 border rounded text-xs">Cancelar</button>
+                                      </>
+                                    ) : (
+                                      <div className="text-xs text-gray-400 italic">Edição bloqueada</div>
+                                    )
                                   ) : (
-                                    <>
-                                      <button onClick={() => { setEditingItemId(item.id!); setEditItemForm({ titulo: item.titulo || '', descricao: item.descricao || '', valor: item.valor?.toString() || '' }); setItemError(null); }}
-                                        className="p-1 rounded text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 text-xs" title="Editar">✏️</button>
-                                      <button onClick={() => handleDeleteItem(m.id!, item.id!)}
-                                        className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 text-xs" title="Excluir">🗑️</button>
-                                    </>
+                                    canEdit ? (
+                                      <>
+                                        <button onClick={() => { setEditingItemId(item.id!); setEditItemForm({ titulo: item.titulo || '', descricao: item.descricao || '', valor: item.valor?.toString() || '' }); setItemError(null); }}
+                                          className="p-1 rounded text-gray-400 hover:text-yellow-600 hover:bg-yellow-50 text-xs" title="Editar">✏️</button>
+                                        <button onClick={() => handleDeleteItem(m.id!, item.id!)}
+                                          className="p-1 rounded text-gray-400 hover:text-red-600 hover:bg-red-50 text-xs" title="Excluir">🗑️</button>
+                                      </>
+                                    ) : (
+                                      <div className="text-xs text-gray-400 italic">Ações bloqueadas</div>
+                                    )
                                   )}
                                 </div>
                               </div>
@@ -823,7 +968,7 @@ const PlanoFullPage: React.FC = () => {
                         {showNewItemFor === m.id ? (
                           <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                             <p className="text-xs font-semibold text-blue-700 mb-2">Novo Item</p>
-                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                               <input value={newItemByMeta[m.id!]?.titulo || ''}
                                 onChange={e => setNewItemByMeta(prev => ({ ...prev, [m.id!]: { ...emptyItem(), ...prev[m.id!], titulo: e.target.value } }))}
                                 className="border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
@@ -832,27 +977,59 @@ const PlanoFullPage: React.FC = () => {
                                 onChange={e => setNewItemByMeta(prev => ({ ...prev, [m.id!]: { ...emptyItem(), ...prev[m.id!], descricao: e.target.value } }))}
                                 className="border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
                                 placeholder="Descrição" />
-                              <input type="number" step="0.01" min="0" value={newItemByMeta[m.id!]?.valor || ''}
-                                onChange={e => setNewItemByMeta(prev => ({ ...prev, [m.id!]: { ...emptyItem(), ...prev[m.id!], valor: e.target.value } }))}
-                                className="border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
-                                placeholder="Valor (R$)" />
+                              <div>
+                                <label className="block text-xs text-gray-600 mb-1">Tipo</label>
+                                <select value={newItemByMeta[m.id!]?.tipo || ''}
+                                  onChange={e => setNewItemByMeta(prev => ({ ...prev, [m.id!]: { ...emptyItem(), ...prev[m.id!], tipo: e.target.value } }))}
+                                  className="border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                                  <option value="">— Selecione —</option>
+                                  <option value="BENS">Bens</option>
+                                  <option value="SERVIÇOS">Serviços</option>
+                                </select>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">Quantidade</label>
+                                  <input type="number" min="0" value={newItemByMeta[m.id!]?.quantidade || ''}
+                                    onChange={e => setNewItemByMeta(prev => ({ ...prev, [m.id!]: { ...emptyItem(), ...prev[m.id!], quantidade: e.target.value } }))}
+                                    className="border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    placeholder="0" />
+                                </div>
+                                <div>
+                                  <label className="block text-xs text-gray-600 mb-1">Valor Unitário (R$)</label>
+                                  <input type="number" step="0.01" min="0" value={newItemByMeta[m.id!]?.valorUnitario || ''}
+                                    onChange={e => setNewItemByMeta(prev => ({ ...prev, [m.id!]: { ...emptyItem(), ...prev[m.id!], valorUnitario: e.target.value } }))}
+                                    className="border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"
+                                    placeholder="0,00" />
+                                </div>
+                              </div>
                             </div>
                             <div className="flex gap-2 mt-2">
-                              <button onClick={() => handleCreateItem(m.id!)} disabled={savingItemMeta === m.id}
-                                className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50">
-                                {savingItemMeta === m.id ? 'Salvando...' : 'Adicionar'}
-                              </button>
-                              <button onClick={() => setShowNewItemFor(null)}
-                                className="px-3 py-1.5 border rounded-lg text-xs text-gray-600 hover:bg-white">
-                                Cancelar
-                              </button>
+                              {canEdit ? (
+                                <>
+                                  <button onClick={() => handleCreateItem(m.id!)} disabled={savingItemMeta === m.id}
+                                    className="px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 disabled:opacity-50">
+                                    {savingItemMeta === m.id ? 'Salvando...' : 'Adicionar'}
+                                  </button>
+                                  <button onClick={() => setShowNewItemFor(null)}
+                                    className="px-3 py-1.5 border rounded-lg text-xs text-gray-600 hover:bg-white">
+                                    Cancelar
+                                  </button>
+                                </>
+                              ) : (
+                                <div className="text-xs text-gray-400 italic">Adição de itens bloqueada após aprovação.</div>
+                              )}
                             </div>
                           </div>
                         ) : (
-                          <button onClick={() => { setShowNewItemFor(m.id!); setItemError(null); }}
-                            className="mt-1 text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
-                            + Adicionar item
-                          </button>
+                          canEdit ? (
+                            <button onClick={() => { setShowNewItemFor(m.id!); setItemError(null); }}
+                              className="mt-1 text-xs text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1">
+                              + Adicionar item
+                            </button>
+                          ) : (
+                            <div className="text-xs text-gray-400 italic">Adicionar itens bloqueado</div>
+                          )
                         )}
                       </div>
                     )}
@@ -971,6 +1148,8 @@ const PlanoFullPage: React.FC = () => {
           </div>
         )}
       </div>
+
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </div>
   );
 };

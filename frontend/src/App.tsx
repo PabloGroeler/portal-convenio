@@ -35,12 +35,63 @@ import TiposDocumentoConfigPage from './pages/TiposDocumentoConfigPage';
 import PlanoFullPage from './pages/PlanoFullPage';
 import PrestacaoContasPage from './pages/PrestacaoContasPage';
 import PlanoTrabalhoPage from './pages/PlanoTrabalhoPage';
+import AdminParlamentarLimitesPage from './pages/AdminParlamentarLimitesPage';
+import FuncionalidadesConfigPage from './pages/FuncionalidadesConfigPage';
+import React from 'react';
 
 // Create a client
 const queryClient = new QueryClient();
 
 function App() {
   const routerBasename = window.location.pathname.startsWith('/emendas') ? '/emendas' : '/';
+
+  // Runtime import/type checks to help debug "Element type is invalid" errors.
+  // This logs the typeof each imported page/component and flags items that look like module objects
+  // (i.e., { default: ... }) instead of a function/component.
+  React.useEffect(() => {
+    try {
+      const checks: Array<{ name: string; comp: any }> = [
+        { name: 'Layout', comp: Layout },
+        { name: 'HomePage', comp: HomePage },
+        { name: 'LoginPage', comp: LoginPage },
+        { name: 'RegisterPage', comp: RegisterPage },
+        { name: 'DashboardPage', comp: DashboardPage },
+        { name: 'NewsPage', comp: NewsPage },
+        { name: 'NewsArticlePage', comp: NewsArticlePage },
+        { name: 'ContactPage', comp: ContactPage },
+        { name: 'ManualsPage', comp: ManualsPage },
+        { name: 'DownloadsPage', comp: DownloadsPage },
+        { name: 'LegislationPage', comp: LegislationPage },
+        { name: 'ConveniosPage', comp: ConveniosPage },
+        { name: 'EmendasPage', comp: EmendasPage },
+        { name: 'EmendaDetailPage', comp: EmendaDetailPage },
+        { name: 'InstitutionsPage', comp: InstitutionsPage },
+        { name: 'CouncilorsPage', comp: CouncilorsPage },
+        { name: 'CadastroDadosInstitucionaisPage', comp: CadastroDadosInstitucionaisPage },
+        { name: 'CadastroDirigentePage', comp: CadastroDirigentePage },
+        { name: 'CadastroEmendaPage', comp: CadastroEmendaPage },
+        { name: 'ProtectedRoute', comp: ProtectedRoute },
+        { name: 'DashboardLayout', comp: DashboardLayout },
+        { name: 'DashboardHomePage', comp: DashboardHomePage },
+        { name: 'DashboardEmendasPage', comp: DashboardEmendasPage },
+        { name: 'UsersPage', comp: UsersPage },
+        { name: 'ProfilePage', comp: ProfilePage },
+        { name: 'DiretoriaPage', comp: DiretoriaPage },
+        { name: 'VerifyEmailPage', comp: VerifyEmailPage },
+        { name: 'ForgotPasswordPage', comp: ForgotPasswordPage },
+        { name: 'ResetPasswordPage', comp: ResetPasswordPage },
+        { name: 'TiposDocumentoConfigPage', comp: TiposDocumentoConfigPage },
+        { name: 'PlanoFullPage', comp: PlanoFullPage },
+        { name: 'PrestacaoContasPage', comp: PrestacaoContasPage },
+        { name: 'PlanoTrabalhoPage', comp: PlanoTrabalhoPage },
+        { name: 'AdminParlamentarLimitesPage', comp: AdminParlamentarLimitesPage },
+        { name: 'FuncionalidadesConfigPage', comp: FuncionalidadesConfigPage },
+      ];
+
+    } catch (err) {
+      console.error('Import check failed', err);
+    }
+  }, []);
 
   return (
     <QueryClientProvider client={queryClient}>
@@ -82,6 +133,8 @@ function App() {
                 <Route path="usuarios" element={<UsersPage />} />
                 <Route path="profile" element={<ProfilePage />} />
                 <Route path="tipos-documento-config" element={<TiposDocumentoConfigPage />} />
+                <Route path="admin/funcionalidades" element={<FuncionalidadesConfigPage />} />
+                <Route path="admin/parlamentar-limites" element={<AdminParlamentarLimitesPage />} />
               </Route>
 
               {/* Full-screen pages (no header/footer) */}
