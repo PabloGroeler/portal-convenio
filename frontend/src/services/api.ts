@@ -1,8 +1,11 @@
 import axios from 'axios';
 
-// Relative base — nginx proxies /api/* straight to the backend (no prefix stripping locally).
-// In prod, Apache ProxyPass /api -> backend, so /api/auth/login reaches the backend correctly.
-const API_URL = '/api';
+declare const __API_BASE__: string | undefined;
+
+// Prefer build-time API base from .env (via DefinePlugin), then runtime window override, then default proxy path.
+const API_URL = (__API_BASE__ as string | undefined)
+  || (typeof window !== 'undefined' && (window as any).__API_BASE__)
+  || '/api';
 
 const api = axios.create({
   baseURL: API_URL,

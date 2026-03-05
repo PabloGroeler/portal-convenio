@@ -28,6 +28,8 @@ services:
     build:
       context: .
       dockerfile: src/main/docker/Dockerfile.jvm
+      args:
+        UPLOAD_DIR: ${UPLOAD_DIR}
     depends_on:
       postgres:
         condition: service_healthy
@@ -37,9 +39,10 @@ services:
     env_file:
       - .env
     volumes:
-      - app-uploads:/app/uploads
+      - ${UPLOAD_DIR}:${UPLOAD_DIR}
+      - app-uploads:${UPLOAD_DIR}
     environment:
-      UPLOAD_DIR: /app/uploads
+      UPLOAD_DIR: ${UPLOAD_DIR}
       # Override database connection for Docker network
       QUARKUS_DATASOURCE_JDBC_URL: jdbc:postgresql://postgres:5432/app_emendas
       QUARKUS_DATASOURCE_DB_KIND: postgresql
@@ -58,7 +61,6 @@ services:
       QUARKUS_HTTP_PORT: 8085
       QUARKUS_HTTP_HOST: 0.0.0.0
       QUARKUS_SWAGGER_UI_PATH: /swagger-ui
-      # Note: Email config (QUARKUS_MAILER_*) is loaded from .env file above
 
   # Frontend service
   frontend:
@@ -71,7 +73,10 @@ services:
     depends_on:
       - app
     restart: unless-stopped
+    env_file:
+      - .env
     environment:
+      - API_BASE=${API_BASE}
       # Force axios to use the same-origin /api path so Vite proxy handles routing in Docker.
       - VITE_API_URL=/api
     volumes:

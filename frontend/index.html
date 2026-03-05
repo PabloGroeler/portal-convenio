@@ -9,6 +9,8 @@
   </head>
   <body>
     <div id="root"></div>
-    <!-- webpack injects scripts automatically -->
+    <!-- runtime config: if /config.js exists it will set window.__API_BASE__ -->
+    <script src="/config.js"></script>
+    <!-- webpack/vite injects scripts automatically -->
   </body>
 </html>

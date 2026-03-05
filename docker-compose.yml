@@ -13,6 +13,8 @@ services:
     build:
       context: .
       dockerfile: src/main/docker/Dockerfile.jvm
+      args:
+        UPLOAD_DIR: ${UPLOAD_DIR}
     ports:
       - "8085:8080"
     networks:
@@ -21,8 +23,11 @@ services:
     env_file:
       - .env
     volumes:
-      - app-uploads:/var/uploads
+      # Map the host path defined in UPLOAD_DIR into the container at the same path
+      - ${UPLOAD_DIR}:${UPLOAD_DIR}
+      - app-uploads:${UPLOAD_DIR}
     environment:
+      UPLOAD_DIR: ${UPLOAD_DIR}
       QUARKUS_DATASOURCE_DB_KIND: postgresql
       QUARKUS_HIBERNATE_ORM_DATABASE_GENERATION: none
       QUARKUS_FLYWAY_MIGRATE_AT_START: "true"

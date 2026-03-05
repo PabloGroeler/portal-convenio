@@ -1,7 +1,12 @@
 const path = require('path');
+const dotenv = require('dotenv');
 const HtmlWebpackPlugin = require('html-webpack-plugin');
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
+const webpack = require('webpack');
+
+dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
+const resolvedApiBase = process.env.API_BASE || '/api';
 
 module.exports = (env, argv) => {
   const isProd = argv.mode === 'production';
@@ -90,6 +95,10 @@ module.exports = (env, argv) => {
             globOptions: { ignore: ['**/favicon.ico'] },
           },
         ],
+      }),
+      new webpack.DefinePlugin({
+        __API_BASE__: JSON.stringify(resolvedApiBase),
+        'process.env.API_BASE': JSON.stringify(resolvedApiBase),
       }),
     ],
 
