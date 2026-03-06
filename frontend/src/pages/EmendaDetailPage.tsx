@@ -7,6 +7,8 @@ import funcaoOrcamentariaService, { type FuncaoOrcamentariaDTO } from '../servic
 import AdmissibilidadePanel from '../components/AnalistaOrcamentoPanel';
 import SecretariaDemandaPanel from '../components/SecretariaDemandaPanel';
 import ConveniosDocumentalPanel from '../components/ConveniosDocumentalPanel';
+import JuridicoParecerPanel from '../components/JuridicoParecerPanel';
+import OperadorExecucaoPanel from '../components/OperadorExecucaoPanel';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/user.types';
 
@@ -51,6 +53,11 @@ const EmendaDetailPage: React.FC = () => {
   const isAdmin = hasRole(UserRole.ADMIN);
   const isSecretaria = hasRole(UserRole.SECRETARIA);
   const isConvenios = hasRole(UserRole.CONVENIOS);
+  const isJuridico = hasRole(UserRole.JURIDICO);
+  const isOperador = hasRole(UserRole.OPERADOR);
+  const isGestor = hasRole(UserRole.GESTOR);
+  // Área de despacho genérica só para ADMIN/GESTOR
+  const canDespacho = isAdmin || isGestor;
 
   const [emenda, setEmenda] = useState<Emenda | null>(null);
   const [loading, setLoading] = useState(true);
@@ -171,6 +178,21 @@ const EmendaDetailPage: React.FC = () => {
           </button>
         )}
       </div>
+
+      {/* Banner de perfil ativo — visível para todos exceto ADMIN */}
+      {user?.role && !isAdmin && (
+        <div className={`px-6 py-2 text-xs font-medium flex items-center gap-2 border-b ${
+          isSecretaria ? 'bg-teal-50 text-teal-800 border-teal-100' :
+          isConvenios  ? 'bg-violet-50 text-violet-800 border-violet-100' :
+          isJuridico   ? 'bg-blue-50 text-blue-800 border-blue-100' :
+          isOperador   ? 'bg-indigo-50 text-indigo-800 border-indigo-100' :
+          'bg-amber-50 text-amber-800 border-amber-100'
+        }`}>
+          <span className="font-semibold">Perfil ativo:</span> {String(user.role)}
+          <span className="ml-2 text-gray-400">·</span>
+          <span>Status da emenda: <strong>{emenda.status || 'Recebido'}</strong></span>
+        </div>
+      )}
 
       {/* Content */}
       <div className="flex-1 p-6 grid grid-cols-1 lg:grid-cols-12 gap-8 items-start overflow-y-auto">
@@ -316,7 +338,8 @@ const EmendaDetailPage: React.FC = () => {
             </div>
           </section>
 
-          {/* Área de Despacho */}
+          {/* Área de Despacho — somente ADMIN/GESTOR */}
+          {canDespacho && (
           <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
             <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
               <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -324,7 +347,7 @@ const EmendaDetailPage: React.FC = () => {
                 <line x1="12" x2="12" y1="8" y2="12"></line>
                 <line x1="12" y1="16" x2="12.01" y2="16"></line>
               </svg>
-              Área de Despacho
+              Área de Despacho <span className="text-xs font-normal text-purple-600 ml-1">(Admin/Gestor)</span>
             </h3>
             <div className="space-y-4">
               <div>
@@ -356,6 +379,7 @@ const EmendaDetailPage: React.FC = () => {
               </div>
             </div>
           </div>
+          )}
         </div>
 
         {/* Right Column - Sidebar */}
@@ -441,8 +465,40 @@ const EmendaDetailPage: React.FC = () => {
             />
           )}
 
-          {/* Análise de Demanda */}
-          {id && [
+          {/* Análise de Demanda — sempre visível para SECRETARIA/ADMIN; o painel decide o que mostrar */}
+          {id && (isAdmin || isSecretaria) && (
+            <>
+              {/* Banner informativo quando status ainda não chegou na demanda */}
+              {!['Admissibilidade aprovada','Em análise de demanda','Análise de demanda aprovada',
+                  'Devolvida por incompatibilidade de demanda','Em análise documental',
+                  'Análise documental aprovada','Devolvida por inviabilidade documental',
+                  'Iniciado','Em execução','Concluído'].includes(emenda.status ?? '') && (
+                <div className="bg-teal-50 border border-teal-200 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-teal-800 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-teal-400" />
+                    Análise de Demanda
+                  </h3>
+                  <p className="text-xs text-teal-700">
+                    Aguardando aprovação da admissibilidade pelo setor de Orçamento antes de iniciar a análise de demanda.<br />
+                    <span className="font-semibold">Status atual:</span> {emenda.status || 'Recebido'}
+                  </p>
+                </div>
+              )}
+              <SecretariaDemandaPanel
+                emendaId={id}
+                emendaStatus={emenda.status}
+                tipoTransferencia={emenda.tipoTransferencia}
+                canAct={isAdmin || isSecretaria}
+                onStatusChange={(newStatus) => {
+                  setEmenda((prev) => prev ? { ...prev, status: newStatus } : prev);
+                  emendaService.getHistorico(id).then(setHistorico).catch(() => {});
+                }}
+              />
+            </>
+          )}
+
+          {/* Análise de Demanda — somente leitura para outros perfis que também precisam ver */}
+          {id && !isAdmin && !isSecretaria && [
             'Admissibilidade aprovada',
             'Em análise de demanda',
             'Análise de demanda aprovada',
@@ -455,7 +511,7 @@ const EmendaDetailPage: React.FC = () => {
               emendaId={id}
               emendaStatus={emenda.status}
               tipoTransferencia={emenda.tipoTransferencia}
-              canAct={isAdmin || isSecretaria}
+              canAct={false}
               onStatusChange={(newStatus) => {
                 setEmenda((prev) => prev ? { ...prev, status: newStatus } : prev);
                 emendaService.getHistorico(id).then(setHistorico).catch(() => {});
@@ -463,18 +519,43 @@ const EmendaDetailPage: React.FC = () => {
             />
           )}
 
-          {/* Análise Documental — somente para Indireta (Story 5: Direta shows closure notice) */}
-          {id && [
-            'Análise de demanda aprovada',
-            'Em análise documental',
-            'Análise documental aprovada',
-            'Devolvida por inviabilidade documental',
+          {/* Análise Documental — sempre visível para CONVENIOS/ADMIN */}
+          {id && (isAdmin || isConvenios) && (
+            <>
+              {!['Análise de demanda aprovada','Em análise documental','Análise documental aprovada',
+                  'Devolvida por inviabilidade documental','Iniciado','Em execução','Concluído'].includes(emenda.status ?? '') && (
+                <div className="bg-violet-50 border border-violet-200 rounded-xl p-4">
+                  <h3 className="text-sm font-semibold text-violet-800 mb-1 flex items-center gap-2">
+                    <span className="inline-block w-2 h-2 rounded-full bg-violet-400" />
+                    Análise Documental — Convênios
+                  </h3>
+                  <p className="text-xs text-violet-700">
+                    Aguardando aprovação da análise de demanda pela Secretaria antes de iniciar a análise documental.<br />
+                    <span className="font-semibold">Status atual:</span> {emenda.status || 'Recebido'}
+                  </p>
+                </div>
+              )}
+              <ConveniosDocumentalPanel
+                emendaId={id}
+                emendaStatus={emenda.status}
+                tipoTransferencia={emenda.tipoTransferencia}
+                canAct={(isAdmin || isConvenios) && emenda.tipoTransferencia === 'Indireta'}
+                onStatusChange={(newStatus) => {
+                  setEmenda((prev) => prev ? { ...prev, status: newStatus } : prev);
+                  emendaService.getHistorico(id).then(setHistorico).catch(() => {});
+                }}
+              />
+            </>
+          )}
+
+          {/* Análise Documental — somente leitura para outros perfis */}
+          {id && !isAdmin && !isConvenios && [
+            'Análise de demanda aprovada','Em análise documental',
+            'Análise documental aprovada','Devolvida por inviabilidade documental',
           ].includes(emenda.status ?? '') && (
             <ConveniosDocumentalPanel
               emendaId={id}
               emendaStatus={emenda.status}
-              tipoTransferencia={emenda.tipoTransferencia}
-              canAct={(isAdmin || isConvenios) && emenda.tipoTransferencia === 'Indireta'}
               onStatusChange={(newStatus) => {
                 setEmenda((prev) => prev ? { ...prev, status: newStatus } : prev);
                 emendaService.getHistorico(id).then(setHistorico).catch(() => {});

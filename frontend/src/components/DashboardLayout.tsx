@@ -101,6 +101,23 @@ const DashboardLayout: React.FC = () => {
                 </NavLink>
               </li>
 
+              {/* Workflow — somente ADMIN */}
+              {String(user?.role ?? '').toUpperCase() === 'ADMIN' && (
+              <li>
+                <NavLink
+                  to="/dashboard/workflow"
+                  className={({ isActive }) =>
+                    `${linkBase} ${isActive ? 'bg-gray-900 text-white' : 'text-gray-700 hover:bg-gray-100'}`
+                  }
+                >
+                  <svg className={iconBase} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                    <path d="M17 12h-5v5h5v-5zM16 1v2H8V1H6v2H5c-1.11 0-1.99.9-1.99 2L3 19c0 1.1.89 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2h-1V1h-2zm3 18H5V8h14v11z"/>
+                  </svg>
+                  <span>Fluxo de Tramitação</span>
+                </NavLink>
+              </li>
+              )}
+
               {/* Gestão (collapsible) - Only show if user has access to at least one item */}
               {hasGestaoAccess && (
               <li>

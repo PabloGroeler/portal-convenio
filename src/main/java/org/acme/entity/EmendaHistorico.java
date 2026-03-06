@@ -17,8 +17,7 @@ import java.time.OffsetDateTime;
 public class EmendaHistorico {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "emendas_historico_seq")
-    @SequenceGenerator(name = "emendas_historico_seq", sequenceName = "emendas_historico_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)

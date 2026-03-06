@@ -55,8 +55,15 @@ export interface InstitutionDTO {
 }
 
 const institutionService = {
+  // Lista TODAS as instituições (admin only / uso interno)
   list: async (): Promise<InstitutionDTO[]> => {
     const response = await api.get('/institutions');
+    return response.data;
+  },
+
+  // Lista apenas instituições visíveis para o usuário logado (filtro por role no backend)
+  listForUser: async (): Promise<InstitutionDTO[]> => {
+    const response = await api.get('/institutions/for-user');
     return response.data;
   },
 

@@ -116,7 +116,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const hasRole = useCallback((role: UserRole): boolean => {
     if (!user || !user.role) return false;
-    return user.role === role;
+    return String(user.role).toUpperCase() === String(role).toUpperCase();
   }, [user]);
 
   const isAdmin = useCallback((): boolean => {

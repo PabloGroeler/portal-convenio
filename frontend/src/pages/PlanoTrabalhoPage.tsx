@@ -19,6 +19,52 @@ const STATUS_LABEL: Record<string, string> = {
   RASCUNHO:  '📝 Rascunho',
 };
 
+const ROLE_FLOW: Record<string, { title: string; steps: { label: string; detail: string; status?: string }[]; planStatuses?: string[] }> = {
+  ORCAMENTO: {
+    title: 'Fluxo para Orçamento',
+    steps: [
+      { label: 'Admissibilidade', detail: 'Puxar "Em análise de admissibilidade", aprovar ou devolver ao legislativo', status: 'Em análise de admissibilidade → Admissibilidade aprovada/Devolvida ao legislativo' },
+      { label: 'Demanda', detail: 'Encaminhar para análise de demanda (Secretaria) ou devolver por incompatibilidade', status: 'Em análise de demanda → Análise de demanda aprovada/Devolvida por incompatibilidade de demanda' },
+      { label: 'Retornos', detail: 'Tratar devoluções de convênios/documental quando houver execução Indireta', status: 'Devolvida por inviabilidade documental' },
+    ],
+    planStatuses: ['ENVIADO', 'RASCUNHO', 'REPROVADO'],
+  },
+  SECRETARIA: {
+    title: 'Fluxo para Secretaria',
+    steps: [
+      { label: 'Demanda', detail: 'Receber pós-admissibilidade (Direta) e avaliar viabilidade; aprovar ou devolver', status: 'Em análise de demanda → Análise de demanda aprovada/Devolvida por incompatibilidade de demanda' },
+      { label: 'Execução Direta', detail: 'Para emendas Diretas, seguir para Iniciado/Execução após demanda aprovada', status: 'Análise de demanda aprovada → Iniciado/Em execução' },
+      { label: 'Pendências', detail: 'Registrar observações e reenviar ao proponente/operador quando necessário', status: 'Devolvido (genérico)' },
+    ],
+    planStatuses: ['ENVIADO', 'RASCUNHO'],
+  },
+  CONVENIOS: {
+    title: 'Fluxo para Convênios (Indireta)',
+    steps: [
+      { label: 'Documental', detail: 'Abrir análise documental apenas se tipo = Indireta; aprovar ou devolver', status: 'Em análise documental → Análise documental aprovada/Devolvida por inviabilidade documental' },
+      { label: 'Formalização', detail: 'Após documental aprovada, formalizar termo/empenho e iniciar execução', status: 'Iniciado → Em execução → Concluído' },
+    ],
+    planStatuses: ['ENVIADO', 'APROVADO', 'REPROVADO'],
+  },
+  JURIDICO: {
+    title: 'Fluxo para Jurídico',
+    steps: [
+      { label: 'Parecer', detail: 'Emitir parecer em minutas/termos quando acionado por Convênios ou Secretaria', status: 'Observação no histórico; status não muda diretamente' },
+      { label: 'Ajustes', detail: 'Registrar exigências e devolver ao setor demandante', status: 'Devolvido (genérico)' },
+    ],
+    planStatuses: ['ENVIADO', 'REPROVADO'],
+  },
+  OPERADOR: {
+    title: 'Fluxo para Operador/Proponente',
+    steps: [
+      { label: 'Detalhamento', detail: 'Enviar formulário e anexos quando solicitado', status: 'Iniciado (AGUARDAR_DETALHAMENTO) → Em análise de demanda/documental' },
+      { label: 'Pendências', detail: 'Corrigir itens devolvidos por Orçamento, Secretaria ou Convênios', status: 'Devolvido (genérico)' },
+      { label: 'Execução', detail: 'Acompanhar execução e prestação de contas quando aplicável', status: 'Em execução → Concluído' },
+    ],
+    planStatuses: ['RASCUNHO', 'ENVIADO', 'APROVADO', 'REPROVADO'],
+  },
+};
+
 const PlanoTrabalhoPage: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
@@ -33,8 +79,14 @@ const PlanoTrabalhoPage: React.FC = () => {
   const [selectedPlanoId, setSelectedPlanoId] = useState<string | null>(null);
   const [motivo, setMotivo] = useState('');
   const [saving, setSaving] = useState(false);
+  const [filterStatus, setFilterStatus] = useState<string | null>(null);
 
   const isGestorOrAdmin = user?.role === 'GESTOR' || user?.role === 'ADMIN';
+  const roleFlow = (user?.role && ROLE_FLOW[user.role]) ? ROLE_FLOW[user.role] : null;
+  const recommendedStatuses = roleFlow?.planStatuses ?? ['RASCUNHO', 'ENVIADO', 'APROVADO', 'REPROVADO'];
+  const planosFiltrados = filterStatus
+    ? planos.filter(p => (p.status || 'RASCUNHO') === filterStatus)
+    : planos;
 
   const fetchPlanos = async () => {
     const gestorOrAdmin = user?.role === 'GESTOR' || user?.role === 'ADMIN';
@@ -88,6 +140,42 @@ const PlanoTrabalhoPage: React.FC = () => {
           <span className="text-lg leading-none">+</span> Novo Plano
         </button>
       </div>
+
+      {roleFlow && (
+        <div className="mb-6 bg-indigo-50 border border-indigo-100 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <div className="text-indigo-600 mt-0.5">🧭</div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-indigo-900">{roleFlow.title}</p>
+              <div className="mt-2 grid sm:grid-cols-2 gap-2">
+                {roleFlow.steps.map((s, idx) => (
+                  <div key={idx} className="bg-white border border-indigo-100 rounded-lg p-3 text-xs text-indigo-900 shadow-sm">
+                    <div className="font-semibold text-indigo-700">{s.label}</div>
+                    <div className="text-indigo-900 mt-1 leading-snug">{s.detail}</div>
+                    {s.status && <div className="mt-1 text-[11px] text-indigo-600">{s.status}</div>}
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex flex-wrap gap-2 text-xs items-center">
+                <span className="text-indigo-700 font-semibold">Filtrar planos por status:</span>
+                <button type="button" onClick={() => setFilterStatus(null)} className={`px-2 py-1 rounded border text-[11px] ${filterStatus === null ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-200'}`}>
+                  Todos
+                </button>
+                {recommendedStatuses.map(st => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setFilterStatus(st)}
+                    className={`px-2 py-1 rounded border text-[11px] ${filterStatus === st ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-indigo-700 border-indigo-200'}`}
+                  >
+                    {STATUS_LABEL[st] ?? st}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {loading ? (
         <div className="flex justify-center items-center py-20">
@@ -159,7 +247,7 @@ const PlanoTrabalhoPage: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {planos.map(p => {
+              {planosFiltrados.map(p => {
                 const status = p.status || 'RASCUNHO';
                 const valor = p.emendaValor ?? p.valor;
                 return (

@@ -7,8 +7,7 @@ import java.util.Optional;
 @Table(name = "emenda_analista_orcamento")
 public class EmendaAnalistaOrcamento extends PanacheEntityBase {
     @Id
-    @SequenceGenerator(name = "emenda_analista_seq", sequenceName = "emenda_analista_orcamento_id_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "emenda_analista_seq")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "emenda_id", nullable = false)

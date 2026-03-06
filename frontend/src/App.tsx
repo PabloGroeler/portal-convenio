@@ -37,6 +37,7 @@ import PrestacaoContasPage from './pages/PrestacaoContasPage';
 import PlanoTrabalhoPage from './pages/PlanoTrabalhoPage';
 import AdminParlamentarLimitesPage from './pages/AdminParlamentarLimitesPage';
 import FuncionalidadesConfigPage from './pages/FuncionalidadesConfigPage';
+import WorkflowPage from './pages/WorkflowPage';
 import React from 'react';
 
 // Create a client
@@ -120,6 +121,11 @@ function App() {
               <Route path="plano/prestacao-contas" element={<PrestacaoContasPage />} />
               <Route path="plano-trabalho" element={<PlanoTrabalhoPage />} />
               <Route path="planos" element={<PlanoTrabalhoPage />} />
+              <Route path="workflow" element={
+                <ProtectedRoute requiredRoles={['ADMIN']}>
+                  <WorkflowPage />
+                </ProtectedRoute>
+              } />
               <Route path="novo-plano" element={<PlanoFullPage />} />
               <Route path="editar-plano" element={<PlanoFullPage />} />
               <Route path="emendas" element={<DashboardEmendasPage />} />

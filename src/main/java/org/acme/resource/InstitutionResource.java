@@ -61,6 +61,14 @@ public class InstitutionResource extends BaseResource {
     }
 
     @GET
+    @Path("/for-user")
+    public Response listForUser() {
+        String username = getCurrentUser();
+        List<Institution> result = institutionService.listForUser(username);
+        return Response.ok(result).build();
+    }
+
+    @GET
     @Path("/{id}")
     public Response getById(@PathParam("id") String id) {
         Institution institution = institutionService.findById(id);
@@ -215,7 +223,7 @@ public class InstitutionResource extends BaseResource {
             return Response.status(Response.Status.NOT_FOUND).build();
         }
 
-        Institution updated = institutionService.update(id, institution);
+        Institution updated = institutionService.update(id, institution, getCurrentUser());
         if (updated == null) {
             return Response.status(Response.Status.NOT_FOUND).build();
         }

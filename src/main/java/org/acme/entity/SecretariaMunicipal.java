@@ -11,8 +11,7 @@ import java.time.OffsetDateTime;
 public class SecretariaMunicipal {
 
     @Id
-    @SequenceGenerator(name = "secretarias_municipais_seq", sequenceName = "secretarias_municipais_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "secretarias_municipais_seq")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     public Long id;
 

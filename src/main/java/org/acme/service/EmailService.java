@@ -315,6 +315,140 @@ public class EmailService {
             """, userName, resetLink, resetLink, resetLink);
     }
 
+    // ── Notificações de emenda / instituição ──────────────────────────────────
+
+    /**
+     * Envia uma notificação HTML genérica (reutilizada pelos builders abaixo).
+     */
+    public void sendHtmlNotification(String toEmail, String subject, String htmlBody) {
+        try {
+            mailer.send(Mail.withHtml(toEmail, subject, htmlBody));
+            Log.infof("Notificação enviada para %s — %s", toEmail, subject);
+        } catch (Exception e) {
+            Log.errorf("Erro ao enviar notificação para %s: %s", toEmail, e.getMessage());
+        }
+    }
+
+    /** HTML body: mudança de status de emenda */
+    public String buildEmendaStatusBody(String codigoEmenda, String institutionId,
+                                        String statusAnterior, String novoStatus,
+                                        String observacao, String usuarioAtor) {
+        String obs = (observacao != null && !observacao.isBlank())
+                ? "<p><strong>Observação:</strong> " + observacao + "</p>" : "";
+        return String.format("""
+            <!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>
+              body{font-family:Arial,sans-serif;color:#333;line-height:1.6}
+              .container{max-width:600px;margin:0 auto;padding:20px}
+              .header{background:#7c3aed;color:#fff;padding:20px;border-radius:8px 8px 0 0}
+              .content{background:#f9f9f9;padding:24px;border:1px solid #e5e7eb;border-radius:0 0 8px 8px}
+              .badge{display:inline-block;padding:4px 12px;border-radius:20px;font-size:13px;font-weight:bold}
+              .old{background:#fee2e2;color:#991b1b}.new{background:#d1fae5;color:#065f46}
+              .footer{text-align:center;margin-top:16px;font-size:11px;color:#9ca3af}
+            </style></head><body>
+            <div class="container">
+              <div class="header"><h2 style="margin:0">📋 Emenda Atualizada</h2></div>
+              <div class="content">
+                <p>A emenda <strong>%s</strong> teve seu status alterado.</p>
+                <table style="border-collapse:collapse;width:100%%">
+                  <tr><td style="padding:6px 0;color:#6b7280">Instituição</td><td><strong>%s</strong></td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280">Status anterior</td>
+                      <td><span class="badge old">%s</span></td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280">Novo status</td>
+                      <td><span class="badge new">%s</span></td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280">Responsável</td><td>%s</td></tr>
+                </table>
+                %s
+                <p style="margin-top:20px">
+                  <a href="%s/dashboard/emendas" style="background:#7c3aed;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">
+                    Ver no Portal →
+                  </a>
+                </p>
+              </div>
+              <div class="footer">Portal de Emendas — notificação automática</div>
+            </div></body></html>
+            """,
+            codigoEmenda, institutionId != null ? institutionId : "—",
+            statusAnterior != null ? statusAnterior : "—", novoStatus,
+            usuarioAtor != null ? usuarioAtor : "sistema",
+            obs, frontendBaseUrl);
+    }
+
+    /** HTML body: atualização de dados da emenda (sem mudança de status) */
+    public String buildEmendaDadosBody(String codigoEmenda, String institutionId,
+                                       String statusAtual, String usuarioAtor) {
+        return String.format("""
+            <!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>
+              body{font-family:Arial,sans-serif;color:#333;line-height:1.6}
+              .container{max-width:600px;margin:0 auto;padding:20px}
+              .header{background:#2563eb;color:#fff;padding:20px;border-radius:8px 8px 0 0}
+              .content{background:#f9f9f9;padding:24px;border:1px solid #e5e7eb;border-radius:0 0 8px 8px}
+              .footer{text-align:center;margin-top:16px;font-size:11px;color:#9ca3af}
+            </style></head><body>
+            <div class="container">
+              <div class="header"><h2 style="margin:0">✏️ Dados da Emenda Atualizados</h2></div>
+              <div class="content">
+                <p>Os dados da emenda <strong>%s</strong> foram atualizados.</p>
+                <table style="border-collapse:collapse;width:100%%">
+                  <tr><td style="padding:6px 0;color:#6b7280">Instituição</td><td><strong>%s</strong></td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280">Status atual</td><td><strong>%s</strong></td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280">Atualizado por</td><td>%s</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280">Data/hora</td><td>%s</td></tr>
+                </table>
+                <p style="margin-top:20px">
+                  <a href="%s/dashboard/emendas" style="background:#2563eb;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">
+                    Ver no Portal →
+                  </a>
+                </p>
+              </div>
+              <div class="footer">Portal de Emendas — notificação automática</div>
+            </div></body></html>
+            """,
+            codigoEmenda, institutionId != null ? institutionId : "—",
+            statusAtual != null ? statusAtual : "—",
+            usuarioAtor != null ? usuarioAtor : "sistema",
+            java.time.LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+            frontendBaseUrl);
+    }
+
+    /** HTML body: atualização de dados da instituição */
+    public String buildInstituicaoBody(String razaoSocial, String institutionId, String usuarioAtor) {
+        return String.format("""
+            <!DOCTYPE html><html><head><meta charset="UTF-8">
+            <style>
+              body{font-family:Arial,sans-serif;color:#333;line-height:1.6}
+              .container{max-width:600px;margin:0 auto;padding:20px}
+              .header{background:#0891b2;color:#fff;padding:20px;border-radius:8px 8px 0 0}
+              .content{background:#f9f9f9;padding:24px;border:1px solid #e5e7eb;border-radius:0 0 8px 8px}
+              .footer{text-align:center;margin-top:16px;font-size:11px;color:#9ca3af}
+            </style></head><body>
+            <div class="container">
+              <div class="header"><h2 style="margin:0">🏢 Instituição Atualizada</h2></div>
+              <div class="content">
+                <p>Os dados da instituição <strong>%s</strong> foram atualizados.</p>
+                <table style="border-collapse:collapse;width:100%%">
+                  <tr><td style="padding:6px 0;color:#6b7280">ID</td><td>%s</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280">Atualizado por</td><td>%s</td></tr>
+                  <tr><td style="padding:6px 0;color:#6b7280">Data/hora</td><td>%s</td></tr>
+                </table>
+                <p style="margin-top:20px">
+                  <a href="%s/dashboard/instituicoes" style="background:#0891b2;color:#fff;padding:10px 20px;border-radius:6px;text-decoration:none">
+                    Ver no Portal →
+                  </a>
+                </p>
+              </div>
+              <div class="footer">Portal de Emendas — notificação automática</div>
+            </div></body></html>
+            """,
+            razaoSocial, institutionId != null ? institutionId : "—",
+            usuarioAtor != null ? usuarioAtor : "sistema",
+            java.time.LocalDateTime.now().format(
+                java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")),
+            frontendBaseUrl);
+    }
+
     private String buildPasswordChangedEmailBody(String userName) {
         return String.format("""
             Olá %s,

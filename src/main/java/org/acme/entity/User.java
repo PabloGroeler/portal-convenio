@@ -15,15 +15,7 @@ import java.time.OffsetDateTime;
 public class User extends PanacheEntityBase {
 
     @Id
-    @SequenceGenerator(
-        name = "usuarios_seq_gen",
-        sequenceName = "usuarios_seq",
-        allocationSize = 1
-    )
-    @GeneratedValue(
-        strategy = GenerationType.SEQUENCE,
-        generator = "usuarios_seq_gen"
-    )
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
 
     public enum UserStatus {

@@ -4,28 +4,38 @@ import institutionService from '../services/institutionService';
 import type { InstitutionDTO } from '../services/institutionService';
 import { StatusOSC } from '../types/statusOSC.types';
 import { StatusOSCBadge } from '../components/StatusOSCComponents';
+import { useAuth } from '../context/AuthContext';
+import { UserRole } from '../types/user.types';
+
+// Perfis que só veem instituições vinculadas às emendas do seu fluxo
+const WORKFLOW_ROLES = [UserRole.ORCAMENTO, UserRole.SECRETARIA, UserRole.CONVENIOS, UserRole.JURIDICO];
 
 const InstitutionsPage: React.FC = () => {
   const navigate = useNavigate();
+  const { hasRole, user } = useAuth();
+
+  const isWorkflow = WORKFLOW_ROLES.some(r => hasRole(r));
+  const canCreate  = hasRole(UserRole.ADMIN) || hasRole(UserRole.GESTOR) || hasRole(UserRole.OPERADOR);
+
   const [institutions, setInstitutions] = useState<InstitutionDTO[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<StatusOSC | 'TODOS'>('TODOS');
 
   useEffect(() => {
+    const fetchInstitutions = async () => {
+      try {
+        // Backend filtra por role: OPERADOR vê só as suas, workflow vê as com emendas, admin/gestor vê todas
+        const data = await institutionService.listForUser();
+        setInstitutions(data);
+      } catch (err) {
+        console.error('Error fetching institutions:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchInstitutions();
   }, []);
-
-  const fetchInstitutions = async () => {
-    try {
-      const data = await institutionService.list();
-      setInstitutions(data);
-    } catch (err) {
-      console.error('Error fetching institutions:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleEdit = (institution: InstitutionDTO) => {
     // Backend uses institutionId as the entity identifier.
@@ -48,13 +58,22 @@ const InstitutionsPage: React.FC = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Instituições</h1>
-        <button
-          onClick={() => navigate('/dashboard/cadastro-dados-institucionais')}
-          className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-        >
-          + Nova Instituição
-        </button>
+        <div>
+          <h1 className="text-3xl font-bold">Instituições</h1>
+          {isWorkflow && (
+            <p className="text-sm text-gray-500 mt-1">
+              Exibindo apenas instituições vinculadas às emendas do seu perfil.
+            </p>
+          )}
+        </div>
+        {canCreate && (
+          <button
+            onClick={() => navigate('/dashboard/cadastro-dados-institucionais')}
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            + Nova Instituição
+          </button>
+        )}
       </div>
 
       <div className="mb-4 flex gap-4 flex-wrap">

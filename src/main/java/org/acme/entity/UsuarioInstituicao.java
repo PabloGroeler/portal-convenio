@@ -9,8 +9,7 @@ import java.time.OffsetDateTime;
 public class UsuarioInstituicao extends PanacheEntityBase {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "usuarios_instituicoes_seq")
-    @SequenceGenerator(name = "usuarios_instituicoes_seq", sequenceName = "usuarios_instituicoes_id_seq", allocationSize = 1)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
 
     @Column(name = "usuario_id", nullable = false)

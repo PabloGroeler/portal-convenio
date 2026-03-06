@@ -8,8 +8,7 @@ import java.util.Optional;
 public class EmendaAdmissibilidade extends PanacheEntityBase {
     public enum Status { PENDENTE, APROVADA, REPROVADA }
     @Id
-    @SequenceGenerator(name = "emenda_admissibilidade_seq", sequenceName = "emenda_admissibilidade_id_seq", allocationSize = 1)
-    @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "emenda_admissibilidade_seq")
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     public Long id;
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "emenda_id", nullable = false)

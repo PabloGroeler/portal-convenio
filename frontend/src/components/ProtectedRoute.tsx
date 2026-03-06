@@ -7,15 +7,24 @@ import { Permission, ROUTE_PERMISSIONS } from '../types/user.types';
 interface ProtectedRouteProps {
   children: React.ReactNode;
   requiredPermissions?: Permission[];
+  requiredRoles?: string[];
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPermissions }) => {
-  const { isAuthenticated, hasAnyPermission } = useAuth();
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiredPermissions, requiredRoles }) => {
+  const { isAuthenticated, hasAnyPermission, user } = useAuth();
   const location = useLocation();
 
   // Check if user is authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" replace state={{ from: location }} />;
+  }
+
+  // Role-based guard
+  if (requiredRoles && requiredRoles.length > 0) {
+    const userRole = String(user?.role ?? '').toUpperCase();
+    if (!requiredRoles.map(r => r.toUpperCase()).includes(userRole)) {
+      return <Navigate to="/dashboard" replace />;
+    }
   }
 
   // Check route-based permissions if defined

@@ -45,6 +45,9 @@ public class EmendaService {
     @Inject
     EmendaValidationService emendaValidationService;
 
+    @Inject
+    EmendaNotificationService notificationService;
+
     public List<Emenda> listAll() {
         // Note: Emenda.attachments is an @ElementCollection and can be lazily loaded.
         // If we return entities outside a transaction, Jackson serialization may trigger
@@ -95,15 +98,14 @@ public class EmendaService {
     }
 
     /**
-     * Story 4 — Role-based visibility filter.
+     * Role-based visibility filter.
      *
-     * Rules applied on top of listAllWithDetails():
-     *   • SECRETARIA: can see "Análise de demanda aprovada" only for Direta.
-     *     Indireta at that status belongs to Convênios.
-     *     Additionally filtered to only the secretaria the user is linked to.
-     *   • CONVENIOS: can see "Análise de demanda aprovada" only for Indireta.
-     *     Direta at that status goes back to the Secretaria.
-     *   • ADMIN / ORCAMENTO / others: see everything (no filter applied here).
+     * ADMIN / GESTOR   : tudo
+     * ORCAMENTO        : tudo (gerencia admissibilidade)
+     * SECRETARIA       : emendas da sua secretaria, exceto "Análise de demanda aprovada + Indireta"
+     * CONVENIOS        : emendas Indireta, exceto "Análise de demanda aprovada + Direta"
+     * JURIDICO         : apenas status pós-documental (Análise documental aprovada, Iniciado, Em execução)
+     * OPERADOR         : apenas emendas vinculadas às suas instituições
      */
     @Transactional
     public List<EmendaDetailDTO> listWithDetailsForUser(String username) {
@@ -113,8 +115,9 @@ public class EmendaService {
 
         org.acme.entity.User.UserRole role = caller.role;
 
-        // ADMIN, ORCAMENTO and unrecognised roles: no additional filter
+        // ADMIN, GESTOR, ORCAMENTO: veem tudo
         if (role == org.acme.entity.User.UserRole.ADMIN ||
+            role == org.acme.entity.User.UserRole.GESTOR ||
             role == org.acme.entity.User.UserRole.ORCAMENTO) {
             return all;
         }
@@ -122,17 +125,11 @@ public class EmendaService {
         final String DEMANDA_APROVADA = "Análise de demanda aprovada";
 
         if (role == org.acme.entity.User.UserRole.SECRETARIA) {
-            // Secretaria sees:
-            //   • Everything that is NOT "Análise de demanda aprovada + Indireta"
-            //     (that belongs to Convênios)
-            //   • For statuses that require secretaria routing, filter to own secretaria
             final String userSecretaria = caller.secretaria;
             return all.stream().filter(e -> {
                 boolean isDemandaAprovada = DEMANDA_APROVADA.equalsIgnoreCase(e.status);
                 boolean isIndireta = "Indireta".equalsIgnoreCase(e.tipoTransferencia);
-                // Hide: Demanda Aprovada + Indireta (that's for Convênios)
                 if (isDemandaAprovada && isIndireta) return false;
-                // For emendas with secretariaDestino, only show those that match the user's secretaria
                 if (e.secretariaDestino != null && !e.secretariaDestino.isBlank() &&
                     userSecretaria != null && !userSecretaria.isBlank()) {
                     return e.secretariaDestino.equalsIgnoreCase(userSecretaria);
@@ -142,20 +139,42 @@ public class EmendaService {
         }
 
         if (role == org.acme.entity.User.UserRole.CONVENIOS) {
-            // Convênios sees:
-            //   • Everything that is NOT "Análise de demanda aprovada + Direta"
-            //     (that goes back to the Secretaria)
             return all.stream().filter(e -> {
                 boolean isDemandaAprovada = DEMANDA_APROVADA.equalsIgnoreCase(e.status);
                 boolean isDireta = "Direta".equalsIgnoreCase(e.tipoTransferencia) ||
-                                   e.tipoTransferencia == null; // null defaults to Direta
-                // Hide: Demanda Aprovada + Direta (not for Convênios)
+                                   e.tipoTransferencia == null;
                 if (isDemandaAprovada && isDireta) return false;
                 return true;
             }).collect(Collectors.toList());
         }
 
-        // All other roles (OPERADOR, GESTOR, ANALISTA, JURIDICO): no filter
+        if (role == org.acme.entity.User.UserRole.JURIDICO) {
+            // Jurídico: apenas emendas na fase pós-documental
+            java.util.Set<String> statusJuridico = java.util.Set.of(
+                "Análise documental aprovada",
+                "Iniciado",
+                "Em execução",
+                "Concluído"
+            );
+            return all.stream()
+                .filter(e -> statusJuridico.contains(e.status))
+                .collect(Collectors.toList());
+        }
+
+        if (role == org.acme.entity.User.UserRole.OPERADOR) {
+            // Operador: apenas emendas das instituições às quais está vinculado
+            java.util.List<org.acme.entity.UsuarioInstituicao> vinculos =
+                org.acme.entity.UsuarioInstituicao.findByUsuario(caller.id);
+            if (vinculos.isEmpty()) return java.util.Collections.emptyList();
+            java.util.Set<String> instIds = vinculos.stream()
+                .map(v -> v.instituicaoId)
+                .collect(Collectors.toSet());
+            return all.stream()
+                .filter(e -> e.institutionId != null && instIds.contains(e.institutionId))
+                .collect(Collectors.toList());
+        }
+
+        // Fallback: retorna tudo
         return all;
     }
 
@@ -482,6 +501,12 @@ public class EmendaService {
         if (emenda.attachments != null) {
             int ignored = emenda.attachments.size();
         }
+
+        // Notificar interessados sobre a mudança de status
+        notificationService.notificarMudancaStatus(
+            emenda.id, emenda.officialCode, emenda.institutionId,
+            statusAnterior, novoStatus, acao.observacao,
+            (acao.usuario == null || acao.usuario.isBlank()) ? "sistema" : acao.usuario);
 
         return emenda;
     }

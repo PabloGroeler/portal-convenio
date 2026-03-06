@@ -9,6 +9,11 @@ import funcaoOrcamentariaService, { type FuncaoOrcamentariaDTO } from '../servic
 import type { EmendaHistoricoDTO } from '../services/emendaService';
 import { useAuth } from '../context/AuthContext';
 import { UserRole } from '../types/user.types';
+import AdmissibilidadePanel from '../components/AnalistaOrcamentoPanel';
+import SecretariaDemandaPanel from '../components/SecretariaDemandaPanel';
+import ConveniosDocumentalPanel from '../components/ConveniosDocumentalPanel';
+import JuridicoParecerPanel from '../components/JuridicoParecerPanel';
+import OperadorExecucaoPanel from '../components/OperadorExecucaoPanel';
 
 interface Emenda {
   id: string;
@@ -39,6 +44,15 @@ interface Emenda {
 const EmendasPage: React.FC = () => {
   const navigate = useNavigate();
   const { hasRole, user } = useAuth();
+  const isAdmin    = hasRole(UserRole.ADMIN);
+  const isOrcamento  = hasRole(UserRole.ORCAMENTO);
+  const isSecretaria = hasRole(UserRole.SECRETARIA);
+  const isConvenios  = hasRole(UserRole.CONVENIOS);
+  const isJuridico   = hasRole(UserRole.JURIDICO);
+  const isOperador   = hasRole(UserRole.OPERADOR);
+  const isGestor     = hasRole(UserRole.GESTOR);
+  // Perfis que só analisam o fluxo — não criam/editam emendas
+  const isWorkflow   = isOrcamento || isSecretaria || isConvenios || isJuridico;
 
   // Status pendentes por role — emendas que precisam de ação do usuário
   // Story 4: SECRETARIA sees "Análise de demanda aprovada" only for Direta
@@ -58,16 +72,32 @@ const EmendasPage: React.FC = () => {
     [UserRole.CONVENIOS]: [
       'Análise de demanda aprovada', // only Indireta — filtered below in useMemo
       'Em análise documental',
+      'Análise documental aprovada',
+      'Devolvida por inviabilidade documental',
+    ],
+    [UserRole.JURIDICO]: [
+      'Em análise documental',
+      'Análise documental aprovada',
+    ],
+    [UserRole.OPERADOR]: [
+      'Iniciado',
+      'Em execução',
+      'Devolvido',
+      'Devolvida por incompatibilidade de demanda',
+      'Devolvida por inviabilidade documental',
     ],
   };
 
   // Status que pertencem à "fila" do role atual
   const myQueueStatuses: string[] = (() => {
-    for (const role of [UserRole.ORCAMENTO, UserRole.SECRETARIA, UserRole.CONVENIOS]) {
+    for (const role of [UserRole.ORCAMENTO, UserRole.SECRETARIA, UserRole.CONVENIOS, UserRole.JURIDICO, UserRole.OPERADOR]) {
       if (hasRole(role)) return STATUS_POR_ROLE[role] ?? [];
     }
     return [];
   })();
+
+  // Perfis que SEMPRE veem apenas sua fila — sem toggle. Admin e Gestor veem tudo.
+  const isQueueRestricted = myQueueStatuses.length > 0 && !isAdmin && !isGestor;
 
   const [emendas, setEmendas] = useState<Emenda[]>([]);
   const [loading, setLoading] = useState(true);
@@ -643,8 +673,11 @@ const EmendasPage: React.FC = () => {
         }
       }
 
-      // "Minha Fila" — filtra apenas status relevantes para o role
-      if (myQueueOnly && myQueueStatuses.length > 0) {
+      // Fila: perfis de workflow SEMPRE veem apenas os status da sua fila.
+      // Admin/Gestor têm toggle opcional via myQueueOnly.
+      if (isQueueRestricted) {
+        if (!myQueueStatuses.includes(e.status)) return false;
+      } else if (myQueueOnly && myQueueStatuses.length > 0) {
         if (!myQueueStatuses.includes(e.status)) return false;
       }
       // status filter relies on the emenda "status" field with NEW lifecycle values
@@ -663,7 +696,7 @@ const EmendasPage: React.FC = () => {
 
       return true;
     });
-  }, [emendas, query, year, statusFilter, detailFilter, myQueueOnly]);
+  }, [emendas, query, year, statusFilter, detailFilter, myQueueOnly, isQueueRestricted, myQueueStatuses, hasRole, user]);
 
   // Paginated results
   const paginatedEmendas = useMemo(() => {
@@ -702,7 +735,8 @@ const EmendasPage: React.FC = () => {
               />
             </div>
 
-          {/* Page actions (moved from header) */}
+          {/* Page actions — oculto para perfis de workflow */}
+          {!isWorkflow && (
           <div className="mt-6 mb-6 flex flex-wrap items-center gap-3">
             <button
               type="button"
@@ -712,6 +746,7 @@ const EmendasPage: React.FC = () => {
               + Nova Emenda
             </button>
           </div>
+          )}
 
            <div className="bg-white rounded shadow p-6">
            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -769,8 +804,17 @@ const EmendasPage: React.FC = () => {
                  <option value="2022">2022</option>
                </select>
 
-               {/* Botão Minha Fila — só aparece para roles com fila definida */}
-               {myQueueStatuses.length > 0 && (
+               {/* Minha Fila: badge estático para perfis restritos; toggle para admin/gestor */}
+               {isQueueRestricted ? (
+                 <span className="inline-flex items-center gap-2 px-3 py-2 rounded text-sm font-medium border bg-indigo-600 text-white border-indigo-600 cursor-default select-none">
+                   📋 Minha Fila
+                   {myQueueCount > 0 && (
+                     <span className="inline-flex items-center justify-center w-5 h-5 rounded-full text-xs font-bold bg-white text-indigo-600">
+                       {myQueueCount}
+                     </span>
+                   )}
+                 </span>
+               ) : myQueueStatuses.length > 0 && (
                  <button
                    onClick={() => { setMyQueueOnly((v) => !v); setStatusFilter('Todas'); }}
                    className={`inline-flex items-center gap-2 px-3 py-2 rounded text-sm font-medium border transition-colors ${
@@ -814,11 +858,15 @@ const EmendasPage: React.FC = () => {
              ) : filtered.length === 0 ? (
                <div className="text-center py-8">
                  <p className="text-gray-500 mb-4">
-                   {emendas.length === 0
-                     ? 'Nenhuma emenda cadastrada ainda. Clique em "Nova Emenda" para criar uma.'
-                     : 'Nenhuma emenda encontrada com os filtros selecionados.'}
+                   {isQueueRestricted
+                     ? 'Nenhuma emenda na sua fila no momento.'
+                     : emendas.length === 0
+                       ? isWorkflow
+                         ? 'Nenhuma emenda pendente para o seu perfil no momento.'
+                         : 'Nenhuma emenda cadastrada ainda. Clique em "Nova Emenda" para criar uma.'
+                       : 'Nenhuma emenda encontrada com os filtros selecionados.'}
                  </p>
-                 {emendas.length === 0 && (
+                 {emendas.length === 0 && !isWorkflow && (
                    <button
                      onClick={openCreateModal}
                      className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded text-sm font-medium hover:bg-blue-700"
@@ -1556,8 +1604,8 @@ const EmendasPage: React.FC = () => {
                    </div>
                  </section>
 
-                 {/* Área de Despacho */}
-                 {!isCreateMode && (
+                 {/* Área de Despacho — somente ADMIN/GESTOR */}
+                 {!isCreateMode && (isAdmin || hasRole(UserRole.GESTOR)) && (
                    <div className="bg-purple-50 border border-purple-200 rounded-xl p-6">
                      <h3 className="text-lg font-bold text-purple-900 mb-4 flex items-center gap-2">
                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5">
@@ -1812,6 +1860,80 @@ const EmendasPage: React.FC = () => {
                      </div>
                    </div>
                  )}
+
+                 {/* ── Painéis de workflow por perfil ── */}
+                 {!isCreateMode && selectedEmenda && (() => {
+                   const eid = editForm.id;
+                   const status = editForm.status;
+                   const tipo = editForm.tipoTransferencia;
+                   const refresh = (newStatus: string) => {
+                     setEditForm(prev => ({ ...prev, status: newStatus }));
+                     setSelectedEmenda(prev => prev ? { ...prev, status: newStatus } : prev);
+                     setEmendas(prev => prev.map(e => e.id === eid ? { ...e, status: newStatus } : e));
+                     emendaService.getHistorico(eid).then(setHistorico).catch(() => {});
+                   };
+                   return (
+                     <>
+                       {(isAdmin || isOrcamento) && (
+                         <AdmissibilidadePanel emendaId={eid} emendaStatus={status}
+                           canAct={isAdmin || isOrcamento} onStatusChange={refresh} />
+                       )}
+                       {(isAdmin || isSecretaria) && (
+                         <>
+                           {!['Admissibilidade aprovada','Em análise de demanda','Análise de demanda aprovada',
+                               'Devolvida por incompatibilidade de demanda','Em análise documental',
+                               'Análise documental aprovada','Devolvida por inviabilidade documental',
+                               'Iniciado','Em execução','Concluído'].includes(status ?? '') && (
+                             <div className="bg-teal-50 border border-teal-200 rounded-xl p-3">
+                               <p className="text-xs font-semibold text-teal-800">Análise de Demanda</p>
+                               <p className="text-xs text-teal-700 mt-1">Aguardando aprovação da admissibilidade. Status atual: <strong>{status}</strong></p>
+                             </div>
+                           )}
+                           <SecretariaDemandaPanel emendaId={eid} emendaStatus={status}
+                             tipoTransferencia={tipo} canAct={isAdmin || isSecretaria} onStatusChange={refresh} />
+                         </>
+                       )}
+                       {(isAdmin || isConvenios) && (
+                         <>
+                           {!['Análise de demanda aprovada','Em análise documental','Análise documental aprovada',
+                               'Devolvida por inviabilidade documental','Iniciado','Em execução','Concluído'].includes(status ?? '') && (
+                             <div className="bg-violet-50 border border-violet-200 rounded-xl p-3">
+                               <p className="text-xs font-semibold text-violet-800">Análise Documental — Convênios</p>
+                               <p className="text-xs text-violet-700 mt-1">Aguardando aprovação da análise de demanda. Status atual: <strong>{status}</strong></p>
+                             </div>
+                           )}
+                           <ConveniosDocumentalPanel emendaId={eid} emendaStatus={status}
+                             tipoTransferencia={tipo} canAct={(isAdmin || isConvenios) && tipo === 'Indireta'} onStatusChange={refresh} />
+                         </>
+                       )}
+                       {(isAdmin || isJuridico) && (
+                         <>
+                           {!['Análise documental aprovada','Iniciado','Em execução'].includes(status ?? '') && (
+                             <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                               <p className="text-xs font-semibold text-blue-800">Parecer Jurídico</p>
+                               <p className="text-xs text-blue-700 mt-1">Aguardando aprovação documental. Status atual: <strong>{status}</strong></p>
+                             </div>
+                           )}
+                           <JuridicoParecerPanel emendaId={eid} emendaStatus={status}
+                             canAct={isAdmin || isJuridico} onStatusChange={refresh} />
+                         </>
+                       )}
+                       {(isAdmin || isOperador || isConvenios || isSecretaria) && (
+                         <>
+                           {!['Iniciado','Em execução','Concluído','Devolvido'].includes(status ?? '') && (
+                             <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3">
+                               <p className="text-xs font-semibold text-indigo-800">Execução / Acompanhamento</p>
+                               <p className="text-xs text-indigo-700 mt-1">Disponível após formalização. Status atual: <strong>{status}</strong></p>
+                             </div>
+                           )}
+                           <OperadorExecucaoPanel emendaId={eid} emendaStatus={status}
+                             canAct={isAdmin || isOperador || isConvenios || isSecretaria} onStatusChange={refresh} />
+                         </>
+                       )}
+                     </>
+                   );
+                 })()}
+
                </aside>
              </div>
            </div>

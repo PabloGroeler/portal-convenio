@@ -149,12 +149,7 @@ const LoginPage = () => {
 
             {/* Senha */}
             <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label htmlFor="password" className="text-sm font-medium text-slate-300">Senha</label>
-                <Link to="/forgot-password" className="text-xs text-blue-400 hover:text-blue-300 transition">
-                  Esqueci minha senha
-                </Link>
-              </div>
+              <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1.5">Senha</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-3 flex items-center pointer-events-none text-slate-500">
                   <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -188,6 +183,15 @@ const LoginPage = () => {
                     </svg>
                   )}
                 </button>
+              </div>
+              <div className="flex justify-end mt-1.5">
+                <Link
+                  to="/forgot-password"
+                  tabIndex={-1}
+                  className="text-xs text-blue-400 hover:text-blue-300 transition"
+                >
+                  Esqueci minha senha
+                </Link>
               </div>
             </div>
 
